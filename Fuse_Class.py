@@ -75,7 +75,7 @@ class FuseDataset(torch.utils.data.Dataset):
     def draw_img(self,idx):
       img_path = os.path.join(self.root, "images", self.imgs[idx])
       img = Image.open(img_path).convert("RGB")
-      display(img)
+      img.show()
 
     def __len__(self):
       return len(self.imgs)
