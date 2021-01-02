@@ -29,6 +29,7 @@ from helper_functions import get_transform
 from helper_functions import collate_fn
 from helper_functions import get_model_instance_segmentation
 from helper_functions import iou
+from helper_functions import label_ocr
 
 
 if __name__ == "__main__":
@@ -51,13 +52,14 @@ if __name__ == "__main__":
     test_data_loader = torch.utils.data.DataLoader(
         test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=1,
         collate_fn=collate_fn)
+
     device = torch.device(
         'cuda') if torch.cuda.is_available() else torch.device('cpu')
     print("We have: {} examples, {} are training and {} testing".format(
         len(indices), len(train_dataset), len(test_dataset)))
 
     num_classes = NO_OF_CLASSES+1
-    num_epochs = 1
+    num_epochs = EPOCHS
     model = get_model_instance_segmentation(num_classes)
 
     # move model to the right device
@@ -70,34 +72,34 @@ if __name__ == "__main__":
 
     len_dataloader = len(train_data_loader)
 
-    for epoch in range(num_epochs):
-        model.train()
-        i = 0
-        for imgs, annotations in train_data_loader:
-            i += 1
-            try:
-                imgs = list(img.to(device) for img in imgs)
-                annotations = [{k: v.to(device) for k, v in t.items()}
-                               for t in annotations]
+    # for epoch in range(num_epochs):
+    #     model.train()
+    #     i = 0
+    #     for imgs, annotations in train_data_loader:
+    #         i += 1
+    #         try:
+    #             imgs = list(img.to(device) for img in imgs)
+    #             annotations = [{k: v.to(device) for k, v in t.items()}
+    #                            for t in annotations]
 
-                loss_dict = model(imgs, annotations)
-                if torch.isnan(sum(loss for loss in loss_dict.values())):
-                    raise Exception("NAN")
-            except Exception as e:
-                print(e)
-                print(annotations)
-                continue
-            losses = sum(loss for loss in loss_dict.values())
+    #             loss_dict = model(imgs, annotations)
+    #             if torch.isnan(sum(loss for loss in loss_dict.values())):
+    #                 raise Exception("NAN")
+    #         except Exception as e:
+    #             print(e)
+    #             print(annotations)
+    #             continue
+    #         losses = sum(loss for loss in loss_dict.values())
 
-            optimizer.zero_grad()
-            losses.backward()
-            optimizer.step()
-            # print(annotations[0]['boxes'])
-            print(
-                f'[Epoch: {epoch}] Iteration: {i}/{len_dataloader}, Loss: {losses}')
-            # evaluate(model, test_data_loader, device=device)
+    #         optimizer.zero_grad()
+    #         losses.backward()
+    #         optimizer.step()
+    #         # print(annotations[0]['boxes'])
+    #         print(
+    #             f'[Epoch: {epoch}] Iteration: {i}/{len_dataloader}, Loss: {losses}')
+    #         # evaluate(model, test_data_loader, device=device)
 
-    torch.save(model.state_dict(), TRAIN_DATAPATH+"models/test5")
+    # torch.save(model.state_dict(), TRAIN_DATAPATH+"models/test5")
 
     loaded_model = get_model_instance_segmentation(num_classes=NO_OF_CLASSES+1)
     loaded_model.load_state_dict(torch.load(TRAIN_DATAPATH+"models/test5"))
@@ -132,21 +134,27 @@ if __name__ == "__main__":
             try:
                 label_via_ocr = "NO OCR"
                 if score > 0.7:
-                    # label_via_ocr = label_ocr(_['name'],boxes,label)
-                    label_via_ocr = "NO OCR"
-                    label_match = iou(label, boxes, dict1, score, _['name'])
+                    label_via_ocr = label_ocr(_['name'],boxes,label)
+                    # print(label_via_ocr)
+                    # label_via_ocr = "NO OCR"
+                    label_match = iou(label, boxes, dict1, score, _['name'],label_via_ocr)
                 if label == label_via_ocr:
                     ocr_counter += 1
                 if label_via_ocr == "ocr fail":
                     ocr_fail += 1
-                    label_counter += label_match
-                    total += 1
+                    
+                    
                 else:
                     pass
+                total += 1
+                label_counter += label_match
             except Exception as e:
                 print(e)
 
             print("-"*180)
 
-    print("ACCURACY OF OCR:", ocr_counter/(total-ocr_fail))
+    try:
+        print("ACCURACY OF OCR:", ocr_counter/(total-ocr_fail))
+    except:
+        print("OCR FAILED")
     print("ACCURACY OF prediction:", label_counter/total)
