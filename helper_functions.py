@@ -24,7 +24,9 @@ def collate_fn(batch):
 
 def get_model_instance_segmentation(num_classes):
     # load an instance segmentation model pre-trained pre-trained on COCO
+    # model = torchvision.models.detection.retinanet_resnet50_fpn(pretrained=False)
     model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=False)
+    # print(model)
     # get number of input features for the classifier
     in_features = model.roi_heads.box_predictor.cls_score.in_features
     # replace the pre-trained head with a new one

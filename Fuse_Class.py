@@ -4,7 +4,7 @@ import torchvision
 import os
 from PIL import Image
 import cv2
-from pycocotools.coco import COCO
+# from pycocotools.coco import COCO
 import pandas as pd
 import numpy as np
 from fuse_config import class_dictionary
@@ -50,8 +50,8 @@ class FuseDataset(torch.utils.data.Dataset):
       # display(img)
       area = (boxes[:, 3] - boxes[:, 1]) * (boxes[:, 2] - boxes[:,
       0])
-      area = torch.as_tensor(area, dtype=torch.float32)
-      iscrowd = torch.zeros((num_objs,), dtype=torch.int64)
+      area = torch.as_tensor(area, dtype=torch.float16) #float32
+      iscrowd = torch.zeros((num_objs,), dtype=torch.int8) #int64
       target  = {}
       target ["boxes"] = boxes
       target ["labels"] = labels

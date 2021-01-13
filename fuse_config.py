@@ -1,12 +1,12 @@
 EPOCHS = 10
-BATCH_SIZE = 4
+BATCH_SIZE = 1
 LEARNING_RATE = 0.005
-TRAIN_DATAPATH = 'dataset_partial\\gould\\'
-train_test_split_index = 10
+TRAIN_DATAPATH = 'C:\\Users\\Simon\\Google Drive\\Maîtrise SGL CIMA+\\General\\FuseDataFull\\'
+train_test_split_index = 200
 NO_OF_CLASSES = 10
 class_dictionary = {
-    # "Gould-Ferraz Shawmut A4J":1,
-    'Gould Shawmut A4J':1,
+     "Gould-Ferraz Shawmut A4J":1,
+    #'Gould Shawmut A4J':1,
     "Ferraz Shawmut AJT":2,
     "English Electric C-J":3,
     "Ferraz Shawmut CRS":4,
