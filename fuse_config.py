@@ -1,7 +1,6 @@
-EPOCHS = 10
-BATCH_SIZE = 4
-LEARNING_RATE = 0.005
+LEARNING_RATE = 0.0005
 TRAIN_DATAPATH = 'dataset_partial\\gould\\'
+ANNOTATION_FILE = "annotation.csv"
 train_test_split_index = 10
 NO_OF_CLASSES = 10
 class_dictionary = {

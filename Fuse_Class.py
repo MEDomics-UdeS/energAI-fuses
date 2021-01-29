@@ -2,7 +2,7 @@ import torch
 import torch.utils.data
 import torchvision
 import os
-from PIL import Image
+from PIL import Image, ImageDraw
 import cv2
 from pycocotools.coco import COCO
 import pandas as pd
@@ -23,35 +23,53 @@ optional
 """
 class FuseDataset(torch.utils.data.Dataset):
   
-    def __init__(self, root, data_file, transforms=None):
+    def __init__(self, root, data_file, max_image_size, resize, transforms=None):
       self.root = root
       self.transforms = transforms
       self.imgs = sorted(os.listdir(os.path.join(root, "images")))
       self.path_to_data_file = data_file
-      
+      self.max_image_size = max_image_size
+      self.resize = resize
 
     def __getitem__(self, idx):
       img_path = os.path.join(self.root, "images", self.imgs[idx])
       img = Image.open(img_path).convert("RGB")
-      save_img = img
-      
-      box_list,label_list = parse_annotations(self.path_to_data_file, 
-      self.imgs[idx])
+
+      box_list,label_list = parse_annotations(self.path_to_data_file, self.imgs[idx])
+
+      num_objs = len(box_list)
+
+      # ==========================================================
+      # SGL 2021-01-22
+      # Image Resize
+      # ==========================================================
+      if self.resize:
+        if img.size[0] > self.max_image_size or img.size[1] > self.max_image_size:
+          original_size = img.size
+          img.thumbnail((self.max_image_size, self.max_image_size),
+                        resample=Image.BILINEAR,
+                        reducing_gap=2)
+          resize_ratio = img.size[0] / original_size[0]
+
+          # draw = ImageDraw.Draw(img)
+
+          for i in range(num_objs):
+            for j in range(4):
+              box_list[i][j] = int(box_list[i][j] * resize_ratio)
+
+            # draw.rectangle([(box_list[i][0], box_list[i][1]), (box_list[i][2], box_list[i][3])], outline ="red", width=5)
+
+          # img.show()
+
+      # ==========================================================
+
       image_id = torch.tensor([idx])
       boxes = torch.as_tensor(box_list, dtype=torch.float32)
-      num_objs = len(box_list)
-    
-      labels = torch.as_tensor(label_list,dtype=torch.long)
-      
-      # draw = ImageDraw.Draw(img)
-      # for i in range(num_objs):
-      #   draw.rectangle([(boxes[i][0],boxes[i][1]),(boxes[i][2],boxes[i][3])],outline ="red",width=5)
+      labels = torch.as_tensor(label_list, dtype=torch.long)
 
-      # display(img)
-      area = (boxes[:, 3] - boxes[:, 1]) * (boxes[:, 2] - boxes[:,
-      0])
-      area = torch.as_tensor(area, dtype=torch.float32)
-      iscrowd = torch.zeros((num_objs,), dtype=torch.int64)
+      area = (boxes[:, 3] - boxes[:, 1]) * (boxes[:, 2] - boxes[:, 0])
+      area = torch.as_tensor(area, dtype=torch.float16) #float32
+      iscrowd = torch.zeros((num_objs,), dtype=torch.int8) #int64
       target  = {}
       target ["boxes"] = boxes
       target ["labels"] = labels
@@ -64,18 +82,19 @@ class FuseDataset(torch.utils.data.Dataset):
 
       if self.transforms is not None:
         img = self.transforms(img)
+
       return img, target
 
-    def get_image(self,idx):
-      img_path = os.path.join(self.root, "images", self.imgs[idx])
-      img = cv2.imread(img_path,0)
-      img_new = Image.fromarray(img)
-      return img_path
-    
-    def draw_img(self,idx):
-      img_path = os.path.join(self.root, "images", self.imgs[idx])
-      img = Image.open(img_path).convert("RGB")
-      img.show()
+    # def get_image(self,idx):
+    #   img_path = os.path.join(self.root, "images", self.imgs[idx])
+    #   img = cv2.imread(img_path,0)
+    #   img_new = Image.fromarray(img)
+    #   return img_path
+    #
+    # def draw_img(self,idx):
+    #   img_path = os.path.join(self.root, "images", self.imgs[idx])
+    #   img = Image.open(img_path).convert("RGB")
+    #   img.show()
 
     def __len__(self):
       return len(self.imgs)
