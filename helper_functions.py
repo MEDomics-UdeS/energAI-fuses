@@ -16,8 +16,10 @@ import torchvision
 from fuzzywuzzy import fuzz
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from tqdm.auto import tqdm
+from PIL import Image, ImageDraw, ImageFont
 
-from fuse_config import (LEARNING_RATE, NO_OF_CLASSES, TRAIN_DATAPATH, class_dictionary)
+from fuse_config import (LEARNING_RATE, NO_OF_CLASSES,
+                         TRAIN_DATAPATH, SAVE_PATH, class_dictionary)
 
 """
 converts the image to a tensor
@@ -44,25 +46,28 @@ def get_model_instance_segmentation(num_classes):
     model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
     return model
 
-def save_graph(t,r,a,f,filename):
-    x = np.arange(0,len(t))
-    df = pd.DataFrame({"time": x,"t":t,"r":r,"a":a,"f":f})
+
+def save_graph(t, r, a, f, filename):
+    # print(t,r,a,f)
+    x = np.arange(0, len(t))
+    df = pd.DataFrame({"time": x, "t": t, "r": r, "a": a, "f": f})
     sns.set_style("darkgrid")
-    sns.lineplot(x="time",y="t",data=df,label="total")
-    sns.lineplot(x="time",y="r",data=df,label="reserved")
-    sns.lineplot(x="time",y="a",data=df,label="allocated")
-    sns.lineplot(x="time",y="f",data=df,label="free")
+    sns.lineplot(x="time", y="t", data=df, label="total")
+    sns.lineplot(x="time", y="r", data=df, label="reserved")
+    sns.lineplot(x="time", y="a", data=df, label="allocated")
+    sns.lineplot(x="time", y="f", data=df, label="free")
     title = filename.split("_")
     epoch_string = title[2][1:]
     batch_string = title[3][1:]
     downsample_string = title[4][1:]
     mp_string = title[5][2:]
     gradient_string = title[6][1:]
-    plt.title("Epochs: "+epoch_string+" Batch Size: "+batch_string+" \nDownsample: "+downsample_string+" Mixed Prec: "+mp_string+" Gradient Acc: "+gradient_string)
-    plt.savefig(TRAIN_DATAPATH+"/plots/"+filename+'.png')
+    plt.title("Epochs: "+epoch_string+" Batch Size: "+batch_string+" \nDownsample: " +
+              downsample_string+" Mixed Prec: "+mp_string+" Gradient Acc: "+gradient_string)
+    plt.savefig(SAVE_PATH+"/plots/"+filename+'.png')
 
 
-def train_model(epochs,train_data_loader, device,mixed_precision,gradient_accumulation,filename,verbose):   
+def train_model(epochs, batch_size, train_data_loader, device, mixed_precision, gradient_accumulation, filename, verbose):
     model = get_model_instance_segmentation(NO_OF_CLASSES+1)
 
     # move model to the right device
@@ -74,7 +79,7 @@ def train_model(epochs,train_data_loader, device,mixed_precision,gradient_accumu
         params, lr=LEARNING_RATE, momentum=0.9, weight_decay=0.0005)
 
     len_dataloader = len(train_data_loader)
-    t = []
+    to = []
     r = []
     a = []
     f = []
@@ -85,66 +90,128 @@ def train_model(epochs,train_data_loader, device,mixed_precision,gradient_accumu
         i = 0
         losses = 0
         if gradient_accumulation:
-          optimizer.zero_grad()
-        pbar = tqdm(train_data_loader, desc=f'Epoch {epoch}',position=0, leave=True)
+            optimizer.zero_grad()
+        # pbar = tqdm(train_data_loader, desc=f'Epoch {epoch}',position=0, leave=True)
 
-        for imgs, annotations in pbar:
+        for imgs, annotations in train_data_loader:
             i += 1
             try:
                 imgs = list(img.to(device) for img in imgs)
 
                 annotations = [{k: v.to(device) for k, v in t.items()}
-                               for t in annotations]                
-
+                               for t in annotations]
+                
+                # to.append(torch.cuda.get_device_properties(0).total_memory*1e-9)
+                # r.append(torch.cuda.memory_reserved(0)*1e-9)
+                # a.append(torch.cuda.memory_allocated(0)*1e-9)
+                # f.append(torch.cuda.memory_reserved(0)*1e-9 -
+                #          torch.cuda.memory_allocated(0)*1e-9)
 
                 if gradient_accumulation and mixed_precision:
                     with amp.autocast(enabled=mixed_precision):
                         loss_dict = model(imgs, annotations)
                         losses = sum(loss for loss in loss_dict.values())
+
+                    to.append(torch.cuda.get_device_properties(0).total_memory*1e-9)
+                    r.append(torch.cuda.memory_reserved(0)*1e-9)
+                    a.append(torch.cuda.memory_allocated(0)*1e-9)
+                    f.append(torch.cuda.memory_reserved(0)*1e-9 -
+                         torch.cuda.memory_allocated(0)*1e-9)
+                         
                     scaler.scale(losses).backward()
-                    if (i+1)%BATCH_SIZE == 0:
+                    if (i+1) % batch_size == 0:
                         scaler.step(optimizer)
                         scaler.update()
                         optimizer.zero_grad(set_to_none=True)
                 elif gradient_accumulation and not mixed_precision:
                     loss_dict = model(imgs, annotations)
                     losses = sum(loss for loss in loss_dict.values())
+
+                    to.append(torch.cuda.get_device_properties(0).total_memory*1e-9)
+                    r.append(torch.cuda.memory_reserved(0)*1e-9)
+                    a.append(torch.cuda.memory_allocated(0)*1e-9)
+                    f.append(torch.cuda.memory_reserved(0)*1e-9 -
+                         torch.cuda.memory_allocated(0)*1e-9)
+
                     losses.backward()
-                    if (i+1)%BATCH_SIZE == 0:
+                    if (i+1) % batch_size == 0:
                         optimizer.step()
                         optimizer.zero_grad()
                 elif not gradient_accumulation and mixed_precision:
                     with amp.autocast(enabled=mixed_precision):
                         loss_dict = model(imgs, annotations)
                         losses = sum(loss for loss in loss_dict.values())
+
+                    to.append(torch.cuda.get_device_properties(0).total_memory*1e-9)
+                    r.append(torch.cuda.memory_reserved(0)*1e-9)
+                    a.append(torch.cuda.memory_allocated(0)*1e-9)
+                    f.append(torch.cuda.memory_reserved(0)*1e-9 -
+                         torch.cuda.memory_allocated(0)*1e-9)
+
                     scaler.scale(losses).backward()
                     scaler.step(optimizer)
                     scaler.update()
                     optimizer.zero_grad(set_to_none=True)
                 elif not gradient_accumulation and not mixed_precision:
+                    # to.append(torch.cuda.get_device_properties(0).total_memory*1e-9)
+                    # r.append(torch.cuda.memory_reserved(0)*1e-9)
+                    # a.append(torch.cuda.memory_allocated(0)*1e-9)
+                    # f.append(torch.cuda.memory_reserved(0)*1e-9 -
+                    #      torch.cuda.memory_allocated(0)*1e-9)
+
                     loss_dict = model(imgs, annotations)
+
+                    to.append(torch.cuda.get_device_properties(0).total_memory*1e-9)
+                    r.append(torch.cuda.memory_reserved(0)*1e-9)
+                    a.append(torch.cuda.memory_allocated(0)*1e-9)
+                    f.append(torch.cuda.memory_reserved(0)*1e-9 -
+                         torch.cuda.memory_allocated(0)*1e-9)
+
                     losses = sum(loss for loss in loss_dict.values())
+
+                    # to.append(torch.cuda.get_device_properties(0).total_memory*1e-9)
+                    # r.append(torch.cuda.memory_reserved(0)*1e-9)
+                    # a.append(torch.cuda.memory_allocated(0)*1e-9)
+                    # f.append(torch.cuda.memory_reserved(0)*1e-9 -
+                    #         torch.cuda.memory_allocated(0)*1e-9)
+
                     optimizer.zero_grad()
+
+                    # to.append(torch.cuda.get_device_properties(0).total_memory*1e-9)
+                    # r.append(torch.cuda.memory_reserved(0)*1e-9)
+                    # a.append(torch.cuda.memory_allocated(0)*1e-9)
+                    # f.append(torch.cuda.memory_reserved(0)*1e-9 -
+                    #      torch.cuda.memory_allocated(0)*1e-9)
+
                     losses.backward()
+
+                    # to.append(torch.cuda.get_device_properties(0).total_memory*1e-9)
+                    # r.append(torch.cuda.memory_reserved(0)*1e-9)
+                    # a.append(torch.cuda.memory_allocated(0)*1e-9)
+                    # f.append(torch.cuda.memory_reserved(0)*1e-9 -
+                    #      torch.cuda.memory_allocated(0)*1e-9)
+                         
                     optimizer.step()
-                    
+
+                if i%10 == 0:
+                    print(
+                        f'[Epoch: {epoch}] Iteration: {i}/{len_dataloader}, Loss: {losses}')
                 del imgs, annotations, loss_dict
                 torch.cuda.empty_cache()
 
-
                 # print(torch.cuda.memory_summary(device))
 
-                t.append(torch.cuda.get_device_properties(0).total_memory*1e-9)
-                r.append(torch.cuda.memory_reserved(0)*1e-9)
-                a.append(torch.cuda.memory_allocated(0)*1e-9)
-                f.append(torch.cuda.memory_reserved(0)*1e-9 -
-                         torch.cuda.memory_allocated(0)*1e-9)  # free inside reserved
-                pbar.set_postfix({'loss': losses.item()})
+                # to.append(torch.cuda.get_device_properties(0).total_memory*1e-9)
+                # r.append(torch.cuda.memory_reserved(0)*1e-9)
+                # a.append(torch.cuda.memory_allocated(0)*1e-9)
+                # f.append(torch.cuda.memory_reserved(0)*1e-9 -
+                #          torch.cuda.memory_allocated(0)*1e-9)  # free inside reserved
+                # # pbar.set_postfix({'loss': losses.item()})
 
             except Exception as e:
                 print(e)
                 print(annotations)
-                t.append(torch.cuda.get_device_properties(0).total_memory*1e-9)
+                to.append(torch.cuda.get_device_properties(0).total_memory*1e-9)
                 r.append(torch.cuda.memory_reserved(0)*1e-9)
                 a.append(torch.cuda.memory_allocated(0)*1e-9)
                 f.append(torch.cuda.memory_reserved(0)*1e-9 -
@@ -152,28 +219,27 @@ def train_model(epochs,train_data_loader, device,mixed_precision,gradient_accumu
 
                 del imgs, annotations
                 torch.cuda.empty_cache()
-                t.append(torch.cuda.get_device_properties(0).total_memory*1e-9)
+                to.append(torch.cuda.get_device_properties(0).total_memory*1e-9)
                 r.append(torch.cuda.memory_reserved(0)*1e-9)
                 a.append(torch.cuda.memory_allocated(0)*1e-9)
                 f.append(torch.cuda.memory_reserved(0)*1e-9 -
                          torch.cuda.memory_allocated(0)*1e-9)
-                
 
                 traceback.print_exc()
                 # print(annotations)
                 continue
     if verbose:
-        save_graph(t,r,a,f,filename)
-    torch.save(model.state_dict(), TRAIN_DATAPATH+"models/"+filename)
+        save_graph(to, r, a, f, filename)
+    torch.save(model.state_dict(), SAVE_PATH+"models/"+filename)
 
 
-def test_model(test_dataset, device,filename):
+def test_model(test_dataset, device, filename):
     loaded_model = get_model_instance_segmentation(num_classes=NO_OF_CLASSES+1)
-    loaded_model.load_state_dict(torch.load(TRAIN_DATAPATH+"models/"+filename))
+    loaded_model.load_state_dict(torch.load(SAVE_PATH+"models/"+filename))
 
     # print("Ground Truth \t\t Label \t\t\t BoxIndex \t\t IOU Score")
-    print('{:^30} {:^30} {:^30} {:^30} {:^30} {:^30} {:^30}'.format(
-        'Image', 'Ground Truth', 'Label', 'LabelOCR', 'Box Index', 'Confidence Score', 'IOU Score'))
+    print('{:^3} {:^20} {:^20} {:^25} {:^20} {:^10} {:^10}'.format('Index',
+        'Image', 'Ground Truth', 'Label', 'Box Index', 'Confidence Score', 'IOU Score'))
     ocr_counter = 0
     label_counter = 0
     total = 0
@@ -191,6 +257,7 @@ def test_model(test_dataset, device,filename):
                 label = list(class_dictionary.keys())[
                     list(class_dictionary.values()).index(label)]
                 dict1.append({"label": label, "boxes": label_boxes[elem]})
+                total+=1
             for element in range(len(prediction[0]["boxes"])):
                 boxes = prediction[0]["boxes"][element].cpu().numpy()
                 score = np.round(
@@ -198,36 +265,41 @@ def test_model(test_dataset, device,filename):
                 label = prediction[0]["labels"][element].cpu().numpy()
                 label = list(class_dictionary.keys())[
                     list(class_dictionary.values()).index(label)]
-            try:
-                if score > 0.7:
-                    label_via_ocr = label_ocr(_['name'], boxes, label)
-                    label_match = iou(label, boxes, dict1, score, _[
-                                      'name'], label_via_ocr)
-                    if label == label_via_ocr:
-                        ocr_counter += 1
-                    if label_via_ocr == "ocr fail":
-                        ocr_fail += 1
-                else:
-                    pass
-                total += 1
-                label_counter += label_match
-            except Exception as e:
-                print(e)
+                try:
+                    label_match = 0
+                    if score > 0.7:
+                        # label_via_ocr = label_ocr(_['name'], boxes, label)
+                        label_match = iou(label, boxes, dict1, score, _[
+                                        'name'],i)
+                        
+                        # if label == label_via_ocr:
+                        #     ocr_counter += 1
+                        # if label_via_ocr == "ocr fail":
+                        #     ocr_fail += 1
+                    else:
+                        pass
+                    # total += 1
+                    label_counter += label_match
+                    # print(label_counter,total,label_counter/total)
+                except Exception as e:
+                    print(e)
 
-            print("-"*180)
+            print("-"*150)
 
     try:
         print("ACCURACY OF OCR:", ocr_counter/(total-ocr_fail))
     except:
         print("OCR FAILED")
+    print(label_counter,total)
     print("ACCURACY OF prediction:", label_counter/total)
 
 
-def iou(label, box1, box2, score, name, label_ocr="No OCR"):
+def iou(label, box1, box2, score, name, index,label_ocr="No OCR"):
     name = ''.join(chr(i) for i in name)
     # print('{:^30}'.format(name[-1]))
     iou_list = []
     iou_label = []
+    label_index = -1
     for item in box2:
         try:
             x11, y11, x21, y21 = item["boxes"]
@@ -247,11 +319,17 @@ def iou(label, box1, box2, score, name, label_ocr="No OCR"):
             iou_list.append(iou)
             label_index = iou_list.index(max(iou_list))
         except Exception as e:
-            print(e)
+            print("Error: ",e)
+            print(iou_list)
             continue
-
-    print('{:^30} {:^30} {:^30} {:^30} {:^30} {:^30} {:^30}'.format(
-        name, box2[label_index]["label"], label, label_ocr, label_index, score, max(iou_list)))
+    score1 = '%.2f'%(score)
+    try:
+        print('{:^3} {:^20} {:^20} {:^25} {:^20} {:^10} {:^10}'.format(index,
+            name, box2[label_index]["label"], label, label_index, score1 , round(max(iou_list),2)))
+    except:
+        print('{:^3} {:^20} {:^20} {:^25} {:^20} {:^10} {:^10}'.format(index,
+            name, "None", label, label_index, score1 , "None"))
+        return 0
     if box2[label_index]["label"] == label:
         return 1
     else:
@@ -360,3 +438,43 @@ def label_ocr(img, box, label):
         return list(sorted_d.keys())[0]
     else:
         return "ocr fail"
+
+
+def view_test_image(idx,test_dataset,filename):
+    loaded_model = get_model_instance_segmentation(num_classes=NO_OF_CLASSES+1)
+    loaded_model.load_state_dict(torch.load(SAVE_PATH+"models/"+filename))
+    img, _ = test_dataset[idx]
+    # convert tensor to ascii to name
+    label_boxes = np.array(test_dataset[idx][1]["boxes"])
+    # put the model in evaluation mode
+    loaded_model.eval()
+    with torch.no_grad():
+        prediction = loaded_model([img])
+    image = Image.fromarray(img.mul(255).permute(1, 2, 0).byte().numpy())
+    draw = ImageDraw.Draw(image)
+    # draw groundtruth
+    for elem in range(len(label_boxes)):
+        label = test_dataset[idx][1]["labels"][elem].cpu().numpy()
+        label = list(class_dictionary.keys())[
+            list(class_dictionary.values()).index(label)]
+        draw.rectangle([(label_boxes[elem][0], label_boxes[elem][1]),
+                        (label_boxes[elem][2], label_boxes[elem][3])], outline="green", width=3)
+        font = ImageFont.truetype(
+            "/usr/share/fonts/truetype/liberation/LiberationSansNarrow-Regular.ttf", 50)
+        draw.text((label_boxes[elem][0], label_boxes[elem][1]),
+                  text=label + " " + str(1), font=font, fill=(255, 255, 0, 0))
+    for element in range(len(prediction[0]["boxes"])):
+        boxes = prediction[0]["boxes"][element].cpu().numpy()
+        score = np.round(prediction[0]["scores"]
+                         [element].cpu().numpy(), decimals=4)
+        label = prediction[0]["labels"][element].cpu().numpy()
+        label = list(class_dictionary.keys())[
+            list(class_dictionary.values()).index(label)]
+        if score > 0.5:
+            draw.rectangle(
+                [(boxes[0], boxes[1]), (boxes[2], boxes[3])], outline="red", width=5)
+            font = ImageFont.truetype(
+                "/usr/share/fonts/truetype/liberation/LiberationSansNarrow-Regular.ttf", 50)
+            draw.text((boxes[2]-boxes[0], boxes[3]-1), text=label + " " +
+                    str(score), font=font, fill=(255, 255, 255, 0))
+    image = image.save("image_save/"+str(idx)+".jpg")

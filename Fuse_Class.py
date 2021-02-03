@@ -4,7 +4,7 @@ import torchvision
 import os
 from PIL import Image, ImageDraw
 import cv2
-from pycocotools.coco import COCO
+# from pycocotools.coco import COCO
 import pandas as pd
 import numpy as np
 from fuse_config import class_dictionary
