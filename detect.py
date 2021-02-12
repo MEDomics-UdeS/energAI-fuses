@@ -3,6 +3,7 @@ import datetime
 import os
 import torch
 import time
+from torch.utils.tensorboard import SummaryWriter
 
 
 from Fuse_Class import FuseDataset
@@ -99,18 +100,21 @@ if __name__ == "__main__":
         'cuda') if torch.cuda.is_available() else torch.device('cpu')
     print("We have: {} examples, {} are training and {} testing".format(
         len(indices), len(train_dataset), len(test_dataset)))
-
+    writer = SummaryWriter("runs/"+filename)
     if args.train:
         train_model(args.epochs, args.batch, train_data_loader, device,
-                    args.mixed_precision, args.gradient_accumulation, filename, args.verbose)
+                    args.mixed_precision, args.gradient_accumulation, filename, args.verbose,writer)
     if args.test:
-        test_model(test_dataset, device, filename)
+        test_model(test_dataset, device, filename,writer)
     
     if args.testfile:
         # test_model(total_dataset, device, args.testfile)
         test_model(test_dataset, device, args.testfile)
     
     if args.image:
-        for i in range(len(test_dataset)):
-            view_test_image(i,test_dataset,filename)
+        for i in range(len(total_dataset)):
+            print(i,len(total_dataset),end=" ")
+            view_test_image(i,total_dataset,filename)
     print("Time Taken (minutes): ",round((time.time() - start)/60,2))
+    writer.flush()
+    writer.close()

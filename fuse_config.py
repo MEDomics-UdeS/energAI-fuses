@@ -1,7 +1,7 @@
 LEARNING_RATE = 0.005
 TRAIN_DATAPATH = '/data/energAI/FuseDataFull/'
 SAVE_PATH = '/home/local/USHERBROOKE/kuls3101/fuse_detection/'
-ANNOTATION_FILE = "annotation_updated.csv"
+ANNOTATION_FILE = "annotation_sgl.csv"
 train_test_split_index = 200
 NO_OF_CLASSES = 10
 class_dictionary = {

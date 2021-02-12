@@ -5,6 +5,7 @@ import traceback
 from itertools import chain
 import pandas as pd
 
+
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
@@ -67,7 +68,7 @@ def save_graph(t, r, a, f, filename):
     plt.savefig(SAVE_PATH+"/plots/"+filename+'.png')
 
 
-def train_model(epochs, batch_size, train_data_loader, device, mixed_precision, gradient_accumulation, filename, verbose):
+def train_model(epochs, batch_size, train_data_loader, device, mixed_precision, gradient_accumulation, filename, verbose,writer):
     model = get_model_instance_segmentation(NO_OF_CLASSES+1)
 
     # move model to the right device
@@ -85,7 +86,7 @@ def train_model(epochs, batch_size, train_data_loader, device, mixed_precision, 
     f = []
     if mixed_precision:
         scaler = amp.grad_scaler.GradScaler(enabled=mixed_precision)
-    for epoch in range(epochs):
+    for epoch in range(epochs+1):
         model.train()
         i = 0
         losses = 0
@@ -117,6 +118,12 @@ def train_model(epochs, batch_size, train_data_loader, device, mixed_precision, 
                     a.append(torch.cuda.memory_allocated(0)*1e-9)
                     f.append(torch.cuda.memory_reserved(0)*1e-9 -
                          torch.cuda.memory_allocated(0)*1e-9)
+
+                    writer.add_scalar("Loss/train", losses, epoch)
+                    writer.add_scalar("Memory/reserved", r[-1], epoch)
+                    writer.add_scalar("Memory/allocated", a[-1], epoch)
+                    writer.add_scalar("Memory/free", f[-1], epoch)
+                    
                          
                     scaler.scale(losses).backward()
                     if (i+1) % batch_size == 0:
@@ -133,6 +140,12 @@ def train_model(epochs, batch_size, train_data_loader, device, mixed_precision, 
                     f.append(torch.cuda.memory_reserved(0)*1e-9 -
                          torch.cuda.memory_allocated(0)*1e-9)
 
+                    writer.add_scalar("Loss/train", losses, epoch)
+                    writer.add_scalar("Memory/reserved", r[-1], epoch)
+                    writer.add_scalar("Memory/allocated", a[-1], epoch)
+                    writer.add_scalar("Memory/free", f[-1], epoch)
+
+
                     losses.backward()
                     if (i+1) % batch_size == 0:
                         optimizer.step()
@@ -147,6 +160,11 @@ def train_model(epochs, batch_size, train_data_loader, device, mixed_precision, 
                     a.append(torch.cuda.memory_allocated(0)*1e-9)
                     f.append(torch.cuda.memory_reserved(0)*1e-9 -
                          torch.cuda.memory_allocated(0)*1e-9)
+                    
+                    writer.add_scalar("Loss/train", losses, epoch)
+                    writer.add_scalar("Memory/reserved", r[-1], epoch)
+                    writer.add_scalar("Memory/allocated", a[-1], epoch)
+                    writer.add_scalar("Memory/free", f[-1], epoch)
 
                     scaler.scale(losses).backward()
                     scaler.step(optimizer)
@@ -169,28 +187,13 @@ def train_model(epochs, batch_size, train_data_loader, device, mixed_precision, 
 
                     losses = sum(loss for loss in loss_dict.values())
 
-                    # to.append(torch.cuda.get_device_properties(0).total_memory*1e-9)
-                    # r.append(torch.cuda.memory_reserved(0)*1e-9)
-                    # a.append(torch.cuda.memory_allocated(0)*1e-9)
-                    # f.append(torch.cuda.memory_reserved(0)*1e-9 -
-                    #         torch.cuda.memory_allocated(0)*1e-9)
+                    writer.add_scalar("Loss/train", losses, epoch)
+                    writer.add_scalar("Memory/reserved", r[-1], epoch)
+                    writer.add_scalar("Memory/allocated", a[-1], epoch)
+                    writer.add_scalar("Memory/free", f[-1], epoch)
 
                     optimizer.zero_grad()
-
-                    # to.append(torch.cuda.get_device_properties(0).total_memory*1e-9)
-                    # r.append(torch.cuda.memory_reserved(0)*1e-9)
-                    # a.append(torch.cuda.memory_allocated(0)*1e-9)
-                    # f.append(torch.cuda.memory_reserved(0)*1e-9 -
-                    #      torch.cuda.memory_allocated(0)*1e-9)
-
                     losses.backward()
-
-                    # to.append(torch.cuda.get_device_properties(0).total_memory*1e-9)
-                    # r.append(torch.cuda.memory_reserved(0)*1e-9)
-                    # a.append(torch.cuda.memory_allocated(0)*1e-9)
-                    # f.append(torch.cuda.memory_reserved(0)*1e-9 -
-                    #      torch.cuda.memory_allocated(0)*1e-9)
-                         
                     optimizer.step()
 
                 if i%10 == 0:
@@ -233,7 +236,7 @@ def train_model(epochs, batch_size, train_data_loader, device, mixed_precision, 
     torch.save(model.state_dict(), SAVE_PATH+"models/"+filename)
 
 
-def test_model(test_dataset, device, filename):
+def test_model(test_dataset, device, filename,writer):
     loaded_model = get_model_instance_segmentation(num_classes=NO_OF_CLASSES+1)
     loaded_model.load_state_dict(torch.load(SAVE_PATH+"models/"+filename))
 
@@ -292,6 +295,7 @@ def test_model(test_dataset, device, filename):
         print("OCR FAILED")
     print(label_counter,total)
     print("ACCURACY OF prediction:", label_counter/total)
+    writer.add_scalar("Accuracy/test",label_counter/total,1)
 
 
 def iou(label, box1, box2, score, name, index,label_ocr="No OCR"):
@@ -444,7 +448,9 @@ def view_test_image(idx,test_dataset,filename):
     loaded_model = get_model_instance_segmentation(num_classes=NO_OF_CLASSES+1)
     loaded_model.load_state_dict(torch.load(SAVE_PATH+"models/"+filename))
     img, _ = test_dataset[idx]
-    # convert tensor to ascii to name
+    img_name = ''.join(chr(i) for i in _['name'])
+    print(img_name)
+    
     label_boxes = np.array(test_dataset[idx][1]["boxes"])
     # put the model in evaluation mode
     loaded_model.eval()
@@ -475,6 +481,6 @@ def view_test_image(idx,test_dataset,filename):
                 [(boxes[0], boxes[1]), (boxes[2], boxes[3])], outline="red", width=5)
             font = ImageFont.truetype(
                 "/usr/share/fonts/truetype/liberation/LiberationSansNarrow-Regular.ttf", 50)
-            draw.text((boxes[2]-boxes[0], boxes[3]-1), text=label + " " +
+            draw.text((boxes[0]-1, boxes[3]), text=label + " " +
                     str(score), font=font, fill=(255, 255, 255, 0))
-    image = image.save("image_save/"+str(idx)+".jpg")
+    image = image.save("image_save_1/"+img_name)
