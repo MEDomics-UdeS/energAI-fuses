@@ -87,6 +87,7 @@ def train_model(epochs, batch_size, train_data_loader, device, mixed_precision, 
     if mixed_precision:
         scaler = amp.grad_scaler.GradScaler(enabled=mixed_precision)
     for epoch in range(epochs+1):
+        resize_ratios_all = []
         model.train()
         i = 0
         losses = 0
@@ -94,13 +95,15 @@ def train_model(epochs, batch_size, train_data_loader, device, mixed_precision, 
             optimizer.zero_grad()
         # pbar = tqdm(train_data_loader, desc=f'Epoch {epoch}',position=0, leave=True)
 
-        for imgs, annotations in train_data_loader:
+        for imgs, annotations, resize_ratios in train_data_loader:
             i += 1
             try:
                 imgs = list(img.to(device) for img in imgs)
 
                 annotations = [{k: v.to(device) for k, v in t.items()}
                                for t in annotations]
+
+                resize_ratios_all.extend(list(resize_ratios))
                 
                 # to.append(torch.cuda.get_device_properties(0).total_memory*1e-9)
                 # r.append(torch.cuda.memory_reserved(0)*1e-9)
@@ -231,6 +234,11 @@ def train_model(epochs, batch_size, train_data_loader, device, mixed_precision, 
                 traceback.print_exc()
                 # print(annotations)
                 continue
+        average_ratio = sum(resize_ratios_all) / len(resize_ratios_all)
+        print(f'[Epoch: {epoch}] Average downsampling ratio : {average_ratio:.2%}')
+        print(f'[Epoch: {epoch}] Maximum downsampling ratio : {max(resize_ratios_all):.2%}')
+        print(f'[Epoch: {epoch}] Minimum downsampling ratio : {min(resize_ratios_all):.2%}')
+
     if verbose:
         save_graph(to, r, a, f, filename)
     torch.save(model.state_dict(), SAVE_PATH+"models/"+filename)
@@ -248,7 +256,7 @@ def test_model(test_dataset, device, filename,writer):
     total = 0
     ocr_fail = 0
     for i in range(len(test_dataset)):
-        img, _ = test_dataset[i]
+        img, _, resize_ratio = test_dataset[i]
         label_boxes = np.array(test_dataset[i][1]["boxes"])
         loaded_model.eval()
 
