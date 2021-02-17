@@ -43,23 +43,24 @@ class FuseDataset(torch.utils.data.Dataset):
       # SGL 2021-01-22
       # Image Resize
       # ==========================================================
-      if self.resize:
-        if img.size[0] > self.max_image_size or img.size[1] > self.max_image_size:
-          original_size = img.size
-          img.thumbnail((self.max_image_size, self.max_image_size),
-                        resample=Image.BILINEAR,
-                        reducing_gap=2)
-          resize_ratio = img.size[0] / original_size[0]
+      if self.resize and (img.size[0] > self.max_image_size or img.size[1] > self.max_image_size):
+        original_size = img.size
+        img.thumbnail((self.max_image_size, self.max_image_size),
+                      resample=Image.BILINEAR,
+                      reducing_gap=2)
+        resize_ratio = img.size[0] / original_size[0]
 
-          # draw = ImageDraw.Draw(img)
+        # draw = ImageDraw.Draw(img)
 
-          for i in range(num_objs):
-            for j in range(4):
-              box_list[i][j] = int(box_list[i][j] * resize_ratio)
+        for i in range(num_objs):
+          for j in range(4):
+            box_list[i][j] = int(box_list[i][j] * resize_ratio)
 
-            # draw.rectangle([(box_list[i][0], box_list[i][1]), (box_list[i][2], box_list[i][3])], outline ="red", width=5)
+          # draw.rectangle([(box_list[i][0], box_list[i][1]), (box_list[i][2], box_list[i][3])], outline ="red", width=5)
+      else:
+        resize_ratio = 1
 
-          # img.show()
+        # img.show()
 
       # ==========================================================
 
@@ -83,7 +84,7 @@ class FuseDataset(torch.utils.data.Dataset):
       if self.transforms is not None:
         img = self.transforms(img)
 
-      return img, target
+      return img, target, resize_ratio
 
     # def get_image(self,idx):
     #   img_path = os.path.join(self.root, "images", self.imgs[idx])
