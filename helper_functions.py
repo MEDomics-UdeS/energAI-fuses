@@ -68,9 +68,8 @@ def save_graph(t, r, a, f, filename):
               downsample_string+" Mixed Prec: "+mp_string+" Gradient Acc: "+gradient_string)
     plt.savefig(SAVE_PATH+"/plots/"+filename+'.png')
 
-
-
-def train_model(epochs, accumulation_size, train_data_loader, device, mixed_precision, gradient_accumulation, filename, verbose,writer):#, early,validation,validation_dataset)):
+def train_model(epochs, accumulation_size, train_data_loader, device, mixed_precision,
+                gradient_accumulation, filename, verbose,writer, early,validation,validation_dataset):
     torch.backends.cudnn.benchmark = True
 
     model = get_model_instance_segmentation(NO_OF_CLASSES+1)
@@ -206,25 +205,25 @@ def train_model(epochs, accumulation_size, train_data_loader, device, mixed_prec
                 traceback.print_exc()
                 continue
 
-#         if validation:
-#             if (epoch+1)%validation == 0:
-#                 torch.save(model.state_dict(), SAVE_PATH+"models/"+filename)
-#                 val_acc = validate_model(validation_dataset,device,filename,batch_size)
-#                 if early:
-#                     if es.step(val_acc):
-#                         print("Early Stopping")
-#                         break
-#         elif early:
-#             if es.step(losses):
-#                 print("Early Stopping")
-#                 break
+        if validation:
+            if (epoch+1)%validation == 0:
+                torch.save(model.state_dict(), SAVE_PATH+"models/"+filename)
+                val_acc = validate_model(validation_dataset,filename)
+                if early:
+                    if es.step(val_acc):
+                        print("Early Stopping")
+                        break
+        elif early:
+            if es.step(losses):
+                print("Early Stopping")
+                break
         
     if verbose:
         save_graph(to, r, a, f, filename)
 
     torch.save(model.state_dict(), SAVE_PATH+"models/"+filename)
 
-def validate_model(val_dataset,device,filename,batch):
+def validate_model(val_dataset, filename):
     start = time.time()
     loaded_model = get_model_instance_segmentation(num_classes=NO_OF_CLASSES+1)
     loaded_model.load_state_dict(torch.load(SAVE_PATH+"models/"+filename))
@@ -234,7 +233,7 @@ def validate_model(val_dataset,device,filename,batch):
         if i%20 == 0:
             print(i)
         img, _ = val_dataset[i]
-        label_boxes = np.array(val_dataset[i][1]["boxes"])
+        label_boxes = np.array(val_dataset[i][1]["boxes"].cpu())
         loaded_model.eval()
 
         with torch.no_grad():
@@ -281,8 +280,8 @@ def test_model(test_dataset, device, filename,writer):
     total = 0
     ocr_fail = 0
     for i in range(len(test_dataset)):
-        img, _, resize_ratio = test_dataset[i]
-        label_boxes = np.array(test_dataset[i][1]["boxes"])
+        img, _ = test_dataset[i]
+        label_boxes = np.array(test_dataset[i][1]["boxes"].cpu())
         loaded_model.eval()
 
         with torch.no_grad():
@@ -518,13 +517,24 @@ def view_test_image(idx,test_dataset,filename):
                     str(score), font=font, fill=(255, 255, 255, 0))
     image = image.save("image_save_1/"+img_name)
 
-def split_trainset(trainset, validset, validation_split, random_seed):
+def split_trainset(trainset, validset, testset, validation_split, random_seed):
     dataset_size = len(trainset)
     indices = list(range(dataset_size))
-    split = int(np.floor(validation_split * dataset_size))
+    split_val = int(np.floor(validation_split * dataset_size))
     np.random.seed(random_seed)
     np.random.shuffle(indices)
-    val_indices = indices[:split]
+    val_indices = indices[0:split_val]
+
     imgs, targets = trainset.extract_data(idx_list=val_indices)
     validset.add_data(imgs, targets)
-    return trainset, validset
+
+    dataset_size_new = len(trainset)
+    indices = list(range(dataset_size_new))
+    split_test = int(np.floor(validation_split * dataset_size))
+    np.random.shuffle(indices)
+    test_indices = indices[0:split_test]
+
+    imgs, targets = trainset.extract_data(idx_list=test_indices)
+    testset.add_data(imgs, targets)
+
+    return trainset, validset, testset
