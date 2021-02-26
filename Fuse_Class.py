@@ -23,7 +23,7 @@ class FuseDataset(torch.utils.data.Dataset):
     def __init__(self, root, data_file, max_image_size, transforms=None, num_workers=NUM_WORKERS_RAY, save=False):
       self.transforms = transforms
       image_paths = sorted(os.listdir(os.path.join(root, "images"))) if root else []
-      #image_paths = image_paths[0:1000] if root else []
+      image_paths = image_paths[0:1000] if root else []
 
       annotations = pd.read_csv(data_file)
 
