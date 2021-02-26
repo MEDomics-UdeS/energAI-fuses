@@ -63,6 +63,7 @@ if __name__ == "__main__":
     print("Filename: ", filename)
 
     print("Train: ", args.train)
+    print("Validation: ", bool(args.validation))
     print("Test: ", args.test)
 
     print("Epochs: ", args.epochs)
@@ -81,7 +82,9 @@ if __name__ == "__main__":
         root=TRAIN_DATAPATH, data_file=SAVE_PATH + "annotations/" + ANNOTATION_FILE,
         max_image_size=args.size, transforms=get_transform(), save=False)
     test_dataset = FuseDataset(
-
+        root=None, data_file=SAVE_PATH + "annotations/" + ANNOTATION_FILE,
+        max_image_size=args.size, transforms=get_transform(), save=False)
+    val_dataset = FuseDataset(
         root=None, data_file=SAVE_PATH + "annotations/" + ANNOTATION_FILE,
         max_image_size=args.size, transforms=get_transform(), save=False)
 
@@ -90,27 +93,30 @@ if __name__ == "__main__":
     torch.manual_seed(args.random)
 
     total_dataset = copy.deepcopy(train_dataset)
-    train_dataset, test_dataset = split_trainset(train_dataset, test_dataset, TRAIN_TEST_SPLIT, args.random)
-    # val dataset to add
+    train_dataset, test_dataset, val_dataset = split_trainset(train_dataset, test_dataset, val_dataset,
+                                                              TRAIN_TEST_SPLIT, args.random)
 
     train_data_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=int(args.batch / args.gradient_accumulation),
         shuffle=True, num_workers=NUM_WORKERS_DL, collate_fn=collate_fn)
 
-    test_data_loader = torch.utils.data.DataLoader(
+    val_data_loader = torch.utils.data.DataLoader(
+        val_dataset, batch_size=int(args.batch / args.gradient_accumulation),
+        shuffle=False, num_workers=NUM_WORKERS_DL, collate_fn=collate_fn)
 
+    test_data_loader = torch.utils.data.DataLoader(
         test_dataset, batch_size=int(args.batch / args.gradient_accumulation),
         shuffle=False, num_workers=NUM_WORKERS_DL, collate_fn=collate_fn)
 
     device = torch.device(
         'cuda') if torch.cuda.is_available() else torch.device('cpu')
-    print("We have: {} examples, {} are training and {} testing".format(
-        len(total_dataset), len(train_dataset), len(test_dataset)))
+    print("We have: {} examples, {} are training, {} are validation and {} testing".format(
+        len(total_dataset), len(train_dataset), len(val_dataset), len(test_dataset)))
     writer = SummaryWriter("runs/" + filename)
     if args.train:
         train_model(args.epochs, args.gradient_accumulation, train_data_loader, device,
                     args.mixed_precision, True if args.gradient_accumulation > 1 else False, filename, args.verbose,
-                    writer)#,args.early,args.validation,val_dataset)
+                    writer, args.early, args.validation, val_dataset)
 
     if args.test:
         test_model(test_dataset, device, filename, writer)
