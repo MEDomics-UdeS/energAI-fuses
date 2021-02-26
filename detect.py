@@ -4,12 +4,14 @@ import os
 import torch
 import time
 from torch.utils.tensorboard import SummaryWriter
+import copy
+import ray
 
+ray.init(include_dashboard=False)
 
 from Fuse_Class import FuseDataset
-from fuse_config import (ANNOTATION_FILE, LEARNING_RATE, NO_OF_CLASSES,SAVE_PATH,
-                         TRAIN_DATAPATH, train_test_split_index)
-from helper_functions import collate_fn, get_transform, test_model, train_model, view_test_image
+from fuse_config import (ANNOTATION_FILE, SAVE_PATH, TRAIN_DATAPATH, TRAIN_TEST_SPLIT, NUM_WORKERS_DL)
+from helper_functions import collate_fn, get_transform, test_model, train_model, view_test_image, split_trainset
 
 if __name__ == "__main__":
 
@@ -20,7 +22,7 @@ if __name__ == "__main__":
     parser.add_argument('-ts', '--test', action="store_true",
                         help='test a model')
 
-    parser.add_argument('-tstf', '--testfile', action="store",type=str,
+    parser.add_argument('-tstf', '--testfile', action="store", type=str,
                         help='test a model with filename')
 
     parser.add_argument('-e', '--epochs', action="store",
@@ -28,29 +30,30 @@ if __name__ == "__main__":
     parser.add_argument('-b', '--batch', action="store",
                         type=int, help="Batch Size")
 
-    parser.add_argument('-d', '--downsample', action="store", type=int,
-                        help='downsample the data (takes an argument: max_resize value (int))')
+    parser.add_argument('-s', '--size', action="store", type=int,
+                        help='resize the images to size*size (takes an argument: max_resize value (int))',
+                        default=1000)
     parser.add_argument('-mp', '--mixed_precision', action="store_true",
                         help='to use mixed precision')
-    parser.add_argument('-g', '--gradient_accumulation', action="store_true",
-                        help='to use gradient acculmulation')
+    parser.add_argument('-g', '--gradient_accumulation', action="store", type=int,
+                        help='to use gradient accumulation (takes an argument: accumulation_size (int))',
+                        default=1)
 
     parser.add_argument('-r', '--random', action="store", type=int, required=False,
-                        help='to give a seed value')
-    parser.add_argument('-i', '--image', action="store",type=str,
+                        help='to give a seed value', default=1)
+    parser.add_argument('-i', '--image', action="store", type=str,
                         help='to view images, input - model name')
 
     parser.add_argument('-v', '--verbose', action="store_true",
                         help='to generate and save graphs')
     args = parser.parse_args()
 
-
     start = time.time()
     filename = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M")
-    filename = filename+"_e"+str(args.epochs)+"_b"+str(args.batch)+"_d"+str(args.downsample or '0') + \
-        "_mp"+str(int(args.mixed_precision))+"_g" + \
-        str(int(args.gradient_accumulation))
-    
+    filename = filename + "_e" + str(args.epochs) + "_b" + str(args.batch) + "_s" + str(args.size or '0') + \
+               "_mp" + str(int(args.mixed_precision)) + "_g" + \
+               str(int(args.gradient_accumulation))
+
     if args.image:
         filename = args.image
     print("Filename: ", filename)
@@ -61,60 +64,56 @@ if __name__ == "__main__":
     print("Epochs: ", args.epochs)
     print("Batch Size: ", args.batch)
 
-    print("Downsampling: ", args.downsample)
+    print("Size: ", args.size)
     print("Mixed Precision: ", args.mixed_precision)
-    print("Gradient Accumulation: ", args.gradient_accumulation)
+    print("Gradient Accumulation Size: ", args.gradient_accumulation)
 
     print("Random Seed: ", args.random)
     print("Save Plots: ", args.verbose)
-    print("-"*100)
-
-    resize = bool(args.downsample)
-    max_image_size = args.downsample if args.downsample else 1000
+    print("-" * 100)
 
     train_dataset = FuseDataset(
-        root=TRAIN_DATAPATH, data_file=SAVE_PATH +"annotations/" + ANNOTATION_FILE, max_image_size=max_image_size, resize=resize, transforms=get_transform())
+        root=TRAIN_DATAPATH, data_file=SAVE_PATH + "annotations/" + ANNOTATION_FILE,
+        max_image_size=args.size, transforms=get_transform(), save=False)
     test_dataset = FuseDataset(
-        root=TRAIN_DATAPATH, data_file=SAVE_PATH +"annotations/"+ ANNOTATION_FILE, max_image_size=max_image_size, resize=resize, transforms=get_transform())
+        root=None, data_file=SAVE_PATH + "annotations/" + ANNOTATION_FILE,
+        max_image_size=args.size, transforms=get_transform(), save=False)
 
-    # split the dataset in train and test set
-    if not args.random:
-        torch.manual_seed(1)
-    else:
-        torch.manual_seed(args.random)
-    indices = torch.randperm(len(train_dataset)).tolist()
-    total_dataset = train_dataset
-    train_dataset = torch.utils.data.Subset(
-        train_dataset, indices[:-train_test_split_index])
-    test_dataset = torch.utils.data.Subset(
-        test_dataset, indices[-train_test_split_index:])
+    start = time.time()
+
+    torch.manual_seed(args.random)
+
+    total_dataset = copy.deepcopy(train_dataset)
+    train_dataset, test_dataset = split_trainset(train_dataset, test_dataset, TRAIN_TEST_SPLIT, args.random)
 
     train_data_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=args.batch, shuffle=True, num_workers=1,
-        collate_fn=collate_fn)
+        train_dataset, batch_size=int(args.batch / args.gradient_accumulation),
+        shuffle=True, num_workers=NUM_WORKERS_DL, collate_fn=collate_fn)
+
     test_data_loader = torch.utils.data.DataLoader(
-        test_dataset, batch_size=args.batch, shuffle=False, num_workers=1,
-        collate_fn=collate_fn)
+        test_dataset, batch_size=int(args.batch / args.gradient_accumulation),
+        shuffle=False, num_workers=NUM_WORKERS_DL, collate_fn=collate_fn)
 
     device = torch.device(
         'cuda') if torch.cuda.is_available() else torch.device('cpu')
     print("We have: {} examples, {} are training and {} testing".format(
-        len(indices), len(train_dataset), len(test_dataset)))
-    writer = SummaryWriter("runs/"+filename)
+        len(total_dataset), len(train_dataset), len(test_dataset)))
+    writer = SummaryWriter("runs/" + filename)
     if args.train:
-        train_model(args.epochs, args.batch, train_data_loader, device,
-                    args.mixed_precision, args.gradient_accumulation, filename, args.verbose,writer)
+        train_model(args.epochs, args.gradient_accumulation, train_data_loader, device,
+                    args.mixed_precision, True if args.gradient_accumulation > 1 else False, filename, args.verbose,
+                    writer)
     if args.test:
-        test_model(test_dataset, device, filename,writer)
-    
+        test_model(test_dataset, device, filename, writer)
+
     if args.testfile:
         # test_model(total_dataset, device, args.testfile)
         test_model(test_dataset, device, args.testfile)
-    
+
     if args.image:
         for i in range(len(total_dataset)):
-            print(i,len(total_dataset),end=" ")
-            view_test_image(i,total_dataset,filename)
-    print("Time Taken (minutes): ",round((time.time() - start)/60,2))
+            print(i, len(total_dataset), end=" ")
+            view_test_image(i, total_dataset, filename)
+    print("Time Taken (minutes): ", round((time.time() - start) / 60, 2))
     writer.flush()
     writer.close()
