@@ -19,6 +19,8 @@ if __name__ == "__main__":
 
     parser.add_argument('-tr', '--train', action="store_true",
                         help='train a new model')
+    parser.add_argument('-val', '--validation', action="store",type=int,
+                        help='activate validation a model',default = 1)
     parser.add_argument('-ts', '--test', action="store_true",
                         help='test a model')
 
@@ -29,6 +31,8 @@ if __name__ == "__main__":
                         type=int, help="Number of Epochs")
     parser.add_argument('-b', '--batch', action="store",
                         type=int, help="Batch Size")
+    parser.add_argument('-es', '--early', action="store",
+                        type=int, help="Early Stopping")
 
     parser.add_argument('-s', '--size', action="store", type=int,
                         help='resize the images to size*size (takes an argument: max_resize value (int))',
@@ -43,7 +47,7 @@ if __name__ == "__main__":
                         help='to give a seed value', default=1)
     parser.add_argument('-i', '--image', action="store", type=str,
                         help='to view images, input - model name')
-
+    
     parser.add_argument('-v', '--verbose', action="store_true",
                         help='to generate and save graphs')
     args = parser.parse_args()
@@ -63,6 +67,7 @@ if __name__ == "__main__":
 
     print("Epochs: ", args.epochs)
     print("Batch Size: ", args.batch)
+    print("Early Stopping: ", args.early)
 
     print("Size: ", args.size)
     print("Mixed Precision: ", args.mixed_precision)
@@ -76,6 +81,7 @@ if __name__ == "__main__":
         root=TRAIN_DATAPATH, data_file=SAVE_PATH + "annotations/" + ANNOTATION_FILE,
         max_image_size=args.size, transforms=get_transform(), save=False)
     test_dataset = FuseDataset(
+
         root=None, data_file=SAVE_PATH + "annotations/" + ANNOTATION_FILE,
         max_image_size=args.size, transforms=get_transform(), save=False)
 
@@ -85,12 +91,14 @@ if __name__ == "__main__":
 
     total_dataset = copy.deepcopy(train_dataset)
     train_dataset, test_dataset = split_trainset(train_dataset, test_dataset, TRAIN_TEST_SPLIT, args.random)
+    # val dataset to add
 
     train_data_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=int(args.batch / args.gradient_accumulation),
         shuffle=True, num_workers=NUM_WORKERS_DL, collate_fn=collate_fn)
 
     test_data_loader = torch.utils.data.DataLoader(
+
         test_dataset, batch_size=int(args.batch / args.gradient_accumulation),
         shuffle=False, num_workers=NUM_WORKERS_DL, collate_fn=collate_fn)
 
@@ -102,18 +110,19 @@ if __name__ == "__main__":
     if args.train:
         train_model(args.epochs, args.gradient_accumulation, train_data_loader, device,
                     args.mixed_precision, True if args.gradient_accumulation > 1 else False, filename, args.verbose,
-                    writer)
+                    writer)#,args.early,args.validation,val_dataset)
+
     if args.test:
         test_model(test_dataset, device, filename, writer)
 
     if args.testfile:
-        # test_model(total_dataset, device, args.testfile)
-        test_model(test_dataset, device, args.testfile)
-
+        test_model(test_dataset, device, args.testfile,writer)
+    
     if args.image:
         for i in range(len(total_dataset)):
-            print(i, len(total_dataset), end=" ")
-            view_test_image(i, total_dataset, filename)
-    print("Time Taken (minutes): ", round((time.time() - start) / 60, 2))
+            print(i,len(total_dataset),end=" ")
+            view_test_image(i,total_dataset,filename)
+    print("Total Time Taken (minutes): ",round((time.time() - start)/60,2))
+
     writer.flush()
     writer.close()
