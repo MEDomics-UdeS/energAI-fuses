@@ -1,11 +1,12 @@
 import subprocess as sp
 import time
+
 # Help Call
 # sp.run(['python3', 'detect.py', '-h'])
-epoch_list = [5, 10, 15]
-batch_list = [16, 20]
-mp = [0, 1]
-g = [0, 1]
+epoch_list = [10]
+batch_list = [10]
+mp = [0]
+g = [0]
 count = 0
 cmd_list = []
 for i in epoch_list:
@@ -31,15 +32,11 @@ for i in epoch_list:
 
 # print(cmd_list[-1],count)
 # exit()
-cmds = [['python3', 'detect.py', '--train', '--epochs', '1', '--batch', '10', '--verbose'],
-        ['python3', 'detect.py', '--train', '--epochs', '1',
-            '--batch', '4', '--downsample', '1000', '--verbose'],
-        ['python3', 'detect.py', '--train', '--epochs', '1',
-            '--batch', '1', '--mixed_precision', '--verbose'],
-        ['python3', 'detect.py', '--train', '--epochs', '1', '--batch', '1', '--gradient_accumulation', '--verbose']]
-
+#cmds = [['python3', 'detect.py', '--train', '--epochs', '1', '--batch', '10', '--downsample', '500', '-g', '--verbose'],
+#        ['python3', 'detect.py', '--train', '--epochs', '1', '--batch', '10', '--downsample', '500', '--verbose']]
+cmds = [['python3', 'detect.py', '--train', '--epochs', '5', '--batch', '10', '--s', '1000', '-g', '1', '--verbose']]
 start = time.time()
-for cmd in cmd_list:
+for cmd in cmds:
     print(cmd)
     p = sp.Popen(cmd)
     p.wait()
