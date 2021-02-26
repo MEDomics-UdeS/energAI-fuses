@@ -4,7 +4,7 @@ import re
 import traceback
 from itertools import chain
 import pandas as pd
-
+import time
 
 import cv2
 import matplotlib.pyplot as plt
@@ -21,7 +21,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 from fuse_config import (LEARNING_RATE, NO_OF_CLASSES,
                          TRAIN_DATAPATH, SAVE_PATH, class_dictionary)
-
+from early_stopping import EarlyStopping
 """
 converts the image to a tensor
 """
@@ -68,12 +68,13 @@ def save_graph(t, r, a, f, filename):
     plt.savefig(SAVE_PATH+"/plots/"+filename+'.png')
 
 
-def train_model(epochs, batch_size, train_data_loader, device, mixed_precision, gradient_accumulation, filename, verbose,writer):
+def train_model(epochs, batch_size, train_data_loader, device, mixed_precision, gradient_accumulation, filename, verbose, writer, early,validation,validation_dataset):
     model = get_model_instance_segmentation(NO_OF_CLASSES+1)
-
+    
     # move model to the right device
     model.to(device)
-
+    if early:
+        es = EarlyStopping(patience=early)
     # parameters
     params = [p for p in model.parameters() if p.requires_grad]
     optimizer = torch.optim.SGD(
@@ -86,7 +87,7 @@ def train_model(epochs, batch_size, train_data_loader, device, mixed_precision, 
     f = []
     if mixed_precision:
         scaler = amp.grad_scaler.GradScaler(enabled=mixed_precision)
-    for epoch in range(epochs+1):
+    for epoch in range(epochs):
         model.train()
         i = 0
         losses = 0
@@ -102,11 +103,6 @@ def train_model(epochs, batch_size, train_data_loader, device, mixed_precision, 
                 annotations = [{k: v.to(device) for k, v in t.items()}
                                for t in annotations]
                 
-                # to.append(torch.cuda.get_device_properties(0).total_memory*1e-9)
-                # r.append(torch.cuda.memory_reserved(0)*1e-9)
-                # a.append(torch.cuda.memory_allocated(0)*1e-9)
-                # f.append(torch.cuda.memory_reserved(0)*1e-9 -
-                #          torch.cuda.memory_allocated(0)*1e-9)
 
                 if gradient_accumulation and mixed_precision:
                     with amp.autocast(enabled=mixed_precision):
@@ -126,7 +122,7 @@ def train_model(epochs, batch_size, train_data_loader, device, mixed_precision, 
                     
                          
                     scaler.scale(losses).backward()
-                    if (i+1) % batch_size == 0:
+                    if (i+1) % 10 == 0:
                         scaler.step(optimizer)
                         scaler.update()
                         optimizer.zero_grad(set_to_none=True)
@@ -147,7 +143,7 @@ def train_model(epochs, batch_size, train_data_loader, device, mixed_precision, 
 
 
                     losses.backward()
-                    if (i+1) % batch_size == 0:
+                    if (i+1) % 10 == 0:
                         optimizer.step()
                         optimizer.zero_grad()
                 elif not gradient_accumulation and mixed_precision:
@@ -171,12 +167,6 @@ def train_model(epochs, batch_size, train_data_loader, device, mixed_precision, 
                     scaler.update()
                     optimizer.zero_grad(set_to_none=True)
                 elif not gradient_accumulation and not mixed_precision:
-                    # to.append(torch.cuda.get_device_properties(0).total_memory*1e-9)
-                    # r.append(torch.cuda.memory_reserved(0)*1e-9)
-                    # a.append(torch.cuda.memory_allocated(0)*1e-9)
-                    # f.append(torch.cuda.memory_reserved(0)*1e-9 -
-                    #      torch.cuda.memory_allocated(0)*1e-9)
-
                     loss_dict = model(imgs, annotations)
 
                     to.append(torch.cuda.get_device_properties(0).total_memory*1e-9)
@@ -231,9 +221,67 @@ def train_model(epochs, batch_size, train_data_loader, device, mixed_precision, 
                 traceback.print_exc()
                 # print(annotations)
                 continue
+        
+        if validation:
+            if (epoch+1)%validation == 0:
+                torch.save(model.state_dict(), SAVE_PATH+"models/"+filename)
+                val_acc = validate_model(validation_dataset,device,filename,batch_size)
+                if early:
+                    if es.step(val_acc):
+                        print("Early Stopping")
+                        break
+        elif early:
+            if es.step(losses):
+                print("Early Stopping")
+                break
+        
     if verbose:
         save_graph(to, r, a, f, filename)
     torch.save(model.state_dict(), SAVE_PATH+"models/"+filename)
+
+def validate_model(val_dataset,device,filename,batch):
+    start = time.time()
+    loaded_model = get_model_instance_segmentation(num_classes=NO_OF_CLASSES+1)
+    loaded_model.load_state_dict(torch.load(SAVE_PATH+"models/"+filename))
+    label_counter = 0
+    total = 0
+    for i in range(len(val_dataset)):
+        if i%20 == 0:
+            print(i)
+        img, _ = val_dataset[i]
+        label_boxes = np.array(val_dataset[i][1]["boxes"])
+        loaded_model.eval()
+
+        with torch.no_grad():
+            prediction = loaded_model([img])
+            dict1 = []
+            for elem in range(len(label_boxes)):
+                label = val_dataset[i][1]["labels"][elem].cpu().numpy()
+                label = list(class_dictionary.keys())[
+                    list(class_dictionary.values()).index(label)]
+                dict1.append({"label": label, "boxes": label_boxes[elem]})
+                total+=1
+            for element in range(len(prediction[0]["boxes"])):
+                boxes = prediction[0]["boxes"][element].cpu().numpy()
+                score = np.round(
+                    prediction[0]["scores"][element].cpu().numpy(), decimals=4)
+                label = prediction[0]["labels"][element].cpu().numpy()
+                label = list(class_dictionary.keys())[
+                    list(class_dictionary.values()).index(label)]
+                try:
+                    label_match = 0
+                    if score > 0.7:
+                        label_match = iou(label, boxes, dict1, score, _[
+                                        'name'],i)
+                    else:
+                        pass
+                    label_counter += label_match
+                except Exception as e:
+                    print(e)
+
+    print("Validation Accuracy:", label_counter/total)
+    print("Time for Validation: ",round((time.time() - start)/60,2))
+    return label_counter/total
 
 
 def test_model(test_dataset, device, filename,writer):
@@ -335,7 +383,7 @@ def iou(label, box1, box2, score, name, index,label_ocr="No OCR"):
             name, "None", label, label_index, score1 , "None"))
         return 0
     if box2[label_index]["label"] == label:
-        return 1
+        return float(score1)
     else:
         return 0
 
