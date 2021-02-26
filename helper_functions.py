@@ -20,7 +20,7 @@ from tqdm.auto import tqdm
 from PIL import Image, ImageDraw, ImageFont
 
 from fuse_config import (LEARNING_RATE, NO_OF_CLASSES,
-                         TRAIN_DATAPATH, SAVE_PATH, class_dictionary)
+                         TRAIN_DATAPATH, SAVE_PATH, class_dictionary, GRAD_CLIP)
 
 """
 converts the image to a tensor
@@ -68,7 +68,9 @@ def save_graph(t, r, a, f, filename):
     plt.savefig(SAVE_PATH+"/plots/"+filename+'.png')
 
 
-def train_model(epochs, batch_size, train_data_loader, device, mixed_precision, gradient_accumulation, filename, verbose,writer):
+def train_model(epochs, accumulation_size, train_data_loader, device, mixed_precision, gradient_accumulation, filename, verbose,writer):
+    torch.backends.cudnn.benchmark = True
+
     model = get_model_instance_segmentation(NO_OF_CLASSES+1)
 
     # move model to the right device
@@ -86,30 +88,22 @@ def train_model(epochs, batch_size, train_data_loader, device, mixed_precision, 
     f = []
     if mixed_precision:
         scaler = amp.grad_scaler.GradScaler(enabled=mixed_precision)
-    for epoch in range(epochs+1):
-        resize_ratios_all = []
+    step = -1
+    for epoch in range(epochs):
         model.train()
         i = 0
         losses = 0
         if gradient_accumulation:
             optimizer.zero_grad()
-        # pbar = tqdm(train_data_loader, desc=f'Epoch {epoch}',position=0, leave=True)
 
-        for imgs, annotations, resize_ratios in train_data_loader:
+        for imgs, annotations in train_data_loader:
             i += 1
+            step += 1
             try:
-                imgs = list(img.to(device) for img in imgs)
+                imgs = torch.stack(imgs).to(device)
 
                 annotations = [{k: v.to(device) for k, v in t.items()}
                                for t in annotations]
-
-                resize_ratios_all.extend(list(resize_ratios))
-                
-                # to.append(torch.cuda.get_device_properties(0).total_memory*1e-9)
-                # r.append(torch.cuda.memory_reserved(0)*1e-9)
-                # a.append(torch.cuda.memory_allocated(0)*1e-9)
-                # f.append(torch.cuda.memory_reserved(0)*1e-9 -
-                #          torch.cuda.memory_allocated(0)*1e-9)
 
                 if gradient_accumulation and mixed_precision:
                     with amp.autocast(enabled=mixed_precision):
@@ -121,15 +115,11 @@ def train_model(epochs, batch_size, train_data_loader, device, mixed_precision, 
                     a.append(torch.cuda.memory_allocated(0)*1e-9)
                     f.append(torch.cuda.memory_reserved(0)*1e-9 -
                          torch.cuda.memory_allocated(0)*1e-9)
-
-                    writer.add_scalar("Loss/train", losses, epoch)
-                    writer.add_scalar("Memory/reserved", r[-1], epoch)
-                    writer.add_scalar("Memory/allocated", a[-1], epoch)
-                    writer.add_scalar("Memory/free", f[-1], epoch)
-                    
                          
                     scaler.scale(losses).backward()
-                    if (i+1) % batch_size == 0:
+                    if (i+1) % accumulation_size == 0:
+                        scaler.unscale_(optimizer)
+                        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=GRAD_CLIP)
                         scaler.step(optimizer)
                         scaler.update()
                         optimizer.zero_grad(set_to_none=True)
@@ -143,14 +133,9 @@ def train_model(epochs, batch_size, train_data_loader, device, mixed_precision, 
                     f.append(torch.cuda.memory_reserved(0)*1e-9 -
                          torch.cuda.memory_allocated(0)*1e-9)
 
-                    writer.add_scalar("Loss/train", losses, epoch)
-                    writer.add_scalar("Memory/reserved", r[-1], epoch)
-                    writer.add_scalar("Memory/allocated", a[-1], epoch)
-                    writer.add_scalar("Memory/free", f[-1], epoch)
-
-
                     losses.backward()
-                    if (i+1) % batch_size == 0:
+                    if (i+1) % accumulation_size == 0:
+                        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=GRAD_CLIP)
                         optimizer.step()
                         optimizer.zero_grad()
                 elif not gradient_accumulation and mixed_precision:
@@ -163,23 +148,12 @@ def train_model(epochs, batch_size, train_data_loader, device, mixed_precision, 
                     a.append(torch.cuda.memory_allocated(0)*1e-9)
                     f.append(torch.cuda.memory_reserved(0)*1e-9 -
                          torch.cuda.memory_allocated(0)*1e-9)
-                    
-                    writer.add_scalar("Loss/train", losses, epoch)
-                    writer.add_scalar("Memory/reserved", r[-1], epoch)
-                    writer.add_scalar("Memory/allocated", a[-1], epoch)
-                    writer.add_scalar("Memory/free", f[-1], epoch)
 
                     scaler.scale(losses).backward()
                     scaler.step(optimizer)
                     scaler.update()
                     optimizer.zero_grad(set_to_none=True)
                 elif not gradient_accumulation and not mixed_precision:
-                    # to.append(torch.cuda.get_device_properties(0).total_memory*1e-9)
-                    # r.append(torch.cuda.memory_reserved(0)*1e-9)
-                    # a.append(torch.cuda.memory_allocated(0)*1e-9)
-                    # f.append(torch.cuda.memory_reserved(0)*1e-9 -
-                    #      torch.cuda.memory_allocated(0)*1e-9)
-
                     loss_dict = model(imgs, annotations)
 
                     to.append(torch.cuda.get_device_properties(0).total_memory*1e-9)
@@ -190,29 +164,20 @@ def train_model(epochs, batch_size, train_data_loader, device, mixed_precision, 
 
                     losses = sum(loss for loss in loss_dict.values())
 
-                    writer.add_scalar("Loss/train", losses, epoch)
-                    writer.add_scalar("Memory/reserved", r[-1], epoch)
-                    writer.add_scalar("Memory/allocated", a[-1], epoch)
-                    writer.add_scalar("Memory/free", f[-1], epoch)
-
                     optimizer.zero_grad()
                     losses.backward()
                     optimizer.step()
+
+                writer.add_scalar("Loss/train", losses, step)
+                writer.add_scalar("Memory/reserved", r[-1], step)
+                writer.add_scalar("Memory/allocated", a[-1], step)
+                writer.add_scalar("Memory/free", f[-1], step)
 
                 if i%10 == 0:
                     print(
                         f'[Epoch: {epoch}] Iteration: {i}/{len_dataloader}, Loss: {losses}')
                 del imgs, annotations, loss_dict
                 torch.cuda.empty_cache()
-
-                # print(torch.cuda.memory_summary(device))
-
-                # to.append(torch.cuda.get_device_properties(0).total_memory*1e-9)
-                # r.append(torch.cuda.memory_reserved(0)*1e-9)
-                # a.append(torch.cuda.memory_allocated(0)*1e-9)
-                # f.append(torch.cuda.memory_reserved(0)*1e-9 -
-                #          torch.cuda.memory_allocated(0)*1e-9)  # free inside reserved
-                # # pbar.set_postfix({'loss': losses.item()})
 
             except Exception as e:
                 print(e)
@@ -232,15 +197,11 @@ def train_model(epochs, batch_size, train_data_loader, device, mixed_precision, 
                          torch.cuda.memory_allocated(0)*1e-9)
 
                 traceback.print_exc()
-                # print(annotations)
                 continue
-        average_ratio = sum(resize_ratios_all) / len(resize_ratios_all)
-        print(f'[Epoch: {epoch}] Average downsampling ratio : {average_ratio:.2%}')
-        print(f'[Epoch: {epoch}] Maximum downsampling ratio : {max(resize_ratios_all):.2%}')
-        print(f'[Epoch: {epoch}] Minimum downsampling ratio : {min(resize_ratios_all):.2%}')
 
     if verbose:
         save_graph(to, r, a, f, filename)
+
     torch.save(model.state_dict(), SAVE_PATH+"models/"+filename)
 
 
@@ -492,3 +453,14 @@ def view_test_image(idx,test_dataset,filename):
             draw.text((boxes[0]-1, boxes[3]), text=label + " " +
                     str(score), font=font, fill=(255, 255, 255, 0))
     image = image.save("image_save_1/"+img_name)
+
+def split_trainset(trainset, validset, validation_split, random_seed):
+    dataset_size = len(trainset)
+    indices = list(range(dataset_size))
+    split = int(np.floor(validation_split * dataset_size))
+    np.random.seed(random_seed)
+    np.random.shuffle(indices)
+    val_indices = indices[:split]
+    imgs, targets = trainset.extract_data(idx_list=val_indices)
+    validset.add_data(imgs, targets)
+    return trainset, validset
