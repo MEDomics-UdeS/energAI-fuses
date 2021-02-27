@@ -231,16 +231,16 @@ def validate_model(val_dataset, filename):
     total = 0
     for i in range(len(val_dataset)):
         if i%20 == 0:
-            print(i)
-        img, _ = val_dataset[i]
-        label_boxes = np.array(val_dataset[i][1]["boxes"].cpu())
+            print(i,end=" ")
+        
+        img, targets = val_dataset[i]
+        label_boxes = targets["boxes"].detach().cpu().numpy()
         loaded_model.eval()
-
         with torch.no_grad():
             prediction = loaded_model([img])
             dict1 = []
             for elem in range(len(label_boxes)):
-                label = val_dataset[i][1]["labels"][elem].cpu().numpy()
+                label = targets["labels"][elem].detach().cpu().numpy()
                 label = list(class_dictionary.keys())[
                     list(class_dictionary.values()).index(label)]
                 dict1.append({"label": label, "boxes": label_boxes[elem]})
@@ -255,7 +255,7 @@ def validate_model(val_dataset, filename):
                 try:
                     label_match = 0
                     if score > 0.7:
-                        label_match = iou(label, boxes, dict1, score, _[
+                        label_match = iou(label, boxes, dict1, score, targets[
                                         'name'],i)
                     else:
                         pass
@@ -263,7 +263,7 @@ def validate_model(val_dataset, filename):
                 except Exception as e:
                     print(e)
 
-    print("Validation Accuracy:", label_counter/total)
+    print("\nValidation Accuracy:", label_counter/total)
     print("Time for Validation: ",round((time.time() - start)/60,2))
     return label_counter/total
 
@@ -280,15 +280,15 @@ def test_model(test_dataset, device, filename,writer):
     total = 0
     ocr_fail = 0
     for i in range(len(test_dataset)):
-        img, _ = test_dataset[i]
-        label_boxes = np.array(test_dataset[i][1]["boxes"].cpu())
+        img, targets = test_dataset[i]
+        label_boxes = targets["boxes"].detach().cpu().numpy()
         loaded_model.eval()
 
         with torch.no_grad():
             prediction = loaded_model([img])
             dict1 = []
             for elem in range(len(label_boxes)):
-                label = test_dataset[i][1]["labels"][elem].cpu().numpy()
+                label = targets["labels"][elem].cpu().numpy()
                 label = list(class_dictionary.keys())[
                     list(class_dictionary.values()).index(label)]
                 dict1.append({"label": label, "boxes": label_boxes[elem]})
@@ -304,8 +304,8 @@ def test_model(test_dataset, device, filename,writer):
                     label_match = 0
                     if score > 0.7:
                         # label_via_ocr = label_ocr(_['name'], boxes, label)
-                        label_match = iou(label, boxes, dict1, score, _[
-                                        'name'],i)
+                        label_match = iou(label, boxes, dict1, score, targets[
+                                        'name'],i,"No OCR",True)
                         
                         # if label == label_via_ocr:
                         #     ocr_counter += 1
@@ -330,7 +330,7 @@ def test_model(test_dataset, device, filename,writer):
     writer.add_scalar("Accuracy/test",label_counter/total,1)
 
 
-def iou(label, box1, box2, score, name, index,label_ocr="No OCR"):
+def iou(label, box1, box2, score, name, index,label_ocr="No OCR",print=False):
     name = ''.join(chr(i) for i in name)
     # print('{:^30}'.format(name[-1]))
     iou_list = []
@@ -359,12 +359,13 @@ def iou(label, box1, box2, score, name, index,label_ocr="No OCR"):
             print(iou_list)
             continue
     score1 = '%.2f'%(score)
-    try:
-        print('{:^3} {:^20} {:^20} {:^25} {:^20} {:^10} {:^10}'.format(index,
-            name, box2[label_index]["label"], label, label_index, score1 , round(max(iou_list),2)))
-    except:
-        print('{:^3} {:^20} {:^20} {:^25} {:^20} {:^10} {:^10}'.format(index,
-            name, "None", label, label_index, score1 , "None"))
+    if print:
+        try:
+            print('{:^3} {:^20} {:^20} {:^25} {:^20} {:^10} {:^10}'.format(index,
+                name, box2[label_index]["label"], label, label_index, score1 , round(max(iou_list),2)))
+        except:
+            print('{:^3} {:^20} {:^20} {:^25} {:^20} {:^10} {:^10}'.format(index,
+                name, "None", label, label_index, score1 , "None"))
         return 0
     if box2[label_index]["label"] == label:
         return float(score1)
@@ -479,11 +480,11 @@ def label_ocr(img, box, label):
 def view_test_image(idx,test_dataset,filename):
     loaded_model = get_model_instance_segmentation(num_classes=NO_OF_CLASSES+1)
     loaded_model.load_state_dict(torch.load(SAVE_PATH+"models/"+filename))
-    img, _ = test_dataset[idx]
-    img_name = ''.join(chr(i) for i in _['name'])
+    img, targets = test_dataset[idx]
+    img_name = ''.join(chr(i) for i in targets['name'])
     print(img_name)
     
-    label_boxes = np.array(test_dataset[idx][1]["boxes"])
+    label_boxes = targets['boxes'].detach().cpu().numpy()
     # put the model in evaluation mode
     loaded_model.eval()
     with torch.no_grad():
