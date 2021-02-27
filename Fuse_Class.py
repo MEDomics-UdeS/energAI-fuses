@@ -23,7 +23,7 @@ class FuseDataset(torch.utils.data.Dataset):
     def __init__(self, root, data_file, max_image_size, transforms=None, num_workers=NUM_WORKERS_RAY, save=False):
       self.transforms = transforms
       image_paths = sorted(os.listdir(os.path.join(root, "images"))) if root else []
-      image_paths = image_paths[0:1000] if root else []
+    #   image_paths = image_paths[0:100] if root else []
 
       annotations = pd.read_csv(data_file)
 
@@ -42,7 +42,7 @@ class FuseDataset(torch.utils.data.Dataset):
 
         nb_job_left = size - num_workers
 
-        for _ in trange(size, desc='Parallelizing...'):
+        for _ in range(size):
             ready, not_ready = ray.wait(ids, num_returns=1)
             ids = not_ready
             result = ray.get(ready)[0]
@@ -79,8 +79,7 @@ class FuseDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
       if self.transforms is not None:
-        self.imgs[idx] = self.transforms(self.imgs[idx])
-
+        return self.transforms(self.imgs[idx]), self.targets[idx]
       return self.imgs[idx], self.targets[idx]
 
     def __len__(self):

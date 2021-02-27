@@ -114,10 +114,11 @@ if __name__ == "__main__":
         len(total_dataset), len(train_dataset), len(val_dataset), len(test_dataset)))
     writer = SummaryWriter("runs/" + filename)
     if args.train:
+        train_start = time.time()
         train_model(args.epochs, args.gradient_accumulation, train_data_loader, device,
                     args.mixed_precision, True if args.gradient_accumulation > 1 else False, filename, args.verbose,
                     writer, args.early, args.validation, val_dataset)
-
+        print("Total Time Taken (minutes): ",round((time.time() - train_start)/60,2))
     if args.test:
         test_model(test_dataset, device, filename, writer)
 
