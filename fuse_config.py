@@ -1,10 +1,10 @@
 LEARNING_RATE = 0.005
 GRAD_CLIP = 5
-TRAIN_DATAPATH = '/home/simon/Documents/FuseDataFull/'
-SAVE_PATH = '/home/simon/Documents/FuseDataFull/'
-RESIZED_IMAGES_SAVE_PATH = '/home/simon/Documents/image_save_test/'
+TRAIN_DATAPATH = '/data/energAI/FuseDataFull/'
+SAVE_PATH = '/home/local/USHERBROOKE/kuls3101/fuse_detection/'
+RESIZED_IMAGES_SAVE_PATH = '/data/energAI/image_save_test/'
 ANNOTATION_FILE = "annotation_sgl.csv"
-TRAIN_TEST_SPLIT =  0.2
+TRAIN_TEST_SPLIT =  0.1
 NO_OF_CLASSES = 10
 NUM_WORKERS_RAY = 64
 NUM_WORKERS_DL = 4

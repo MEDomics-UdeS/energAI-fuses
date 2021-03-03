@@ -210,7 +210,7 @@ def train_model(epochs, accumulation_size, train_data_loader, device, mixed_prec
                 torch.save(model.state_dict(), SAVE_PATH+"models/"+filename)
                 val_acc = validate_model(validation_dataset,filename)
                 if early:
-                    if es.step(val_acc):
+                    if es.step(torch.as_tensor(val_acc, dtype=torch.float16)):
                         print("Early Stopping")
                         break
         elif early:
@@ -262,6 +262,8 @@ def validate_model(val_dataset, filename):
                     label_counter += label_match
                 except Exception as e:
                     print(e)
+                    traceback.print_exc()
+
 
     print("\nValidation Accuracy:", label_counter/total)
     print("Time for Validation: ",round((time.time() - start)/60,2))
@@ -330,7 +332,7 @@ def test_model(test_dataset, device, filename,writer):
     writer.add_scalar("Accuracy/test",label_counter/total,1)
 
 
-def iou(label, box1, box2, score, name, index,label_ocr="No OCR",print=False):
+def iou(label, box1, box2, score, name, index,label_ocr="No OCR",verbose=False):
     name = ''.join(chr(i) for i in name)
     # print('{:^30}'.format(name[-1]))
     iou_list = []
@@ -359,14 +361,13 @@ def iou(label, box1, box2, score, name, index,label_ocr="No OCR",print=False):
             print(iou_list)
             continue
     score1 = '%.2f'%(score)
-    if print:
+    if verbose:
         try:
             print('{:^3} {:^20} {:^20} {:^25} {:^20} {:^10} {:^10}'.format(index,
                 name, box2[label_index]["label"], label, label_index, score1 , round(max(iou_list),2)))
         except:
             print('{:^3} {:^20} {:^20} {:^25} {:^20} {:^10} {:^10}'.format(index,
                 name, "None", label, label_index, score1 , "None"))
-        return 0
     if box2[label_index]["label"] == label:
         return float(score1)
     else:
