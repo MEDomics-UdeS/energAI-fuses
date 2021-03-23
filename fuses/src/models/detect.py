@@ -5,6 +5,10 @@ import time
 from torch.utils.tensorboard import SummaryWriter
 import copy
 import ray
+import os
+import sys
+
+sys.path.insert(0, f'{os.getcwd()}')
 
 from fuses.src.data.Fuse_Class import FuseDataset
 from fuses.fuse_config import (ANNOTATION_FILE, SAVE_PATH, TRAIN_DATAPATH, TRAIN_TEST_SPLIT, NUM_WORKERS_DL)
@@ -54,7 +58,7 @@ if __name__ == "__main__":
 
     start = time.time()
     filename = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M")
-    filename = f"filename_e{args.epoch}_b{args.batch}_s{args.size}_mp{int(args.mixed_precision)}" \
+    filename = f"filename_e{args.epochs}_b{args.batch}_s{args.size}_mp{int(args.mixed_precision)}" \
                f"_g{int(args.gradient_accumulation)}"
 
     if args.image:

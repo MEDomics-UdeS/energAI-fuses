@@ -1,8 +1,8 @@
 LEARNING_RATE = 0.005
 GRAD_CLIP = 5
-TRAIN_DATAPATH = '/media/simon/NVMe/Google Drive/Maîtrise SGL CIMA+/General/FuseDataFull/'
-SAVE_PATH = '/media/simon/NVMe/Google Drive/Maîtrise SGL CIMA+/General/FuseDataFull/'
-RESIZED_IMAGES_SAVE_PATH = '/media/simon/NVMe/image_save_test/'
+TRAIN_DATAPATH = '/home/simon/Documents/FuseDataFull/'
+SAVE_PATH = '/home/simon/Documents/FuseDataFull/'
+RESIZED_IMAGES_SAVE_PATH = '/home/simon/Documents/image_save_test/'
 ANNOTATION_FILE = "annotation_sgl.csv"
 TRAIN_TEST_SPLIT = 0.1
 NO_OF_CLASSES = 10

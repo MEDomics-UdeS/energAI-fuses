@@ -3,11 +3,10 @@ import torch.utils.data
 import os
 from PIL import Image, ImageDraw
 import pandas as pd
-from fuses.fuse_config import class_dictionary, NUM_WORKERS_RAY, RESIZED_IMAGES_SAVE_PATH
-from tqdm import trange
 import ray
 import numpy as np
 
+from fuses.fuse_config import class_dictionary, NUM_WORKERS_RAY, RESIZED_IMAGES_SAVE_PATH
 """
 The Dataset class
 used to build the dataset

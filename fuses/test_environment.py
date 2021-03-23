@@ -1,4 +1,5 @@
 import sys
+import os
 import subprocess as sp
 import time
 
@@ -50,7 +51,7 @@ if __name__ == '__main__':
     # cmds = [['python3', 'detect.py', '--train', '--epochs', '1', '--batch', '10', '--downsample', '500', '-g',
     #          '--verbose'],
     #        ['python3', 'detect.py', '--train', '--epochs', '1', '--batch', '10', '--downsample', '500', '--verbose']]
-    cmds = [['python3', 'src/models/detect.py', '--train', '--epochs', '5', '--batch', '1',
+    cmds = [['python3', 'fuses/src/models/detect.py', '--train', '--epochs', '5', '--batch', '1',
              '--s', '1000', '-g', '1', '--verbose']]
     start = time.time()
     for cmd in cmds:
