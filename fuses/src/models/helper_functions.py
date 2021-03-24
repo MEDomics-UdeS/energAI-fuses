@@ -17,7 +17,7 @@ import torchvision
 from PIL import Image, ImageDraw, ImageFont
 from fuzzywuzzy import fuzz
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
-
+from torchvision import transforms
 from early_stopping import EarlyStopping
 from fuses.fuse_config import (LEARNING_RATE, NO_OF_CLASSES,
                                TRAIN_DATAPATH, SAVE_PATH, class_dictionary, GRAD_CLIP)
@@ -27,9 +27,19 @@ converts the image to a tensor
 """
 
 
-def get_transform():
-    custom_transforms = [torchvision.transforms.ToTensor()]
-    return torchvision.transforms.Compose(custom_transforms)
+def train_transform():
+    custom_transforms = [
+        transforms.ColorJitter(0.25, 0.25, 0.25, 0.25),
+        transforms.ToTensor()
+    ]
+    return transforms.Compose(custom_transforms)
+
+
+def base_transform():
+    custom_transforms = [
+        transforms.ToTensor()
+    ]
+    return transforms.Compose(custom_transforms)
 
 
 def collate_fn(batch):

@@ -12,8 +12,8 @@ sys.path.insert(0, f'{os.getcwd()}')
 
 from fuses.src.data.Fuse_Class import FuseDataset
 from fuses.fuse_config import (ANNOTATION_FILE, SAVE_PATH, TRAIN_DATAPATH, TRAIN_TEST_SPLIT, NUM_WORKERS_DL)
-from fuses.src.models.helper_functions import collate_fn, get_transform, test_model, train_model, view_test_image, \
-    split_trainset
+from fuses.src.models.helper_functions import collate_fn, base_transform, train_transform, test_model, train_model, \
+    view_test_image, split_trainset
 
 ray.init(include_dashboard=False)
 
@@ -83,13 +83,13 @@ if __name__ == "__main__":
 
     train_dataset = FuseDataset(
         root=TRAIN_DATAPATH, data_file=SAVE_PATH + "annotations/" + ANNOTATION_FILE,
-        max_image_size=args.size, transforms=get_transform(), save=False)
+        max_image_size=args.size, transforms=train_transform(), save=False)
     test_dataset = FuseDataset(
         root=None, data_file=SAVE_PATH + "annotations/" + ANNOTATION_FILE,
-        max_image_size=args.size, transforms=get_transform(), save=False)
+        max_image_size=args.size, transforms=base_transform(), save=False)
     val_dataset = FuseDataset(
         root=None, data_file=SAVE_PATH + "annotations/" + ANNOTATION_FILE,
-        max_image_size=args.size, transforms=get_transform(), save=False)
+        max_image_size=args.size, transforms=base_transform(), save=False)
 
     start = time.time()
 
