@@ -19,8 +19,8 @@ from fuzzywuzzy import fuzz
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from torchvision import transforms
 from early_stopping import EarlyStopping
-from fuses.fuse_config import (LEARNING_RATE, NO_OF_CLASSES,
-                               TRAIN_DATAPATH, SAVE_PATH, class_dictionary, GRAD_CLIP)
+from fuse_config import (LEARNING_RATE, NO_OF_CLASSES,
+                         TRAIN_DATAPATH, SAVE_PATH, class_dictionary, GRAD_CLIP)
 
 """
 converts the image to a tensor

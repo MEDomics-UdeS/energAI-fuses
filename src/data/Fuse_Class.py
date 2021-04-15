@@ -6,7 +6,7 @@ import pandas as pd
 import ray
 import numpy as np
 
-from fuses.fuse_config import class_dictionary, NUM_WORKERS_RAY, RESIZED_IMAGES_SAVE_PATH
+from fuse_config import class_dictionary, NUM_WORKERS_RAY, RESIZED_IMAGES_SAVE_PATH
 
 """
 The Dataset class

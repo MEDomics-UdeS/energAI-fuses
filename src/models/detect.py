@@ -7,18 +7,21 @@ import copy
 import ray
 import os
 import sys
+import random
+import numpy as np
 
-sys.path.insert(0, f'{os.getcwd()}')
+sys.path.insert(0, os.getcwd())
 
-from fuses.src.data.Fuse_Class import FuseDataset
-from fuses.fuse_config import (ANNOTATION_FILE, SAVE_PATH, TRAIN_DATAPATH, TRAIN_TEST_SPLIT, NUM_WORKERS_DL)
-from fuses.src.models.helper_functions import collate_fn, base_transform, train_transform, test_model, train_model, \
-    view_test_image, split_trainset
+from src.data.Fuse_Class import FuseDataset
+from fuse_config import (ANNOTATION_FILE, SAVE_PATH, TRAIN_DATAPATH, TRAIN_TEST_SPLIT, NUM_WORKERS_DL)
+from src.models.helper_functions import collate_fn, base_transform, train_transform, test_model, train_model, \
+     view_test_image, split_trainset
 
 ray.init(include_dashboard=False)
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
+    torch.set_deterministic(True)
     parser = argparse.ArgumentParser(description='Processing inputs.')
 
     parser.add_argument('-tr', '--train', action="store_true",
