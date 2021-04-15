@@ -26,10 +26,10 @@ from fuse_config import (LEARNING_RATE, NO_OF_CLASSES,
 converts the image to a tensor
 """
 
-
+# add settings for data aug
 def train_transform():
     custom_transforms = [
-        transforms.ColorJitter(0.25, 0.25, 0.25, 0.25),
+       # transforms.ColorJitter(0.25, 0.25, 0.25, 0.25),
         transforms.ToTensor()
     ]
     return transforms.Compose(custom_transforms)
@@ -67,11 +67,11 @@ def save_graph(t, r, a, f, filename):
     sns.lineplot(x="time", y="a", data=df, label="allocated")
     sns.lineplot(x="time", y="f", data=df, label="free")
     title = filename.split("_")
-    epoch_string = title[2][1:]
-    batch_string = title[3][1:]
-    downsample_string = title[4][1:]
-    mp_string = title[5][2:]
-    gradient_string = title[6][1:]
+    epoch_string = title[1][1:]
+    batch_string = title[2][1:]
+    downsample_string = title[3][1:]
+    mp_string = title[4][2:]
+    gradient_string = title[5][1:]
     plt.title("Epochs: " + epoch_string + " Batch Size: " + batch_string + " \nDownsample: " +
               downsample_string + " Mixed Prec: " + mp_string + " Gradient Acc: " + gradient_string)
     plt.savefig(SAVE_PATH + "/plots/" + filename + '.png')
@@ -79,8 +79,6 @@ def save_graph(t, r, a, f, filename):
 
 def train_model(epochs, accumulation_size, train_data_loader, device, mixed_precision,
                 gradient_accumulation, filename, verbose, writer, early, validation, validation_dataset):
-    torch.backends.cudnn.benchmark = True
-
     model = get_model_instance_segmentation(NO_OF_CLASSES + 1)
 
     # move model to the right device
@@ -588,7 +586,7 @@ def split_trainset(trainset, validset, testset, validation_split, random_seed):
     dataset_size = len(trainset)
     indices = list(range(dataset_size))
     split_val = int(np.floor(validation_split * dataset_size))
-    np.random.seed(random_seed)
+    # np.random.seed(random_seed)
     np.random.shuffle(indices)
     val_indices = indices[0:split_val]
 

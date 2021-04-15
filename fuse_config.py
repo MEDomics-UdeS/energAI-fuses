@@ -1,13 +1,13 @@
 LEARNING_RATE = 0.005
 GRAD_CLIP = 5
-TRAIN_DATAPATH = '/home/simon/Documents/FuseDataFull/'
-SAVE_PATH = '/home/simon/Documents/FuseDataFull/'
+TRAIN_DATAPATH = '/home/simon/Documents/FuseDataPartial/'
+SAVE_PATH = TRAIN_DATAPATH
 RESIZED_IMAGES_SAVE_PATH = '/home/simon/Documents/image_save_test/'
 ANNOTATION_FILE = "annotation_sgl.csv"
 TRAIN_TEST_SPLIT = 0.1
 NO_OF_CLASSES = 10
 NUM_WORKERS_RAY = 8
-NUM_WORKERS_DL = 24
+NUM_WORKERS_DL = 1
 class_dictionary = {
     "Gould-Ferraz Shawmut A4J": 1,
     # 'Gould Shawmut A4J':1,

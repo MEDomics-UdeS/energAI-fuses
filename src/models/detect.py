@@ -19,9 +19,12 @@ from src.models.helper_functions import collate_fn, base_transform, train_transf
 
 ray.init(include_dashboard=False)
 
+def seed_worker(worker_id):
+    worker_seed = torch.initial_seed() % 2**32
+    np.random.seed(worker_seed)
+    random.seed(worker_seed)
 
 if __name__ == "__main__":
-    torch.set_deterministic(True)
     parser = argparse.ArgumentParser(description='Processing inputs.')
 
     parser.add_argument('-tr', '--train', action="store_true",
@@ -60,8 +63,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     start = time.time()
-    filename = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M")
-    filename = f"filename_e{args.epochs}_b{args.batch}_s{args.size}_mp{int(args.mixed_precision)}" \
+    filename = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    filename = f"{filename}_e{args.epochs}_b{args.batch}_s{args.size}_mp{int(args.mixed_precision)}" \
                f"_g{int(args.gradient_accumulation)}"
 
     if args.image:
@@ -84,6 +87,18 @@ if __name__ == "__main__":
     print("Save Plots: ", args.verbose)
     print("-" * 100)
 
+    # Ensure reproducibility
+    torch.manual_seed(args.random)
+    torch.cuda.manual_seed_all(args.random)
+    torch.cuda.manual_seed(args.random)
+    np.random.seed(args.random)
+    random.seed(args.random)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    torch.use_deterministic_algorithms(True)
+    # torch.cuda.seed_all(args.random)
+    # torch.cuda.set_rng_state_all(torch.ByteTensor(args.random))
+
     train_dataset = FuseDataset(
         root=TRAIN_DATAPATH, data_file=SAVE_PATH + "annotations/" + ANNOTATION_FILE,
         max_image_size=args.size, transforms=train_transform(), save=False)
@@ -94,9 +109,8 @@ if __name__ == "__main__":
         root=None, data_file=SAVE_PATH + "annotations/" + ANNOTATION_FILE,
         max_image_size=args.size, transforms=base_transform(), save=False)
 
-    start = time.time()
 
-    torch.manual_seed(args.random)
+
 
     total_dataset = copy.deepcopy(train_dataset)
     train_dataset, test_dataset, val_dataset = split_trainset(train_dataset, test_dataset, val_dataset,
@@ -104,15 +118,15 @@ if __name__ == "__main__":
 
     train_data_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=int(args.batch / args.gradient_accumulation),
-        shuffle=True, num_workers=NUM_WORKERS_DL, collate_fn=collate_fn)
+        shuffle=True, num_workers=NUM_WORKERS_DL, collate_fn=collate_fn, worker_init_fn=seed_worker)
 
     val_data_loader = torch.utils.data.DataLoader(
         val_dataset, batch_size=int(args.batch / args.gradient_accumulation),
-        shuffle=False, num_workers=NUM_WORKERS_DL, collate_fn=collate_fn)
+        shuffle=False, num_workers=NUM_WORKERS_DL, collate_fn=collate_fn, worker_init_fn=seed_worker)
 
     test_data_loader = torch.utils.data.DataLoader(
         test_dataset, batch_size=int(args.batch / args.gradient_accumulation),
-        shuffle=False, num_workers=NUM_WORKERS_DL, collate_fn=collate_fn)
+        shuffle=False, num_workers=NUM_WORKERS_DL, collate_fn=collate_fn, worker_init_fn=seed_worker)
 
     device = torch.device(
         'cuda') if torch.cuda.is_available() else torch.device('cpu')
