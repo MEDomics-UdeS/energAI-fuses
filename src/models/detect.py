@@ -5,24 +5,14 @@ import time
 from torch.utils.tensorboard import SummaryWriter
 import copy
 import ray
-import os
-import sys
-import random
-import numpy as np
 
-sys.path.insert(0, os.getcwd())
-
+from reproducibility import seed_worker, set_seed
 from src.data.Fuse_Class import FuseDataset
 from fuse_config import (ANNOTATION_FILE, SAVE_PATH, TRAIN_DATAPATH, TRAIN_TEST_SPLIT, NUM_WORKERS_DL)
 from src.models.helper_functions import collate_fn, base_transform, train_transform, test_model, train_model, \
      view_test_image, split_trainset
 
 ray.init(include_dashboard=False)
-
-def seed_worker(worker_id):
-    worker_seed = torch.initial_seed() % 2**32
-    np.random.seed(worker_seed)
-    random.seed(worker_seed)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Processing inputs.')
@@ -62,6 +52,8 @@ if __name__ == "__main__":
                         help='to generate and save graphs')
     args = parser.parse_args()
 
+    set_seed(args.random)
+
     start = time.time()
     filename = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     filename = f"{filename}_e{args.epochs}_b{args.batch}_s{args.size}_mp{int(args.mixed_precision)}" \
@@ -87,17 +79,7 @@ if __name__ == "__main__":
     print("Save Plots: ", args.verbose)
     print("-" * 100)
 
-    # Ensure reproducibility
-    torch.manual_seed(args.random)
-    torch.cuda.manual_seed_all(args.random)
-    torch.cuda.manual_seed(args.random)
-    np.random.seed(args.random)
-    random.seed(args.random)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
-    torch.use_deterministic_algorithms(True)
-    # torch.cuda.seed_all(args.random)
-    # torch.cuda.set_rng_state_all(torch.ByteTensor(args.random))
+
 
     train_dataset = FuseDataset(
         root=TRAIN_DATAPATH, data_file=SAVE_PATH + "annotations/" + ANNOTATION_FILE,
