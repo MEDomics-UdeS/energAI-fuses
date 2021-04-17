@@ -1,3 +1,5 @@
+# https://pytorch.org/docs/stable/notes/randomness.html
+
 import torch
 import numpy as np
 import random

@@ -3,10 +3,9 @@ import csv
 from os import listdir, walk
 from os.path import isfile, join
 
-dir_list = next(walk('.'))[1]
+dir_list = ['final jsons/']
 
 for directory in dir_list:
-    directory = directory + "/outputs/"
     onlyfiles = [f for f in listdir(directory) if isfile(join(directory, f))]
     print(directory)
     for i in onlyfiles:
