@@ -19,8 +19,7 @@ from fuzzywuzzy import fuzz
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from torchvision import transforms
 from early_stopping import EarlyStopping
-from fuse_config import (LEARNING_RATE, NO_OF_CLASSES,
-                         TRAIN_DATAPATH, SAVE_PATH, class_dictionary, GRAD_CLIP)
+from fuse_config import (LEARNING_RATE, NO_OF_CLASSES, class_dictionary, GRAD_CLIP)
 
 """
 converts the image to a tensor
@@ -74,7 +73,7 @@ def save_graph(t, r, a, f, filename):
     gradient_string = title[5][1:]
     plt.title("Epochs: " + epoch_string + " Batch Size: " + batch_string + " \nDownsample: " +
               downsample_string + " Mixed Prec: " + mp_string + " Gradient Acc: " + gradient_string)
-    plt.savefig(SAVE_PATH + "/plots/" + filename + '.png')
+    plt.savefig("plots/" + filename + '.png')
 
 
 def train_model(epochs, accumulation_size, train_data_loader, device, mixed_precision,
@@ -214,7 +213,7 @@ def train_model(epochs, accumulation_size, train_data_loader, device, mixed_prec
 
         if validation:
             if (epoch + 1) % validation == 0:
-                torch.save(model.state_dict(), SAVE_PATH + "models/" + filename)
+                torch.save(model.state_dict(), "models/" + filename)
                 val_acc = validate_model(validation_dataset, filename)
                 if early:
                     if es.step(torch.as_tensor(val_acc, dtype=torch.float16)):
@@ -228,13 +227,13 @@ def train_model(epochs, accumulation_size, train_data_loader, device, mixed_prec
     if verbose:
         save_graph(to, r, a, f, filename)
 
-    torch.save(model.state_dict(), SAVE_PATH + "models/" + filename)
+    torch.save(model.state_dict(), "models/" + filename)
 
 
 def validate_model(val_dataset, filename):
     start = time.time()
     loaded_model = get_model_instance_segmentation(num_classes=NO_OF_CLASSES + 1)
-    loaded_model.load_state_dict(torch.load(SAVE_PATH + "models/" + filename))
+    loaded_model.load_state_dict(torch.load("models/" + filename))
     label_counter = 0
     total = 0
     for i in range(len(val_dataset)):
@@ -279,7 +278,7 @@ def validate_model(val_dataset, filename):
 
 def test_model(test_dataset, device, filename, writer):
     loaded_model = get_model_instance_segmentation(num_classes=NO_OF_CLASSES + 1)
-    loaded_model.load_state_dict(torch.load(SAVE_PATH + "models/" + filename))
+    loaded_model.load_state_dict(torch.load("models/" + filename))
 
     # print("Ground Truth \t\t Label \t\t\t BoxIndex \t\t IOU Score")
     print('{:^3} {:^20} {:^20} {:^25} {:^20} {:^10} {:^10}'.format('Index',
@@ -451,7 +450,7 @@ ocr_dict = {
 
 def label_ocr(img, box, label):
     name = ''.join(chr(i) for i in img)
-    path = os.path.join(TRAIN_DATAPATH, "images", name)
+    path = os.path.join("data/raw", name)
     image = cv2.imread(path)
     x1, y1, x2, y2 = box
 
@@ -542,7 +541,7 @@ def label_ocr(img, box, label):
 
 def view_test_image(idx, test_dataset, filename):
     loaded_model = get_model_instance_segmentation(num_classes=NO_OF_CLASSES + 1)
-    loaded_model.load_state_dict(torch.load(SAVE_PATH + "models/" + filename))
+    loaded_model.load_state_dict(torch.load("models/" + filename))
     img, targets = test_dataset[idx]
     img_name = ''.join(chr(i) for i in targets['name'])
     print(img_name)

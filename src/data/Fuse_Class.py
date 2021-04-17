@@ -6,7 +6,7 @@ import pandas as pd
 import ray
 import numpy as np
 
-from fuse_config import class_dictionary, NUM_WORKERS_RAY, RESIZED_IMAGES_SAVE_PATH
+from fuse_config import class_dictionary, NUM_WORKERS_RAY
 
 """
 The Dataset class
@@ -23,10 +23,10 @@ optional
 
 
 class FuseDataset(torch.utils.data.Dataset):
-    def __init__(self, root, data_file, max_image_size, transforms=None, num_workers=NUM_WORKERS_RAY, save=False):
+    def __init__(self, root, data_file, max_image_size, transforms=None, num_workers=NUM_WORKERS_RAY, save=True):
         self.transforms = transforms
-        image_paths = sorted(os.listdir(os.path.join(root, "images"))) if root else []
-        #   image_paths = image_paths[0:100] if root else []
+        image_paths = sorted(os.listdir(root)) if root else []
+        image_paths = [path for path in image_paths if path.startswith('.') is False]
 
         annotations = pd.read_csv(data_file)
 
@@ -38,7 +38,7 @@ class FuseDataset(torch.utils.data.Dataset):
         box_lists = [None] * size
 
         if size > 0:
-            image_paths = [os.path.join(root, "images", path) for path in image_paths]
+            image_paths = [os.path.join(root, path) for path in image_paths]
 
             ids = [parallelize.remote(image_paths, max_image_size, annotations, i, save)
                    for i in range(num_workers)]
@@ -77,8 +77,8 @@ class FuseDataset(torch.utils.data.Dataset):
                         annotations.loc[idx, 'ymax'] = box_lists[i][j][3]
                         idx += 1
 
-                annotations.to_csv(f'{RESIZED_IMAGES_SAVE_PATH}annotation.csv')
-                print(f'Resized images and annotations have been saved here : {RESIZED_IMAGES_SAVE_PATH}')
+                annotations.to_csv('/data/annotations/annotation_processed.csv')
+                print('Resized images and annotations have been saved here : /data/annotations/')
 
     def __getitem__(self, idx):
         if self.transforms is not None:
@@ -159,7 +159,7 @@ def parallelize(image_paths, max_image_size, annotations, idx, save):
                            outline="red", width=5)
 
     if save:
-        img2.save(f'{RESIZED_IMAGES_SAVE_PATH}{name_original}')
+        img2.save(f'/data/processed/{name_original}')
 
     image_id = torch.tensor([idx])
     boxes = torch.as_tensor(np.array(box_list), dtype=torch.float32)

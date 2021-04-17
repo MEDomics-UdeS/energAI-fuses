@@ -8,7 +8,7 @@ import ray
 
 from reproducibility import seed_worker, set_seed
 from src.data.Fuse_Class import FuseDataset
-from fuse_config import (ANNOTATION_FILE, SAVE_PATH, TRAIN_DATAPATH, TRAIN_TEST_SPLIT, NUM_WORKERS_DL)
+from fuse_config import TRAIN_TEST_SPLIT, NUM_WORKERS_DL
 from src.models.helper_functions import collate_fn, base_transform, train_transform, test_model, train_model, \
      view_test_image, split_trainset
 
@@ -61,35 +61,36 @@ if __name__ == "__main__":
 
     if args.image:
         filename = args.image
-    print("Filename: ", filename)
+    print("Filename:\t\t\t\t\t", filename)
 
-    print("Train: ", args.train)
-    print("Validation: ", bool(args.validation))
-    print("Test: ", args.test)
+    print("Train:\t\t\t\t\t\t", args.train)
+    print("Validation:\t\t\t\t\t", bool(args.validation))
+    print("Test:\t\t\t\t\t\t", args.test)
 
-    print("Epochs: ", args.epochs)
-    print("Batch Size: ", args.batch)
-    print("Early Stopping: ", args.early)
+    print("Epochs:\t\t\t\t\t\t", args.epochs)
+    print("Batch Size:\t\t\t\t\t", args.batch)
+    print("Early Stopping:\t\t\t\t", args.early)
 
-    print("Size: ", args.size)
-    print("Mixed Precision: ", args.mixed_precision)
-    print("Gradient Accumulation Size: ", args.gradient_accumulation)
+    print("Size:\t\t\t\t\t\t", args.size)
+    print("Mixed Precision:\t\t\t", args.mixed_precision)
+    print("Gradient Accumulation Size:\t", args.gradient_accumulation)
 
-    print("Random Seed: ", args.random)
-    print("Save Plots: ", args.verbose)
+    print("Random Seed:\t\t\t\t", args.random)
+    print("Save Plots:\t\t\t\t\t", args.verbose)
     print("-" * 100)
 
-
+    images_path = 'data/raw'
+    annotations_path = 'data/annotations/annotations.csv'
 
     train_dataset = FuseDataset(
-        root=TRAIN_DATAPATH, data_file=SAVE_PATH + "annotations/" + ANNOTATION_FILE,
-        max_image_size=args.size, transforms=train_transform(), save=False)
+        root=images_path, data_file=annotations_path,
+        max_image_size=args.size, transforms=train_transform(), save=True)
     test_dataset = FuseDataset(
-        root=None, data_file=SAVE_PATH + "annotations/" + ANNOTATION_FILE,
-        max_image_size=args.size, transforms=base_transform(), save=False)
+        root=None, data_file=annotations_path,
+        max_image_size=args.size, transforms=base_transform(), save=True)
     val_dataset = FuseDataset(
-        root=None, data_file=SAVE_PATH + "annotations/" + ANNOTATION_FILE,
-        max_image_size=args.size, transforms=base_transform(), save=False)
+        root=None, data_file=annotations_path,
+        max_image_size=args.size, transforms=base_transform(), save=True)
 
 
 

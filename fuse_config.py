@@ -1,9 +1,5 @@
 LEARNING_RATE = 0.005
 GRAD_CLIP = 5
-TRAIN_DATAPATH = '/home/simon/Documents/FuseDataPartial/'
-SAVE_PATH = TRAIN_DATAPATH
-RESIZED_IMAGES_SAVE_PATH = '/home/simon/Documents/image_save_test/'
-ANNOTATION_FILE = "annotation_sgl.csv"
 TRAIN_TEST_SPLIT = 0.1
 NO_OF_CLASSES = 10
 NUM_WORKERS_RAY = 8
