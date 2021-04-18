@@ -1,12 +1,10 @@
 LEARNING_RATE = 0.005
 GRAD_CLIP = 5
-TRAIN_TEST_SPLIT = 0.1
 NO_OF_CLASSES = 10
 NUM_WORKERS_RAY = 8
-NUM_WORKERS_DL = 1
+NUM_WORKERS_DL = 8
 class_dictionary = {
     "Gould-Ferraz Shawmut A4J": 1,
-    # 'Gould Shawmut A4J':1,
     "Ferraz Shawmut AJT": 2,
     "English Electric C-J": 3,
     "Ferraz Shawmut CRS": 4,
@@ -17,10 +15,3 @@ class_dictionary = {
     "Bussmann LPJ": 9,
     "Gould Shawmut CJ": 10,
 }
-
-"""
-train_datapath
-- images
-- annotations
-- models
-"""

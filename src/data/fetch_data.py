@@ -36,20 +36,19 @@ def download_file_from_google_drive(file_id, dest, chunk_size=32768):
                 if chunk:
                     f.write(chunk)
     else:
-        print('Error', response.status_code, response.reason)
-        sys.exit(1)
+        raise Exception(f'Error {response.status_code}: {response.reason}')
 
 
 if __name__ == "__main__":
     images_id = '12mZB0Or1FhzwZO_zUTYCbbuxwQ56-5PP'
     annotations_id = '1y3BbSGF98Cs9eOTJF-V32JJ8s9dodSC-'
 
-    for i in range(2):
+    for _ in range(2):
         os.chdir(os.path.pardir)
 
     images_unzip = os.path.join(os.getcwd(), 'data', 'raw')
     images_dest = os.path.join(images_unzip, 'images.zip')
-    annotations_dest = os.path.join(os.getcwd(), 'data', 'annotations', 'annotations.csv')
+    annotations_dest = os.path.join(os.getcwd(), 'data', 'annotations', 'annotations_raw.csv')
 
     print('Downloading images to:\t', images_unzip)
     download_file_from_google_drive(images_id, images_dest)

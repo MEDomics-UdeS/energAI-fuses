@@ -51,12 +51,9 @@ if __name__ == '__main__':
     # cmds = [['python3', 'detect.py', '--train', '--epochs', '1', '--batch', '10', '--downsample', '500', '-g',
     #          '--verbose'],
     #        ['python3', 'detect.py', '--train', '--epochs', '1', '--batch', '10', '--downsample', '500', '--verbose']]
-    env_var = 'CUBLAS_WORKSPACE_CONFIG=:4096:8'
+    # env_var = 'CUBLAS_WORKSPACE_CONFIG=:4096:8'
 
-    cmds =[['python', 'src/models/detect.py', '--train', '--val', '0', '--epochs', '5', '--batch', '10',
-             '--s', '1000', '-g', '1', '--verbose'],
-           ['python', 'src/models/detect.py', '--train', '--val', '0', '--epochs', '5', '--batch', '10',
-             '--s', '1000', '-g', '1', '--verbose']]
+    cmds = [['python', 'src/models/detect.py', '-d', 'resized', '-g', '1', '--verbose']]
     start = time.time()
     for cmd in cmds:
         print(cmd)

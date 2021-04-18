@@ -5,6 +5,7 @@ from PIL import Image, ImageDraw
 import pandas as pd
 import ray
 import numpy as np
+from tqdm import trange
 
 from fuse_config import class_dictionary, NUM_WORKERS_RAY
 
@@ -37,15 +38,17 @@ class FuseDataset(torch.utils.data.Dataset):
         resize_ratios = [None] * size
         box_lists = [None] * size
 
-        if size > 0:
+
+
+        if max_image_size > 0:
             image_paths = [os.path.join(root, path) for path in image_paths]
 
-            ids = [parallelize.remote(image_paths, max_image_size, annotations, i, save)
+            ids = [resize_images.remote(image_paths, max_image_size, annotations, i, save)
                    for i in range(num_workers)]
 
             nb_job_left = size - num_workers
 
-            for _ in range(size):
+            for _ in trange(size, desc='Resizing images...'):
                 ready, not_ready = ray.wait(ids, num_returns=1)
                 ids = not_ready
                 result = ray.get(ready)[0]
@@ -59,15 +62,10 @@ class FuseDataset(torch.utils.data.Dataset):
                 if nb_job_left > 0:
                     idx = size - nb_job_left
 
-                    ids.extend([parallelize.remote(image_paths, max_image_size, annotations, idx, save)])
+                    ids.extend([resize_images.remote(image_paths, max_image_size, annotations, idx, save)])
                     nb_job_left -= 1
 
-            average_ratio = sum(resize_ratios) / len(resize_ratios)
-            print(f'Average resize ratio : {average_ratio:.2%}')
-            print(f'Maximum resize ratio : {max(resize_ratios):.2%}')
-            print(f'Minimum resize ratio : {min(resize_ratios):.2%}')
-
-            if save:
+            if save and max_image_size > 0:
                 idx = 0
                 for i in range(len(box_lists)):
                     for j in range(len(box_lists[i])):
@@ -77,8 +75,14 @@ class FuseDataset(torch.utils.data.Dataset):
                         annotations.loc[idx, 'ymax'] = box_lists[i][j][3]
                         idx += 1
 
-                annotations.to_csv('/data/annotations/annotation_processed.csv')
-                print('Resized images and annotations have been saved here : /data/annotations/')
+                annotations.to_csv('data/annotations/annotation_resized.csv', index=False)
+                print('Resized images have been saved here:\t\tdata/resized/')
+                print('Resized annotations have been saved here:\tdata/annotations/annotations_resized.csv')
+
+            average_ratio = sum(resize_ratios) / len(resize_ratios)
+            print(f'Average resize ratio : {average_ratio:.2%}')
+            print(f'Maximum resize ratio : {max(resize_ratios):.2%}')
+            print(f'Minimum resize ratio : {min(resize_ratios):.2%}')
 
     def __getitem__(self, idx):
         if self.transforms is not None:
@@ -105,7 +109,7 @@ class FuseDataset(torch.utils.data.Dataset):
 
 
 @ray.remote
-def parallelize(image_paths, max_image_size, annotations, idx, save):
+def resize_images(image_paths, max_image_size, annotations, idx, show_bounding_boxes=False):
     f = image_paths[idx].rsplit('/', 1)[-1].split(".")
     func = lambda x: x.split(".")[0]
     box_list = annotations.loc[annotations["filename"].apply(func) == f[0]][["xmin", "ymin", "xmax", "ymax"]].values
@@ -120,46 +124,46 @@ def parallelize(image_paths, max_image_size, annotations, idx, save):
 
     name_original = image_paths[idx].split("/")[-1]
 
-    img = Image.open(image_paths[idx]).convert("RGB")
-    original_size = img.size
+    if max_image_size > 0:
+        img = Image.open(image_paths[idx]).convert("RGB")
+        original_size = img.size
 
-    show_bounding_boxes = False
+        img2 = Image.new('RGB', (max_image_size, max_image_size), (255, 255, 255))
 
-    img2 = Image.new('RGB', (max_image_size, max_image_size), (255, 255, 255))
+        resize_ratio = (img2.size[0] * img2.size[1]) / (original_size[0] * original_size[1])
 
-    resize_ratio = (img2.size[0] * img2.size[1]) / (original_size[0] * original_size[1])
+        if max_image_size < original_size[0] or max_image_size < original_size[1]:
+            img.thumbnail((max_image_size, max_image_size),
+                          resample=Image.BILINEAR,
+                          reducing_gap=2)
 
-    if max_image_size < original_size[0] or max_image_size < original_size[1]:
-        img.thumbnail((max_image_size, max_image_size),
-                      resample=Image.BILINEAR,
-                      reducing_gap=2)
+            downsize_ratio = img.size[0] / original_size[0]
+        else:
+            downsize_ratio = 1
 
-        downsize_ratio = img.size[0] / original_size[0]
-    else:
-        downsize_ratio = 1
-
-    x_offset = int((max_image_size - img.size[0]) / 2)
-    y_offset = int((max_image_size - img.size[1]) / 2)
-    img2.paste(img, (x_offset, y_offset, x_offset + img.size[0], y_offset + img.size[1]))
-
-    if show_bounding_boxes:
-        draw = ImageDraw.Draw(img2)
-
-    for i in range(num_objs):
-        for j in range(4):
-            box_list[i][j] = int(box_list[i][j] * downsize_ratio)
-
-            if j == 0 or j == 2:
-                box_list[i][j] += x_offset
-            else:
-                box_list[i][j] += y_offset
+        x_offset = int((max_image_size - img.size[0]) / 2)
+        y_offset = int((max_image_size - img.size[1]) / 2)
+        img2.paste(img, (x_offset, y_offset, x_offset + img.size[0], y_offset + img.size[1]))
 
         if show_bounding_boxes:
-            draw.rectangle([(box_list[i][0], box_list[i][1]), (box_list[i][2], box_list[i][3])],
-                           outline="red", width=5)
+            draw = ImageDraw.Draw(img2)
 
-    if save:
-        img2.save(f'/data/processed/{name_original}')
+        for i in range(num_objs):
+            for j in range(4):
+                box_list[i][j] = int(box_list[i][j] * downsize_ratio)
+
+                if j == 0 or j == 2:
+                    box_list[i][j] += x_offset
+                else:
+                    box_list[i][j] += y_offset
+
+            if show_bounding_boxes:
+                draw.rectangle([(box_list[i][0], box_list[i][1]), (box_list[i][2], box_list[i][3])],
+                               outline="red", width=5)
+
+        img2.save(f'data/resized/{name_original}')
+    else:
+        resize_ratio = 1
 
     image_id = torch.tensor([idx])
     boxes = torch.as_tensor(np.array(box_list), dtype=torch.float32)

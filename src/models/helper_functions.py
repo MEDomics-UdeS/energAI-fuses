@@ -28,6 +28,7 @@ converts the image to a tensor
 # add settings for data aug
 def train_transform():
     custom_transforms = [
+        # normalize, get std and mean
        # transforms.ColorJitter(0.25, 0.25, 0.25, 0.25),
         transforms.ToTensor()
     ]
@@ -581,24 +582,38 @@ def view_test_image(idx, test_dataset, filename):
     image = image.save("image_save_1/" + img_name)
 
 
-def split_trainset(trainset, validset, testset, validation_split, random_seed):
-    dataset_size = len(trainset)
+def split_train_valid_test(train_set, valid_set, test_set, validation_split, test_split):
+    valid_set = split_dataset(train_set, valid_set, validation_split)
+    test_set = split_dataset(train_set, test_set, test_split)
+
+    # dataset_size = len(train_set)
+    # indices = list(range(dataset_size))
+    # split_val = int(np.floor(validation_split * dataset_size))
+    # np.random.shuffle(indices)
+    # val_indices = indices[0:split_val]
+    #
+    # imgs, targets = train_set.extract_data(idx_list=val_indices)
+    # valid_set.add_data(imgs, targets)
+    #
+    # dataset_size_new = len(train_set)
+    # indices = list(range(dataset_size_new))
+    # split_test = int(np.floor(test_split * dataset_size))
+    # np.random.shuffle(indices)
+    # test_indices = indices[0:split_test]
+    #
+    # imgs, targets = train_set.extract_data(idx_list=test_indices)
+    # test_set.add_data(imgs, targets)
+
+    return train_set, valid_set, test_set
+
+
+def split_dataset(dataset_in, dataset_out, split):
+    dataset_size = len(dataset_in)
     indices = list(range(dataset_size))
-    split_val = int(np.floor(validation_split * dataset_size))
-    # np.random.seed(random_seed)
+    split_val = int(np.floor(split * dataset_size))
     np.random.shuffle(indices)
     val_indices = indices[0:split_val]
 
-    imgs, targets = trainset.extract_data(idx_list=val_indices)
-    validset.add_data(imgs, targets)
+    imgs, targets = dataset_in.extract_data(idx_list=val_indices)
 
-    dataset_size_new = len(trainset)
-    indices = list(range(dataset_size_new))
-    split_test = int(np.floor(validation_split * dataset_size))
-    np.random.shuffle(indices)
-    test_indices = indices[0:split_test]
-
-    imgs, targets = trainset.extract_data(idx_list=test_indices)
-    testset.add_data(imgs, targets)
-
-    return trainset, validset, testset
+    return dataset_out.add_data(imgs, targets)
