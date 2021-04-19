@@ -104,26 +104,24 @@ if __name__ == '__main__':
     print('Save Plots:\t\t\t\t\t', args.verbose)
     print('-' * 100)
 
-
-
-
     # Assign image and annotations file paths depending on data source
     images_path = 'data/resized/'
     annotations_path = 'data/annotations/annotations_resized.csv'
 
+    # Resize images if 'raw' has been specified as the data source
     if args.data == 'raw':
         resize_images(max_image_size=args.size, num_workers=num_workers)
 
-
-    train_dataset = FuseDataset(
-        root=images_path, data_file=annotations_path,
-        max_image_size=args.size, transforms=train_transform())
-    test_dataset = FuseDataset(
-        root=None, data_file=annotations_path,
-        max_image_size=args.size, transforms=base_transform())
-    val_dataset = FuseDataset(
-        root=None, data_file=annotations_path,
-        max_image_size=args.size, transforms=base_transform())
+    # Declare training, validation and testing datasets
+    train_dataset = FuseDataset(root=images_path,
+                                data_file=annotations_path,
+                                transforms=train_transform())
+    test_dataset = FuseDataset(root=images_path,
+                               data_file=annotations_path,
+                               transforms=base_transform())
+    val_dataset = FuseDataset(root=images_path,
+                              data_file=annotations_path,
+                              transforms=base_transform())
 
 
 

@@ -19,20 +19,17 @@ optional
 
 
 class FuseDataset(torch.utils.data.Dataset):
-
     def __init__(self, root, data_file, transforms=None):
         self.root = root
+        self.path_to_data_file = data_file
         self.transforms = transforms
+
         imgs = sorted(os.listdir(self.root))
         self.imgs = [img for img in imgs if img.startswith('.') is False]
-        self.path_to_data_file = data_file
+        self.image_paths = [os.path.join(root, img) for img in self.imgs]
 
-        self.image_paths = [os.path.join(root, img) for img in imgs]
-        img_path = os.path.join(self.root, self.imgs)
-        # img = Image.open(img_path).convert("RGB")
-        # save_img = img
         df = pd.read_csv(data_file)
-        f = img_path.split(".")
+        f = data_file.split(".")
         func = lambda x: x.split(".")[0]
         box_list = df.loc[df["filename"].apply(func) == f[0]][["xmin", "ymin", "xmax", "ymax"]].values
         label_array = df.loc[df["filename"].apply(func) == f[0]][["label"]].values
@@ -55,8 +52,9 @@ class FuseDataset(torch.utils.data.Dataset):
         area = torch.as_tensor(area, dtype=torch.float32)
         iscrowd = torch.zeros((num_objs,), dtype=torch.int64)
         self.targets = {"boxes": boxes, "labels": labels, "image_id": image_id, "area": area, "iscrowd": iscrowd}
-        name = img_path.split("/")[-1]
-        name = [ord(c) for c in name]
+        names = [image_path.split("/")[-1] for image_path in self.image_paths]
+        for name in names:
+            name = [ord(char) for char in name]
         self.targets["name"] = torch.tensor(name)
 
     def __getitem__(self, idx):

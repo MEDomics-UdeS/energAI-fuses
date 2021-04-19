@@ -53,7 +53,7 @@ if __name__ == '__main__':
     #        ['python3', 'detect.py', '--train', '--epochs', '1', '--batch', '10', '--downsample', '500', '--verbose']]
     # env_var = 'CUBLAS_WORKSPACE_CONFIG=:4096:8'
 
-    cmds = [['python', 'src/models/detect.py']]
+    cmds = [['python', 'src/models/detect.py', '--data', 'resized']]
     start = time.time()
     for cmd in cmds:
         print(cmd)
