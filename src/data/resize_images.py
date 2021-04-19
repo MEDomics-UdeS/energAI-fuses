@@ -1,4 +1,4 @@
-from fuse_config import class_dictionary
+from fuse_config import CLASS_DICT
 import ray
 import os
 import pandas as pd
@@ -9,6 +9,8 @@ from tqdm import trange
 def resize_images(max_image_size, num_workers,
                   root='data/raw/',
                   annotations_path='data/annotations/annotations_raw.csv'):
+    ray.init(include_dashboard=False)
+
     imgs = sorted(os.listdir(root))
     imgs = [img for img in imgs if img.startswith('.') is False]
     image_paths = [os.path.join(root, img) for img in imgs]

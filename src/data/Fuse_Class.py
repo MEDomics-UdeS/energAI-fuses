@@ -2,21 +2,21 @@ import torch
 import torch.utils.data
 import os
 import pandas as pd
-from fuse_config import class_dictionary
+from fuse_config import *
 from tqdm import tqdm
 import json
 from PIL import Image
 
 
 class FuseDataset(torch.utils.data.Dataset):
-    def __init__(self, root, targets_path, transforms):
-        self.transforms = transforms
-
+    def __init__(self, root=None, targets_path=None):
         if root is not None:
             images = [img for img in sorted(os.listdir(root)) if img.startswith('.') is False]
-            self.image_paths = [os.path.join(root, img) for img in images]
+            image_paths = [os.path.join(root, img) for img in images]
+            self.images = [Image.open(image_path).convert("RGB")
+                           for image_path in tqdm(image_paths, desc='Loading images to RAM...')]
         else:
-            self.image_paths = []
+            self.images = []
 
         if targets_path is not None:
             self.targets = json.load(open(targets_path))
@@ -71,22 +71,22 @@ class FuseDataset(torch.utils.data.Dataset):
         # print('hi')
 
     def __getitem__(self, idx):
-        return self.transforms(Image.open(self.image_paths[idx]).convert("RGB")), self.targets[idx]
+        return self.transforms(self.images[idx]), self.targets[idx]
 
     def __len__(self):
-        return len(self.image_paths)
+        return len(self.images)
 
     def extract_data(self, idx_list):
         idx_list = sorted(idx_list, reverse=True)
-        image_paths = []
+        images = []
         targets = []
 
         for idx in idx_list:
-            image_paths.append(self.image_paths.pop(idx))
+            images.append(self.images.pop(idx))
             targets.append(self.targets.pop(idx))
 
-        return image_paths, targets
+        return images, targets
 
-    def add_data(self, image_paths, targets):
-        self.image_paths.extend(image_paths)
+    def add_data(self, images, targets):
+        self.images.extend(images)
         self.targets.extend(targets)

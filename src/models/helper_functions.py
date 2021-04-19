@@ -4,6 +4,7 @@ import re
 import time
 import traceback
 from itertools import chain
+from tqdm import trange
 
 import cv2
 import matplotlib.pyplot as plt
@@ -19,27 +20,27 @@ from fuzzywuzzy import fuzz
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from torchvision import transforms
 from early_stopping import EarlyStopping
-from fuse_config import (LEARNING_RATE, class_dictionary, GRAD_CLIP)
+from fuse_config import *
 
-"""
-converts the image to a tensor
-"""
 
-# add settings for data aug
-def train_transform():
-    custom_transforms = [
-        # normalize, get std and mean
-       # transforms.ColorJitter(0.25, 0.25, 0.25, 0.25),
-        transforms.ToTensor()
+def train_transform(mean, std, data_aug_value):
+    transforms_list = [
+        transforms.ColorJitter(brightness=data_aug_value,
+                               contrast=data_aug_value,
+                               saturation=data_aug_value,
+                               hue=data_aug_value),
+        transforms.ToTensor(),
+        transforms.Normalize(mean, std)
     ]
-    return transforms.Compose(custom_transforms)
+    return transforms.Compose(transforms_list)
 
 
-def base_transform():
-    custom_transforms = [
-        transforms.ToTensor()
+def base_transform(mean, std):
+    transforms_list = [
+        transforms.ToTensor(),
+        transforms.Normalize(mean, std)
     ]
-    return transforms.Compose(custom_transforms)
+    return transforms.Compose(transforms_list)
 
 
 def collate_fn(batch):
@@ -57,29 +58,29 @@ def get_model_instance_segmentation(num_classes):
     return model
 
 
-def save_graph(t, r, a, f, filename):
-    # print(t,r,a,f)
-    x = np.arange(0, len(t))
-    df = pd.DataFrame({"time": x, "t": t, "r": r, "a": a, "f": f})
-    sns.set_style("darkgrid")
-    sns.lineplot(x="time", y="t", data=df, label="total")
-    sns.lineplot(x="time", y="r", data=df, label="reserved")
-    sns.lineplot(x="time", y="a", data=df, label="allocated")
-    sns.lineplot(x="time", y="f", data=df, label="free")
-    title = filename.split("_")
-    epoch_string = title[1][1:]
-    batch_string = title[2][1:]
-    downsample_string = title[3][1:]
-    mp_string = title[4][2:]
-    gradient_string = title[5][1:]
-    plt.title("Epochs: " + epoch_string + " Batch Size: " + batch_string + " \nDownsample: " +
-              downsample_string + " Mixed Prec: " + mp_string + " Gradient Acc: " + gradient_string)
-    plt.savefig("plots/" + filename + '.png')
+# def save_graph(t, r, a, f, filename):
+#     # print(t,r,a,f)
+#     x = np.arange(0, len(t))
+#     df = pd.DataFrame({"time": x, "t": t, "r": r, "a": a, "f": f})
+#     sns.set_style("darkgrid")
+#     sns.lineplot(x="time", y="t", data=df, label="total")
+#     sns.lineplot(x="time", y="r", data=df, label="reserved")
+#     sns.lineplot(x="time", y="a", data=df, label="allocated")
+#     sns.lineplot(x="time", y="f", data=df, label="free")
+#     title = filename.split("_")
+#     epoch_string = title[1][1:]
+#     batch_string = title[2][1:]
+#     downsample_string = title[3][1:]
+#     mp_string = title[4][2:]
+#     gradient_string = title[5][1:]
+#     plt.title("Epochs: " + epoch_string + " Batch Size: " + batch_string + " \nDownsample: " +
+#               downsample_string + " Mixed Prec: " + mp_string + " Gradient Acc: " + gradient_string)
+#     plt.savefig("plots/" + filename + '.png')
 
 
 def train_model(epochs, accumulation_size, train_data_loader, device, mixed_precision,
-                gradient_accumulation, filename, verbose, writer, early, validation, validation_dataset):
-    model = get_model_instance_segmentation(len(class_dictionary) + 1)
+                gradient_accumulation, filename, writer, early, validation, validation_dataset):
+    model = get_model_instance_segmentation(len(CLASS_DICT) + 1)
 
     # move model to the right device
     model.to(device)
@@ -110,107 +111,107 @@ def train_model(epochs, accumulation_size, train_data_loader, device, mixed_prec
         for imgs, annotations in train_data_loader:
             i += 1
             step += 1
-            try:
-                imgs = torch.stack(imgs).to(device)
+            # try:
+            imgs = torch.stack(imgs).to(device)
 
-                annotations = [{k: v.to(device) for k, v in t.items()}
-                               for t in annotations]
+            annotations = [{k: v.to(device) for k, v in t.items()}
+                           for t in annotations]
 
-                if gradient_accumulation and mixed_precision:
-                    with amp.autocast(enabled=mixed_precision):
-                        loss_dict = model(imgs, annotations)
-                        losses = sum(loss for loss in loss_dict.values())
-
-                    to.append(torch.cuda.get_device_properties(0).total_memory * 1e-9)
-                    r.append(torch.cuda.memory_reserved(0) * 1e-9)
-                    a.append(torch.cuda.memory_allocated(0) * 1e-9)
-                    f.append(torch.cuda.memory_reserved(0) * 1e-9 -
-                             torch.cuda.memory_allocated(0) * 1e-9)
-
-                    scaler.scale(losses).backward()
-
-                    if (i + 1) % accumulation_size == 0:
-                        scaler.unscale_(optimizer)
-                        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=GRAD_CLIP)
-                        scaler.step(optimizer)
-                        scaler.update()
-                        optimizer.zero_grad(set_to_none=True)
-                elif gradient_accumulation and not mixed_precision:
+            if gradient_accumulation and mixed_precision:
+                with amp.autocast(enabled=mixed_precision):
                     loss_dict = model(imgs, annotations)
                     losses = sum(loss for loss in loss_dict.values())
 
-                    to.append(torch.cuda.get_device_properties(0).total_memory * 1e-9)
-                    r.append(torch.cuda.memory_reserved(0) * 1e-9)
-                    a.append(torch.cuda.memory_allocated(0) * 1e-9)
-                    f.append(torch.cuda.memory_reserved(0) * 1e-9 -
-                             torch.cuda.memory_allocated(0) * 1e-9)
+                to.append(torch.cuda.get_device_properties(0).total_memory * 1e-9)
+                r.append(torch.cuda.memory_reserved(0) * 1e-9)
+                a.append(torch.cuda.memory_allocated(0) * 1e-9)
+                f.append(torch.cuda.memory_reserved(0) * 1e-9 -
+                         torch.cuda.memory_allocated(0) * 1e-9)
 
-                    losses.backward()
+                scaler.scale(losses).backward()
 
-                    if (i + 1) % accumulation_size == 0:
-                        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=GRAD_CLIP)
-                        optimizer.step()
-                        optimizer.zero_grad()
-                elif not gradient_accumulation and mixed_precision:
-                    with amp.autocast(enabled=mixed_precision):
-                        loss_dict = model(imgs, annotations)
-                        losses = sum(loss for loss in loss_dict.values())
-
-                    to.append(torch.cuda.get_device_properties(0).total_memory * 1e-9)
-                    r.append(torch.cuda.memory_reserved(0) * 1e-9)
-                    a.append(torch.cuda.memory_allocated(0) * 1e-9)
-                    f.append(torch.cuda.memory_reserved(0) * 1e-9 -
-                             torch.cuda.memory_allocated(0) * 1e-9)
-
-                    scaler.scale(losses).backward()
+                if (i + 1) % accumulation_size == 0:
+                    scaler.unscale_(optimizer)
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=GRAD_CLIP)
                     scaler.step(optimizer)
                     scaler.update()
                     optimizer.zero_grad(set_to_none=True)
-                elif not gradient_accumulation and not mixed_precision:
+            elif gradient_accumulation and not mixed_precision:
+                loss_dict = model(imgs, annotations)
+                losses = sum(loss for loss in loss_dict.values())
+
+                to.append(torch.cuda.get_device_properties(0).total_memory * 1e-9)
+                r.append(torch.cuda.memory_reserved(0) * 1e-9)
+                a.append(torch.cuda.memory_allocated(0) * 1e-9)
+                f.append(torch.cuda.memory_reserved(0) * 1e-9 -
+                         torch.cuda.memory_allocated(0) * 1e-9)
+
+                losses.backward()
+
+                if (i + 1) % accumulation_size == 0:
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=GRAD_CLIP)
+                    optimizer.step()
+                    optimizer.zero_grad()
+            elif not gradient_accumulation and mixed_precision:
+                with amp.autocast(enabled=mixed_precision):
                     loss_dict = model(imgs, annotations)
-
-                    to.append(torch.cuda.get_device_properties(0).total_memory * 1e-9)
-                    r.append(torch.cuda.memory_reserved(0) * 1e-9)
-                    a.append(torch.cuda.memory_allocated(0) * 1e-9)
-                    f.append(torch.cuda.memory_reserved(0) * 1e-9 -
-                             torch.cuda.memory_allocated(0) * 1e-9)
-
                     losses = sum(loss for loss in loss_dict.values())
 
-                    optimizer.zero_grad()
-                    losses.backward()
-                    optimizer.step()
-
-                writer.add_scalar("Loss/train", losses, step)
-                writer.add_scalar("Memory/reserved", r[-1], step)
-                writer.add_scalar("Memory/allocated", a[-1], step)
-                writer.add_scalar("Memory/free", f[-1], step)
-
-                if i % 10 == 0:
-                    print(
-                        f'[Epoch: {epoch}] Iteration: {i}/{len_dataloader}, Loss: {losses}')
-                del imgs, annotations, loss_dict
-                torch.cuda.empty_cache()
-
-            except Exception as e:
-                print(e)
-                print(annotations)
                 to.append(torch.cuda.get_device_properties(0).total_memory * 1e-9)
                 r.append(torch.cuda.memory_reserved(0) * 1e-9)
                 a.append(torch.cuda.memory_allocated(0) * 1e-9)
                 f.append(torch.cuda.memory_reserved(0) * 1e-9 -
                          torch.cuda.memory_allocated(0) * 1e-9)
 
-                del imgs, annotations
-                torch.cuda.empty_cache()
+                scaler.scale(losses).backward()
+                scaler.step(optimizer)
+                scaler.update()
+                optimizer.zero_grad(set_to_none=True)
+            elif not gradient_accumulation and not mixed_precision:
+                loss_dict = model(imgs, annotations)
+
                 to.append(torch.cuda.get_device_properties(0).total_memory * 1e-9)
                 r.append(torch.cuda.memory_reserved(0) * 1e-9)
                 a.append(torch.cuda.memory_allocated(0) * 1e-9)
                 f.append(torch.cuda.memory_reserved(0) * 1e-9 -
                          torch.cuda.memory_allocated(0) * 1e-9)
 
-                traceback.print_exc()
-                continue
+                losses = sum(loss for loss in loss_dict.values())
+
+                optimizer.zero_grad()
+                losses.backward()
+                optimizer.step()
+
+            writer.add_scalar("Loss/train", losses, step)
+            writer.add_scalar("Memory/reserved", r[-1], step)
+            writer.add_scalar("Memory/allocated", a[-1], step)
+            writer.add_scalar("Memory/free", f[-1], step)
+
+            if i % 10 == 0:
+                print(
+                    f'[Epoch: {epoch}] Iteration: {i}/{len_dataloader}, Loss: {losses}')
+            del imgs, annotations, loss_dict
+            torch.cuda.empty_cache()
+
+            # except Exception as e:
+            #     print(e)
+            #     print(annotations)
+            #     to.append(torch.cuda.get_device_properties(0).total_memory * 1e-9)
+            #     r.append(torch.cuda.memory_reserved(0) * 1e-9)
+            #     a.append(torch.cuda.memory_allocated(0) * 1e-9)
+            #     f.append(torch.cuda.memory_reserved(0) * 1e-9 -
+            #              torch.cuda.memory_allocated(0) * 1e-9)
+            #
+            #     del imgs, annotations
+            #     torch.cuda.empty_cache()
+            #     to.append(torch.cuda.get_device_properties(0).total_memory * 1e-9)
+            #     r.append(torch.cuda.memory_reserved(0) * 1e-9)
+            #     a.append(torch.cuda.memory_allocated(0) * 1e-9)
+            #     f.append(torch.cuda.memory_reserved(0) * 1e-9 -
+            #              torch.cuda.memory_allocated(0) * 1e-9)
+            #
+            #     traceback.print_exc()
+            #     continue
 
         if validation:
             if (epoch + 1) % validation == 0:
@@ -225,15 +226,12 @@ def train_model(epochs, accumulation_size, train_data_loader, device, mixed_prec
                 print("Early Stopping")
                 break
 
-    if verbose:
-        save_graph(to, r, a, f, filename)
-
     torch.save(model.state_dict(), "models/" + filename)
 
 
 def validate_model(val_dataset, filename):
     start = time.time()
-    loaded_model = get_model_instance_segmentation(num_classes=len(class_dictionary) + 1)
+    loaded_model = get_model_instance_segmentation(num_classes=len(CLASS_DICT) + 1)
     loaded_model.load_state_dict(torch.load("models/" + filename))
     label_counter = 0
     total = 0
@@ -249,8 +247,8 @@ def validate_model(val_dataset, filename):
             dict1 = []
             for elem in range(len(label_boxes)):
                 label = targets["labels"][elem].detach().cpu().numpy()
-                label = list(class_dictionary.keys())[
-                    list(class_dictionary.values()).index(label)]
+                label = list(CLASS_DICT.keys())[
+                    list(CLASS_DICT.values()).index(label)]
                 dict1.append({"label": label, "boxes": label_boxes[elem]})
                 total += 1
             for element in range(len(prediction[0]["boxes"])):
@@ -258,8 +256,8 @@ def validate_model(val_dataset, filename):
                 score = np.round(
                     prediction[0]["scores"][element].cpu().numpy(), decimals=4)
                 label = prediction[0]["labels"][element].cpu().numpy()
-                label = list(class_dictionary.keys())[
-                    list(class_dictionary.values()).index(label)]
+                label = list(CLASS_DICT.keys())[
+                    list(CLASS_DICT.values()).index(label)]
                 try:
                     label_match = 0
                     if score > 0.7:
@@ -278,7 +276,7 @@ def validate_model(val_dataset, filename):
 
 
 def test_model(test_dataset, device, filename, writer):
-    loaded_model = get_model_instance_segmentation(num_classes=len(class_dictionary) + 1)
+    loaded_model = get_model_instance_segmentation(num_classes=len(CLASS_DICT) + 1)
     loaded_model.load_state_dict(torch.load("models/" + filename))
 
     # print("Ground Truth \t\t Label \t\t\t BoxIndex \t\t IOU Score")
@@ -299,8 +297,8 @@ def test_model(test_dataset, device, filename, writer):
             dict1 = []
             for elem in range(len(label_boxes)):
                 label = targets["labels"][elem].cpu().numpy()
-                label = list(class_dictionary.keys())[
-                    list(class_dictionary.values()).index(label)]
+                label = list(CLASS_DICT.keys())[
+                    list(CLASS_DICT.values()).index(label)]
                 dict1.append({"label": label, "boxes": label_boxes[elem]})
                 total += 1
             for element in range(len(prediction[0]["boxes"])):
@@ -308,8 +306,8 @@ def test_model(test_dataset, device, filename, writer):
                 score = np.round(
                     prediction[0]["scores"][element].cpu().numpy(), decimals=4)
                 label = prediction[0]["labels"][element].cpu().numpy()
-                label = list(class_dictionary.keys())[
-                    list(class_dictionary.values()).index(label)]
+                label = list(CLASS_DICT.keys())[
+                    list(CLASS_DICT.values()).index(label)]
                 try:
                     label_match = 0
                     if score > 0.7:
@@ -385,68 +383,7 @@ def iou(label, box1, box2, score, name, index, label_ocr="No OCR", verbose=False
         return 0
 
 
-ocr_dict = {
-    "Gould-Ferraz Shawmut A4J": ['Gould', 'Shawmut', 'Amp-trap', 'Class J', 'Current', 'Limiting', 'A4J###',
-                                 '### Amps.', '### Amp.', '### Amp', '600 VAC or Less', 'HRC I-J', 'UND. LAB. INC.',
-                                 'LISTED FUSE', 'Gould Inc.', 'Newburyport, MA', 'Gould Shawmut', 'Toronto, Canada',
-                                 '600VAC', '200kA I.R.', '300VDC 20kA I.R.', 'Ferraz Shawmut', 'Certified',
-                                 'Assy. in Mexico', 'Assy. in CANADA', '200kA IR 600V AC', '20kA IR 300V DC',
-                                 '600 V.A.C. or Less', 'Interrupting Rating', '200,000 RMS. SYM. Amps.',
-                                 'Assembled in Mexico', 'IR 200kA', 'Electronics Inc.', 'U.S. Pat. Nos. 4,216,457:',
-                                 '4,300,281 and 4,320,376', 'Newburyport, MA 01950', '600 V ~', '200k A I.R.',
-                                 'PATENTED', 'Ferraz', '200kA IR AC', '300VDC or Less', '100kA IR DC', 'LISTED', 'FUSE',
-                                 'SA'],
-    "Ferraz Shawmut AJT": ['AMP-TRAP', '2000', 'DUAL ELEMENT', 'TIME DELAY', 'Smart', 'SpOt', 'AJT###', '###A',
-                           '600V AC', '500V DC', 'Ferraz', 'Shawmut', 'Any Red - Open', 'Amp-Trap 2000', 'Dual Element',
-                           'Time Delay', 'Mersen', 'Ferraz Shawmut', 'Newburyport, MA 01950', 'Class J Fuse',
-                           '200,000A IR 600V AC', '100,000A IR 500V DC', 'Current Limiting', 'LISTED', 'FUSE',
-                           'ISSUE NO.: ND57-62', 'Ferraz Shawmut Certified', '300,000A IR 600V AC', '600V AC/500V DC',
-                           'Any Red = Open'],
-    "English Electric C-J": ['ENGLISH', 'ELECTRIC', 'HRC', 'ENERGY', 'LIMITING FUSE', '### AMPS',
-                             '600 VOLTS A.C. OR LESS', 'CATALOG No. C###J', 'ENSURE CONTINUED', 'SAFE PROTECTION',
-                             'REPLACE WITH', 'CATALOG No.', 'Made in England', 'CSA SPEC', 'CSA STD.', 'HRC1',
-                             'C22.2-106', 'TESTED AT', '200,000 AMPS', 'EASTERN ELECTRIC', '5775 Ferrier Street.',
-                             'Montreal PQ Canada'],
-    "Ferraz Shawmut CRS": ['Ferraz', 'Shawmut', 'Type D', 'Time Delay', 'Temporise', 'CRS###amp', '600V A.C. or less',
-                           'C.A. ou moins', '10kA IR', 'Ferraz Shawmut', 'Toronto, Canada', 'cefcon', 'LR14742',
-                           'Mexico'],
-    "Gould Shawmut AJT": ['AMP-TRAP', '2000', 'TIME DELAY', 'AJT###', '##A 600V AC', 'GOULD SHAWMUT', 'HRCI-J',
-                          'UND. LAB. INC.', 'LISTED FUSE', 'U.S. PAT. NO. 4,344,058', 'Dual Element', 'Time Delay',
-                          '## Amp.', '600V AC', '500V DC', 'DUAL ELEMENT', 'Class J Fuse', '200,000A IR 600V AC',
-                          '100,000A IR 500V DC', 'Current Limiting', 'Gould Certified', '300,000A IR 600V AC',
-                          'Gould Shawmut', '(508) 462-6662', 'Gould, Inc.', 'Newburyport, Mass., U.S.A.',
-                          'Toronto, Ontario, Canada', 'Made in U.S.A.', 'U.S. Pat. 4,320,376', 'Nos. 4,300,281'],
-    "GEC HRC I-J": ['GEC', 'HRC I-J', 'Rating', '### Amp', 'CSA', 'C22.2', 'No. 106-M1985', 'IR 200kA', '~ 60Hz', '600',
-                    'VOLTS', 'Can. Pat. No. 148995', '188', 'Made in English', 'C###J', 'Cat No.', 'No. 106-M92',
-                    'GEC ALSTHOM'],
-    "Gould Shawmut TRSR": ['GOULD', 'Shawmut', 'Tri-onic', 'TRSR ###', 'Time Delay', 'Temporisé', 'HRCI-R', '###A',
-                           'LR14742', '600V ~', '200k.A.I.R', 'Dual Element', '600 V AC', '600 V DC', '300V DC',
-                           '600V AC', 'Current Limiting', 'Class RK5 Fuse', 'UND. LAB. INC.', 'LISTED FUSE',
-                           '200.000A IR', '20.000A IR', 'Gould Shawmut', '198L', '(508) 462-6662', 'Action',
-                           'Temporisée', 'HRC I', '600V A.C. or less', 'C.A. ou moins', 'TRS###R', '### Amps',
-                           '600 VAC or Less'],
-    "English Electric Form II": ['THE CAT. No.', 'AND RATING', '(MARKED ON THIS CAP)', 'SHOULD BE QUOTED',
-                                 'WHEN RE-ORDERING', 'ENGLISH', 'ELECTRIC', 'TESTED AT', '200,000 Amps', 'FORM II',
-                                 'H.R.C. FUSE', 'SA', 'C.S.A.Spec.C22-2No.106', 'EASTERN ELECTRIC COMPANY LTD.', '600',
-                                 'VOLTS', 'or less', 'A.C. 60 cycle', 'EASTERN ELECTRIC FUSE PATENTED', 'CF###A',
-                                 'CC.###', 'CAT.NO.CC###.', 'Complies with', 'IEC 269-2', 'CSA STD', 'C22-2', 'No 106',
-                                 'Tested at', '200,000 Amps', '600V (or less)', 'AC 60HZ', '100,000 AMP RMS ASYM',
-                                 'C.S.A. APP. N°12203.', '600V. 60 CYCLE A.C.', 'FORM II.H.R.C.FUSE'],
-    "Bussmann LPJ": ['BUSS', 'LOW-PEAK', 'DUAL-ELEMENT TIME-DELAY', 'FUSE', 'LPJ-###SP', '600 VAC OR LESS',
-                     'CURRENT LIMITING', 'AMP', 'THIS FUSE MAY SUBSTITUTE FOR', 'A LISTED CLASS J FUSE', 'HRCI-J',
-                     'IR 200kA AC', 'IR 100kA DC', 'TYPE D', 'UL LISTED', 'SPECIAL PURPOSE FUSE FP33-##',
-                     'IR 300kA AC, IR 100kA DC', '600 VAC', '300 VDC', 'CLASS J', 'LISTED FUSE DL92-##', 'Bussmann LPJ',
-                     'LOW-PEAK', 'ULTIMATE PROTECTION', 'CLASS J FUSE', '600Vac', 'AC IR 300kA', '300Vdc',
-                     'DC IR 100kA', 'Self-certified DC rating', 'Cooper Bussmann, LLC', 'St. Louis, MO 63178',
-                     'Assembled in Mexico', 'www.bussmann.com', 'Cooper Industries', 'Bussmann Division',
-                     'St. Louis, MO', 'MADE IN U.S.A.', 'LISTED SPECIAL PURPOSE'],
-    "Gould Shawmut CJ": ['GOULD', 'Shawmut', 'CJ ###', 'HRCI-J', '###A', 'LR14742', 'Class J', 'Cat. No.', '### Amps',
-                         'Amp-trap', '600 V.A.C. or less', '200,000 Amps A.C.', 'Interrupting Rating',
-                         'Current Limiting', '600 V.C.A. ou moins', '200,000 Amps C.A.', 'Intensité de Rupture',
-                         'Limitant de Courant', '200,000 A.I.R.', 'Mfd. By/Fab. Par', 'Gould Shawmut',
-                         'Toronto, Canada', 'Int. De Rupt.', 'Int. Rating', 'Gould Elec. Fuse Div.', 'HRC I',
-                         '200k A.I.R.', '600V ~']
-}
+
 
 
 def label_ocr(img, box, label):
@@ -518,7 +455,7 @@ def label_ocr(img, box, label):
     #   ocr_dict_rank[key] += 1
     try:
         for list_item in result_list:
-            for key, value in ocr_dict.items():
+            for key, value in OCR_DICT.items():
                 for v in value:
                     if fuzz.partial_ratio(v.lower(), list_item.lower()) > 90 and len(list_item) > 3:
                         ocr_dict_rank[key] = ocr_dict_rank.get(key, 0) + 1
@@ -541,7 +478,7 @@ def label_ocr(img, box, label):
 
 
 def view_test_image(idx, test_dataset, filename):
-    loaded_model = get_model_instance_segmentation(num_classes=len(class_dictionary) + 1)
+    loaded_model = get_model_instance_segmentation(num_classes=len(CLASS_DICT) + 1)
     loaded_model.load_state_dict(torch.load("models/" + filename))
     img, targets = test_dataset[idx]
     img_name = ''.join(chr(i) for i in targets['name'])
@@ -557,8 +494,8 @@ def view_test_image(idx, test_dataset, filename):
     # draw groundtruth
     for elem in range(len(label_boxes)):
         label = test_dataset[idx][1]["labels"][elem].cpu().numpy()
-        label = list(class_dictionary.keys())[
-            list(class_dictionary.values()).index(label)]
+        label = list(CLASS_DICT.keys())[
+            list(CLASS_DICT.values()).index(label)]
         draw.rectangle([(label_boxes[elem][0], label_boxes[elem][1]),
                         (label_boxes[elem][2], label_boxes[elem][3])], outline="green", width=3)
         font = ImageFont.truetype(
@@ -570,8 +507,8 @@ def view_test_image(idx, test_dataset, filename):
         score = np.round(prediction[0]["scores"]
                          [element].cpu().numpy(), decimals=4)
         label = prediction[0]["labels"][element].cpu().numpy()
-        label = list(class_dictionary.keys())[
-            list(class_dictionary.values()).index(label)]
+        label = list(CLASS_DICT.keys())[
+            list(CLASS_DICT.values()).index(label)]
         if score > 0.5:
             draw.rectangle(
                 [(boxes[0], boxes[1]), (boxes[2], boxes[3])], outline="red", width=5)
@@ -587,24 +524,6 @@ def split_train_valid_test(train_set, valid_set, test_set, validation_split, tes
     train_set, valid_set = split_dataset(train_set, valid_set, validation_split, total_size)
     train_set, test_set = split_dataset(train_set, test_set, test_split, total_size)
 
-    # dataset_size = len(train_set)
-    # indices = list(range(dataset_size))
-    # split_val = int(np.floor(validation_split * dataset_size))
-    # np.random.shuffle(indices)
-    # val_indices = indices[0:split_val]
-    #
-    # imgs, targets = train_set.extract_data(idx_list=val_indices)
-    # valid_set.add_data(imgs, targets)
-    #
-    # dataset_size_new = len(train_set)
-    # indices = list(range(dataset_size_new))
-    # split_test = int(np.floor(test_split * dataset_size))
-    # np.random.shuffle(indices)
-    # test_indices = indices[0:split_test]
-    #
-    # imgs, targets = train_set.extract_data(idx_list=test_indices)
-    # test_set.add_data(imgs, targets)
-
     return train_set, valid_set, test_set
 
 
@@ -619,3 +538,20 @@ def split_dataset(dataset_in, dataset_out, split, total_size):
     dataset_out.add_data(imgs, targets)
 
     return dataset_in, dataset_out
+
+
+def calculate_mean_std(images):
+    # Calculate dataset mean & std for normalization
+    r = []
+    g = []
+    b = []
+
+    for i in trange(len(images), desc='Calculating train set mean & standard deviation...'):
+        r.append(np.dstack(np.array(images[i])[:, :, 0]))
+        g.append(np.dstack(np.array(images[i])[:, :, 1]))
+        b.append(np.dstack(np.array(images[i])[:, :, 2]))
+
+    mean = (np.mean(r) / 255, np.mean(g) / 255, np.mean(b) / 255)
+    std = (np.std(r) / 255, np.std(g) / 255, np.std(b) / 255)
+
+    return mean, std

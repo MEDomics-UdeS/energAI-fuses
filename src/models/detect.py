@@ -3,20 +3,19 @@ import datetime
 import torch
 import time
 from torch.utils.tensorboard import SummaryWriter
-import copy
-import ray
+import multiprocessing
+import numpy as np
+from tqdm import trange
+from PIL import ImageStat
 
 from reproducibility import seed_worker, set_seed
 from src.data.Fuse_Class import FuseDataset
 from src.data.resize_images import resize_images
-from src.models.helper_functions import collate_fn, base_transform, train_transform, test_model, train_model, \
-     view_test_image, split_train_valid_test
-import multiprocessing
+from src.models.helper_functions import *
 
-ray.init(include_dashboard=False)
 
 if __name__ == '__main__':
-    # Get number of cpu threads for PyTorch DataLoader and Ray parallelizing
+    # Get number of cpu threads for PyTorch DataLoader and Ray paralleling
     num_workers = multiprocessing.cpu_count()
 
     # Declare argument parser
@@ -25,6 +24,7 @@ if __name__ == '__main__':
     # Data source argument
     parser.add_argument('-d', '--data', action='store', type=str, choices=['raw', 'resized'], default='raw',
                         help='Specify which data source')
+
     # Resizing argument
     parser.add_argument('-s', '--size', action='store', type=int, default=1000,
                         help='Resize the images to size*size (takes an argument: max_resize value (int))')
@@ -32,6 +32,10 @@ if __name__ == '__main__':
     # Training argument
     parser.add_argument('-tr', '--train', action='store_false',
                         help='Train a new model')
+
+    # Data augmentation argument
+    parser.add_argument('-da', '--data_aug', action='store', type=float, default=0.25,
+                        help='Value of data augmentation for training dataset (0: no aug)')
 
     # Validation argument
     parser.add_argument('-vs', '--validation_size', action='store', type=float, default=0.1,
@@ -42,11 +46,11 @@ if __name__ == '__main__':
                         help='Size of test set (float as proportion of dataset)')
 
     # Number of epochs argument
-    parser.add_argument('-e', '--epochs', action='store', type=int, default=10,
+    parser.add_argument('-e', '--epochs', action='store', type=int, default=1,
                         help='Number of epochs')
 
     # Batch size argument
-    parser.add_argument('-b', '--batch', action='store', type=int, default=10,
+    parser.add_argument('-b', '--batch', action='store', type=int, default=20,
                         help='Batch size')
 
     # Early stopping argument
@@ -64,10 +68,6 @@ if __name__ == '__main__':
     # Random seed argument
     parser.add_argument('-r', '--random', action='store', type=int, required=False,
                         help='Set random seed', default=1)
-
-    # Verbose argument
-    parser.add_argument('-v', '--verbose', action='store_false',
-                        help='to generate and save graphs')
 
     # View images using a saved model argument
     parser.add_argument('-i', '--image', action='store', type=str,
@@ -90,18 +90,22 @@ if __name__ == '__main__':
     filename = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 
     # Display arguments in console
-    print('Filename:\t\t\t\t\t', filename)
+    print('\nFilename:\t\t\t\t\t', filename)
+
+    print('\nData Source:\t\t\t\t', args.data)
+
+    if args.data == 'raw':
+        print(f'Image Size:\t\t\t\t\t\t{args.size} x {args.size}')
+
     print('Train:\t\t\t\t\t\t', args.train)
     print('Validation Size:\t\t\t', args.validation_size)
     print('Test Size:\t\t\t\t\t', args.test_size)
     print('Epochs:\t\t\t\t\t\t', args.epochs)
     print('Batch Size:\t\t\t\t\t', args.batch)
     print('Early Stopping:\t\t\t\t', args.early_stopping)
-    print('Size:\t\t\t\t\t\t', args.size)
     print('Mixed Precision:\t\t\t', args.mixed_precision)
     print('Gradient Accumulation Size:\t', args.gradient_accumulation)
     print('Random Seed:\t\t\t\t', args.random)
-    print('Save Plots:\t\t\t\t\t', args.verbose)
     print('-' * 100)
 
     # Assign image and annotations file paths depending on data source
@@ -113,12 +117,18 @@ if __name__ == '__main__':
         resize_images(max_image_size=args.size, num_workers=num_workers)
 
     # Declare training, validation and testing datasets
-    train_dataset = FuseDataset(images_path, annotations_path, train_transform())
-    test_dataset = FuseDataset(None, None, base_transform())
-    val_dataset = FuseDataset(None, None, base_transform())
+    train_dataset = FuseDataset(images_path, annotations_path)
+    val_dataset = FuseDataset()
+    test_dataset = FuseDataset()
 
-    train_dataset, test_dataset, val_dataset = split_train_valid_test(train_dataset, test_dataset, val_dataset,
+    train_dataset, val_dataset, test_dataset = split_train_valid_test(train_dataset, val_dataset, test_dataset,
                                                                       args.validation_size, args.test_size)
+
+    mean, std = calculate_mean_std(train_dataset.images)
+
+    train_dataset.transforms = train_transform(mean, std, args.data_aug)
+    train_dataset.transforms = base_transform(mean, std)
+    train_dataset.transforms = base_transform(mean, std)
 
     train_data_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=int(args.batch / args.gradient_accumulation),
@@ -132,19 +142,18 @@ if __name__ == '__main__':
         test_dataset, batch_size=int(args.batch / args.gradient_accumulation),
         shuffle=False, num_workers=num_workers, collate_fn=collate_fn, worker_init_fn=seed_worker)
 
-    device = torch.device(
-        'cuda') if torch.cuda.is_available() else torch.device('cpu')
+    device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
     print(f'=== Dataset Sizes ===\n'
           f'Training:\t{len(train_dataset)}\n'
           f'Validation:\t{len(val_dataset)}\n'
           f'Testing:\t{len(test_dataset)}')
 
-    writer = SummaryWriter('runs/' + filename)
+    writer = SummaryWriter('logdir/' + filename)
     if args.train:
         train_start = time.time()
         train_model(args.epochs, args.gradient_accumulation, train_data_loader, device,
-                    args.mixed_precision, True if args.gradient_accumulation > 1 else False, filename, args.verbose,
+                    args.mixed_precision, True if args.gradient_accumulation > 1 else False, filename,
                     writer, args.early_stopping, args.validation_size, val_dataset)
         print('Total Time Taken (minutes): ', round((time.time() - train_start) / 60, 2))
     if args.test:
