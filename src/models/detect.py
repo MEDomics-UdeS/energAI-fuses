@@ -8,21 +8,25 @@ import ray
 
 from reproducibility import seed_worker, set_seed
 from src.data.Fuse_Class import FuseDataset
-from fuse_config import NUM_WORKERS_DL
+from src.data.resize_images import resize_images
 from src.models.helper_functions import collate_fn, base_transform, train_transform, test_model, train_model, \
      view_test_image, split_train_valid_test
+import multiprocessing
 
 ray.init(include_dashboard=False)
 
 if __name__ == '__main__':
+    # Get number of cpu threads for PyTorch DataLoader and Ray parallelizing
+    num_workers = multiprocessing.cpu_count()
+
     # Declare argument parser
     parser = argparse.ArgumentParser(description='Processing inputs')
 
     # Data source argument
-    parser.add_argument('-d', '--data', action='store', type=str, choices=['raw', 'resized'],
+    parser.add_argument('-d', '--data', action='store', type=str, choices=['raw', 'resized'], default='raw',
                         help='Specify which data source')
     # Resizing argument
-    parser.add_argument('-s', '--size', action='store', type=int, default=0,
+    parser.add_argument('-s', '--size', action='store', type=int, default=1000,
                         help='Resize the images to size*size (takes an argument: max_resize value (int))')
 
     # Training argument
@@ -62,7 +66,7 @@ if __name__ == '__main__':
                         help='Set random seed', default=1)
 
     # Verbose argument
-    parser.add_argument('-v', '--verbose', action='store_true',
+    parser.add_argument('-v', '--verbose', action='store_false',
                         help='to generate and save graphs')
 
     # View images using a saved model argument
@@ -100,9 +104,16 @@ if __name__ == '__main__':
     print('Save Plots:\t\t\t\t\t', args.verbose)
     print('-' * 100)
 
+
+
+
     # Assign image and annotations file paths depending on data source
-    images_path = f'data/{args.data}'
-    annotations_path = f'data/annotations/annotations_{args.data}.csv'
+    images_path = 'data/resized/'
+    annotations_path = 'data/annotations/annotations_resized.csv'
+
+    if args.data == 'raw':
+        resize_images(max_image_size=args.size, num_workers=num_workers)
+
 
     train_dataset = FuseDataset(
         root=images_path, data_file=annotations_path,
@@ -123,15 +134,15 @@ if __name__ == '__main__':
 
     train_data_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=int(args.batch / args.gradient_accumulation),
-        shuffle=True, num_workers=NUM_WORKERS_DL, collate_fn=collate_fn, worker_init_fn=seed_worker)
+        shuffle=True, num_workers=num_workers, collate_fn=collate_fn, worker_init_fn=seed_worker)
 
     val_data_loader = torch.utils.data.DataLoader(
         val_dataset, batch_size=int(args.batch / args.gradient_accumulation),
-        shuffle=False, num_workers=NUM_WORKERS_DL, collate_fn=collate_fn, worker_init_fn=seed_worker)
+        shuffle=False, num_workers=num_workers, collate_fn=collate_fn, worker_init_fn=seed_worker)
 
     test_data_loader = torch.utils.data.DataLoader(
         test_dataset, batch_size=int(args.batch / args.gradient_accumulation),
-        shuffle=False, num_workers=NUM_WORKERS_DL, collate_fn=collate_fn, worker_init_fn=seed_worker)
+        shuffle=False, num_workers=num_workers, collate_fn=collate_fn, worker_init_fn=seed_worker)
 
     device = torch.device(
         'cuda') if torch.cuda.is_available() else torch.device('cpu')

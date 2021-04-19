@@ -19,7 +19,7 @@ from fuzzywuzzy import fuzz
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from torchvision import transforms
 from early_stopping import EarlyStopping
-from fuse_config import (LEARNING_RATE, NO_OF_CLASSES, class_dictionary, GRAD_CLIP)
+from fuse_config import (LEARNING_RATE, class_dictionary, GRAD_CLIP)
 
 """
 converts the image to a tensor
@@ -79,7 +79,7 @@ def save_graph(t, r, a, f, filename):
 
 def train_model(epochs, accumulation_size, train_data_loader, device, mixed_precision,
                 gradient_accumulation, filename, verbose, writer, early, validation, validation_dataset):
-    model = get_model_instance_segmentation(NO_OF_CLASSES + 1)
+    model = get_model_instance_segmentation(len(class_dictionary) + 1)
 
     # move model to the right device
     model.to(device)
@@ -233,7 +233,7 @@ def train_model(epochs, accumulation_size, train_data_loader, device, mixed_prec
 
 def validate_model(val_dataset, filename):
     start = time.time()
-    loaded_model = get_model_instance_segmentation(num_classes=NO_OF_CLASSES + 1)
+    loaded_model = get_model_instance_segmentation(num_classes=len(class_dictionary) + 1)
     loaded_model.load_state_dict(torch.load("models/" + filename))
     label_counter = 0
     total = 0
@@ -278,7 +278,7 @@ def validate_model(val_dataset, filename):
 
 
 def test_model(test_dataset, device, filename, writer):
-    loaded_model = get_model_instance_segmentation(num_classes=NO_OF_CLASSES + 1)
+    loaded_model = get_model_instance_segmentation(num_classes=len(class_dictionary) + 1)
     loaded_model.load_state_dict(torch.load("models/" + filename))
 
     # print("Ground Truth \t\t Label \t\t\t BoxIndex \t\t IOU Score")
@@ -541,7 +541,7 @@ def label_ocr(img, box, label):
 
 
 def view_test_image(idx, test_dataset, filename):
-    loaded_model = get_model_instance_segmentation(num_classes=NO_OF_CLASSES + 1)
+    loaded_model = get_model_instance_segmentation(num_classes=len(class_dictionary) + 1)
     loaded_model.load_state_dict(torch.load("models/" + filename))
     img, targets = test_dataset[idx]
     img_name = ''.join(chr(i) for i in targets['name'])
