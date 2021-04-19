@@ -95,7 +95,7 @@ if __name__ == '__main__':
     print('\nData Source:\t\t\t\t', args.data)
 
     if args.data == 'raw':
-        print(f'Image Size:\t\t\t\t\t\t{args.size} x {args.size}')
+        print(f'Image Size:\t\t\t\t\t{args.size} x {args.size}')
 
     print('Train:\t\t\t\t\t\t', args.train)
     print('Validation Size:\t\t\t', args.validation_size)
@@ -117,7 +117,7 @@ if __name__ == '__main__':
         resize_images(max_image_size=args.size, num_workers=num_workers)
 
     # Declare training, validation and testing datasets
-    train_dataset = FuseDataset(images_path, annotations_path)
+    train_dataset = FuseDataset(images_path, annotations_path, num_workers)
     val_dataset = FuseDataset()
     test_dataset = FuseDataset()
 
