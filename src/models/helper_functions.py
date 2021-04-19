@@ -583,8 +583,9 @@ def view_test_image(idx, test_dataset, filename):
 
 
 def split_train_valid_test(train_set, valid_set, test_set, validation_split, test_split):
-    valid_set = split_dataset(train_set, valid_set, validation_split)
-    test_set = split_dataset(train_set, test_set, test_split)
+    total_size = len(train_set)
+    train_set, valid_set = split_dataset(train_set, valid_set, validation_split, total_size)
+    train_set, test_set = split_dataset(train_set, test_set, test_split, total_size)
 
     # dataset_size = len(train_set)
     # indices = list(range(dataset_size))
@@ -607,13 +608,14 @@ def split_train_valid_test(train_set, valid_set, test_set, validation_split, tes
     return train_set, valid_set, test_set
 
 
-def split_dataset(dataset_in, dataset_out, split):
+def split_dataset(dataset_in, dataset_out, split, total_size):
     dataset_size = len(dataset_in)
     indices = list(range(dataset_size))
-    split_val = int(np.floor(split * dataset_size))
+    split_idx = int(np.floor(split * total_size))
     np.random.shuffle(indices)
-    val_indices = indices[0:split_val]
+    indices = indices[0:split_idx]
 
-    imgs, targets = dataset_in.extract_data(idx_list=val_indices)
+    imgs, targets = dataset_in.extract_data(idx_list=indices)
+    dataset_out.add_data(imgs, targets)
 
-    return dataset_out.add_data(imgs, targets)
+    return dataset_in, dataset_out

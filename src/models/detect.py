@@ -46,7 +46,7 @@ if __name__ == '__main__':
                         help='Number of epochs')
 
     # Batch size argument
-    parser.add_argument('-b', '--batch', action='store', type=int, default=100,
+    parser.add_argument('-b', '--batch', action='store', type=int, default=10,
                         help='Batch size')
 
     # Early stopping argument
@@ -106,27 +106,17 @@ if __name__ == '__main__':
 
     # Assign image and annotations file paths depending on data source
     images_path = 'data/resized/'
-    annotations_path = 'data/annotations/annotations_resized.csv'
+    annotations_path = 'data/annotations/targets_resized.json'
 
     # Resize images if 'raw' has been specified as the data source
     if args.data == 'raw':
         resize_images(max_image_size=args.size, num_workers=num_workers)
 
     # Declare training, validation and testing datasets
-    train_dataset = FuseDataset(root=images_path,
-                                data_file=annotations_path,
-                                transforms=train_transform())
-    test_dataset = FuseDataset(root=images_path,
-                               data_file=annotations_path,
-                               transforms=base_transform())
-    val_dataset = FuseDataset(root=images_path,
-                              data_file=annotations_path,
-                              transforms=base_transform())
+    train_dataset = FuseDataset(images_path, annotations_path, train_transform())
+    test_dataset = FuseDataset(None, None, base_transform())
+    val_dataset = FuseDataset(None, None, base_transform())
 
-
-
-
-    total_dataset = copy.deepcopy(train_dataset)
     train_dataset, test_dataset, val_dataset = split_train_valid_test(train_dataset, test_dataset, val_dataset,
                                                                       args.validation_size, args.test_size)
 
@@ -144,14 +134,18 @@ if __name__ == '__main__':
 
     device = torch.device(
         'cuda') if torch.cuda.is_available() else torch.device('cpu')
-    print('We have: {} examples, {} are training, {} are validation and {} testing'.format(
-        len(total_dataset), len(train_dataset), len(val_dataset), len(test_dataset)))
+
+    print(f'=== Dataset Sizes ===\n'
+          f'Training:\t{len(train_dataset)}\n'
+          f'Validation:\t{len(val_dataset)}\n'
+          f'Testing:\t{len(test_dataset)}')
+
     writer = SummaryWriter('runs/' + filename)
     if args.train:
         train_start = time.time()
         train_model(args.epochs, args.gradient_accumulation, train_data_loader, device,
                     args.mixed_precision, True if args.gradient_accumulation > 1 else False, filename, args.verbose,
-                    writer, args.early, args.validation, val_dataset)
+                    writer, args.early_stopping, args.validation_size, val_dataset)
         print('Total Time Taken (minutes): ', round((time.time() - train_start) / 60, 2))
     if args.test:
         test_model(test_dataset, device, filename, writer)
