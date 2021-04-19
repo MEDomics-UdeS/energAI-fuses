@@ -137,8 +137,8 @@ if __name__ == '__main__':
         mean, std = MEAN, STD
 
     train_dataset.transforms = train_transform(mean, std, args.data_aug)
-    train_dataset.transforms = base_transform(mean, std)
-    train_dataset.transforms = base_transform(mean, std)
+    val_dataset.transforms = base_transform(mean, std)
+    test_dataset.transforms = base_transform(mean, std)
 
     train_data_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=int(args.batch / args.gradient_accumulation),
