@@ -13,11 +13,11 @@ class FuseDataset(torch.utils.data.Dataset):
             ray.init(include_dashboard=False)
 
             images = [img for img in sorted(os.listdir(root)) if img.startswith('.') is False]
-            image_paths = [os.path.join(root, img) for img in images]
-            size = len(image_paths)
+            self.image_paths = [os.path.join(root, img) for img in images]
+            size = len(self.image_paths)
             self.images = [None] * size
 
-            ids = [ray_load_images.remote(image_paths, i) for i in range(num_workers)]
+            ids = [ray_load_images.remote(self.image_paths, i) for i in range(num_workers)]
 
             nb_job_left = size - num_workers
 
@@ -27,11 +27,12 @@ class FuseDataset(torch.utils.data.Dataset):
                 self.images[idx] = image
 
                 if nb_job_left > 0:
-                    ids.extend([ray_load_images.remote(image_paths, size - nb_job_left)])
+                    ids.extend([ray_load_images.remote(self.image_paths, size - nb_job_left)])
                     nb_job_left -= 1
 
             ray.shutdown()
         else:
+            self.image_paths = []
             self.images = []
 
         if targets_path is not None:

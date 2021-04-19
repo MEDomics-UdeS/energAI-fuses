@@ -77,6 +77,11 @@ if __name__ == '__main__':
     parser.add_argument('-tst_f', '--test_file', action='store', type=str,
                         help='Filename of saved model to test (located in models/)')
 
+    # To compute mean & std deviation on training set
+    parser.add_argument('-ms', '--mean_std', action='store_true',
+                        help='Compute mean & standard deviation on training set if true, '
+                             'otherwise use precalculated values')
+
     # Parsing arguments
     args = parser.parse_args()
 
@@ -106,6 +111,9 @@ if __name__ == '__main__':
     print('Mixed Precision:\t\t\t', args.mixed_precision)
     print('Gradient Accumulation Size:\t', args.gradient_accumulation)
     print('Random Seed:\t\t\t\t', args.random)
+    print('View Images Mode:\t\t\t', args.image)
+    print('Test File Mode:\t\t\t\t', args.test_file)
+    print('Compute Mean & Std:\t\t\t', args.mean_std)
     print('-' * 100)
 
     # Assign image and annotations file paths depending on data source
@@ -123,8 +131,10 @@ if __name__ == '__main__':
 
     train_dataset, val_dataset, test_dataset = split_train_valid_test(train_dataset, val_dataset, test_dataset,
                                                                       args.validation_size, args.test_size)
-
-    mean, std = calculate_mean_std(train_dataset.images)
+    if args.mean_std:
+        mean, std = calculate_mean_std(train_dataset.image_paths, num_workers)
+    else:
+        mean, std = MEAN, STD
 
     train_dataset.transforms = train_transform(mean, std, args.data_aug)
     train_dataset.transforms = base_transform(mean, std)

@@ -22,6 +22,7 @@ from torchvision import transforms
 from early_stopping import EarlyStopping
 from fuse_config import *
 
+import ray
 
 def train_transform(mean, std, data_aug_value):
     transforms_list = [
@@ -540,18 +541,49 @@ def split_dataset(dataset_in, dataset_out, split, total_size):
     return dataset_in, dataset_out
 
 
-def calculate_mean_std(images):
+def calculate_mean_std(image_paths, num_workers):
     # Calculate dataset mean & std for normalization
-    r = []
-    g = []
-    b = []
+    ray.init(include_dashboard=False)
 
-    for i in trange(len(images), desc='Calculating train set mean & standard deviation...'):
-        r.append(np.dstack(np.array(images[i])[:, :, 0]))
-        g.append(np.dstack(np.array(images[i])[:, :, 1]))
-        b.append(np.dstack(np.array(images[i])[:, :, 2]))
+    ids = [ray_get_rgb.remote(image_paths, i) for i in range(num_workers)]
+    size = len(image_paths)
+    r = [None] * size
+    g = [None] * size
+    b = [None] * size
+    nb_job_left = size - num_workers
 
+    for _ in trange(size, desc='Getting RGB values of each pixel...'):
+        ready, ids = ray.wait(ids, num_returns=1)
+        r_val, g_val, b_val, idx = ray.get(ready)[0]
+        r[idx] = r_val
+        g[idx] = g_val
+        b[idx] = b_val
+
+        if nb_job_left > 0:
+            ids.extend([ray_get_rgb.remote(image_paths, size - nb_job_left)])
+            nb_job_left -= 1
+
+    ray.shutdown()
+
+    r = np.array(r)
+    g = np.array(g)
+    b = np.array(b)
+
+    print('Calculating RGB values means...')
     mean = (np.mean(r) / 255, np.mean(g) / 255, np.mean(b) / 255)
+
+    print('Calculating RGB values standard deviations...')
     std = (np.std(r) / 255, np.std(g) / 255, np.std(b) / 255)
 
     return mean, std
+
+
+@ray.remote
+def ray_get_rgb(image_paths, idx):
+    image = Image.open(image_paths[idx]).convert("RGB")
+
+    r = np.dstack(np.array(image)[:, :, 0])
+    g = np.dstack(np.array(image)[:, :, 1])
+    b = np.dstack(np.array(image)[:, :, 2])
+
+    return r, g, b, idx
