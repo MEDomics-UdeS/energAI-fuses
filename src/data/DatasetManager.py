@@ -1,8 +1,8 @@
 import numpy as np
-import torchvision.transforms as transforms
 import ray
 from PIL import Image
 from tqdm import trange
+from torchvision import transforms
 
 from src.data.FuseDataset import FuseDataset
 from constants import MEAN, STD
@@ -22,15 +22,15 @@ class DatasetManager:
                  mean_std) -> None:
 
         # Declare training, validation and testing datasets
-        self.train_dataset = FuseDataset(images_path, annotations_path, num_workers)
-        self.valid_dataset = FuseDataset()
-        self.test_dataset = FuseDataset()
+        self.dataset_train = FuseDataset(images_path, annotations_path, num_workers)
+        self.dataset_valid = FuseDataset()
+        self.dataset_test = FuseDataset()
 
-        total_size = len(self.train_dataset)
+        total_size = len(self.dataset_train)
 
-        self.train_dataset, self.valid_dataset = self.split_dataset(self.train_dataset, self.valid_dataset,
+        self.dataset_train, self.dataset_valid = self.split_dataset(self.dataset_train, self.dataset_valid,
                                                                     validation_size, total_size)
-        self.train_dataset, self.test_dataset = self.split_dataset(self.train_dataset, self.test_dataset,
+        self.dataset_train, self.dataset_test = self.split_dataset(self.dataset_train, self.dataset_test,
                                                                    test_size, total_size)
 
         if mean_std:
@@ -38,24 +38,24 @@ class DatasetManager:
         else:
             mean, std = MEAN, STD
 
-        self.train_dataset.transforms = self.train_transform(mean, std, data_aug)
-        self.valid_dataset.transforms = self.base_transform(mean, std)
-        self.test_dataset.transforms = self.base_transform(mean, std)
+        self.dataset_train.transforms = self.transforms_train(mean, std, data_aug)
+        self.dataset_valid.transforms = self.transforms_base(mean, std)
+        self.dataset_test.transforms = self.transforms_base(mean, std)
 
     @staticmethod
-    def train_transform(mean, std, data_aug_value):
+    def transforms_train(mean, std, data_aug):
         transforms_list = [
-            transforms.ColorJitter(brightness=data_aug_value,
-                                   contrast=data_aug_value,
-                                   saturation=data_aug_value,
-                                   hue=data_aug_value),
+            transforms.ColorJitter(brightness=data_aug,
+                                   contrast=data_aug,
+                                   saturation=data_aug,
+                                   hue=data_aug),
             transforms.ToTensor(),
             transforms.Normalize(mean, std)
         ]
         return transforms.Compose(transforms_list)
 
     @staticmethod
-    def base_transform(mean, std):
+    def transforms_base(mean, std):
         transforms_list = [
             transforms.ToTensor(),
             transforms.Normalize(mean, std)
@@ -79,7 +79,7 @@ class DatasetManager:
         # Calculate dataset mean & std for normalization
         ray.init(include_dashboard=False)
 
-        image_paths = self.train_dataset.image_paths
+        image_paths = self.dataset_train.image_paths
 
         ids = [ray_get_rgb.remote(image_paths, i) for i in range(num_workers)]
         size = len(image_paths)

@@ -1,6 +1,6 @@
 from src.data.DatasetManager import DatasetManager
-from torch.utils.data import DataLoader
 from src.utils.seed import seed_worker
+from torch.utils.data import DataLoader
 
 
 class DataLoaderManager:
@@ -16,21 +16,21 @@ class DataLoaderManager:
 
         batch_size_ga = int(batch_size / gradient_accumulation)
 
-        self.train_data_loader = DataLoader(dataset_manager.train_dataset,
+        self.data_loader_train = DataLoader(dataset_manager.dataset_train,
                                             batch_size=batch_size_ga,
                                             shuffle=shuffle,
                                             num_workers=num_workers,
                                             collate_fn=self.collate_fn,
                                             worker_init_fn=seed_worker)
 
-        self.valid_data_loader = DataLoader(dataset_manager.valid_dataset,
+        self.data_loader_valid = DataLoader(dataset_manager.dataset_valid,
                                             batch_size=batch_size_ga,
                                             shuffle=shuffle,
                                             num_workers=num_workers,
                                             collate_fn=self.collate_fn,
                                             worker_init_fn=seed_worker)
 
-        self.test_data_loader = DataLoader(dataset_manager.test_dataset,
+        self.data_loader_test = DataLoader(dataset_manager.dataset_test,
                                            batch_size=batch_size_ga,
                                            shuffle=shuffle,
                                            num_workers=num_workers,

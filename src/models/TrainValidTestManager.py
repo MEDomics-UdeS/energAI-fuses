@@ -1,16 +1,3 @@
-"""
-File:
-    models/TrainValidTestManager.py
-
-Authors:
-    - Abir Riahi
-    - Nicolas Raymond
-    - Simon Giard-Leroux
-
-Description:
-    Defines the TrainValidTestManager class.
-"""
-
 import os
 import numpy as np
 import torch
@@ -22,37 +9,33 @@ from tqdm import tqdm
 from typing import Optional
 import torchvision.models as models
 import torch.nn as nn
-from src.models.constants import *
-
-MODELS = [RESNET18, SQUEEZE_NET_1_1]
+from constants import *
+# from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
+# from torchvision.models.detection import fasterrcnn_resnet50_fpn
+import torchvision.models.detection as detection
+from constants import CLASS_DICT
+from src.models.EarlyStopping import EarlyStopping
 
 
 class TrainValidTestManager:
     """
     Training, validation and testing manager.
     """
+
     def __init__(self, data_loader_manager: DataLoaderManager,
                  file_name: Optional[str],
                  model_name: str,
                  learning_rate: float,
                  weight_decay: float,
+                 early_stopping,
                  pretrained: bool = False) -> None:
-        """
-        :param data_loader_manager: DatasetManager, class with each dataset and dataloader
-        :param file_name: str, file name with which to save the trained model
-        :param model_name: str, name of the model (RESNET34 or SQUEEZE_NET_1_1)
-        :param learning_rate: float, learning rate for the Adam optimizer
-        :param weight_decay: L2 penalty added to the loss
-        :param pretrained: bool, indicates if the model should be pretrained on ImageNet
-        """
-        # Flag to enable the inbuilt cudnn auto-tuner
-        # to find the best algorithm to use for the hardware used
-        torch.backends.cudnn.benchmark = True
+
+        self.num_classes = len(CLASS_DICT) + 1 # + 1 to include background class
+        self.early_stopping = early_stopping
 
         # Extract the training, validation and testing data loaders
         self.data_loader_train = data_loader_manager.data_loader_train
-        self.data_loader_valid_1 = data_loader_manager.data_loader_valid_1
-        self.data_loader_valid_2 = data_loader_manager.data_loader_valid_2
+        self.data_loader_valid = data_loader_manager.data_loader_valid
         self.data_loader_test = data_loader_manager.data_loader_test
         self.batch_size = data_loader_manager.batch_size
 
@@ -62,14 +45,8 @@ class TrainValidTestManager:
         # Define device as the GPU if available, else use the CPU
         self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
-        # Number of classes in the data_loader dataset
-        if type(self.data_loader_train.dataset) == Subset:
-            num_classes = len(self.data_loader_train.dataset.dataset.class_to_idx)
-        else:
-            num_classes = len(self.data_loader_train.dataset.class_to_idx)
-
         # Get model and set last fully-connected layer with the right number of classes
-        self.model = self.load_zoo_models(model_name, num_classes, pretrained=pretrained)
+        self.load_model(name=model_name, num_classes=self.num_classes, pretrained=pretrained)
 
         # Define loss function
         self.criterion = torch.nn.CrossEntropyLoss()
@@ -91,14 +68,6 @@ class TrainValidTestManager:
             'Validation Accuracy': []
         }
 
-    def update_train_loader(self, data_loader_manager: DataLoaderManager) -> None:
-        """
-        Updates the train loader
-
-        :param data_loader_manager: DataLoaderManager
-        """
-        self.data_loader_train = data_loader_manager.data_loader_train
-
     def train_model(self, epochs: int) -> None:
         """
         Trains the model and saves the trained model.
@@ -107,6 +76,9 @@ class TrainValidTestManager:
         """
         # Specify that the model will be trained
         self.model.train()
+
+        if self.early_stopping:
+            es = EarlyStopping(patience=self.early_stopping)
 
         # Declare tqdm progress bar
         pbar = tqdm(total=len(self.data_loader_train), leave=False,
@@ -151,8 +123,8 @@ class TrainValidTestManager:
             pbar.reset()
 
             # Save the training loss and accuracy in the object
-            self.results['Training Loss'].append(round(np.mean(loss_list_epoch), NB_SAVE_DIGITS))
-            self.results['Training Accuracy'].append(round(np.mean(accuracy_list_epoch), NB_SAVE_DIGITS))
+            self.results['Training Loss'].append(round(np.mean(loss_list_epoch), 5))
+            self.results['Training Accuracy'].append(round(np.mean(accuracy_list_epoch), 5))
 
             # Validate the model
             self.validate_model()
@@ -162,7 +134,7 @@ class TrainValidTestManager:
 
         # If file_name is specified, save the trained model
         if self.file_name is not None:
-            torch.save(self.model.state_dict(), f'{os.getcwd()}/models/{self.file_name}')
+            torch.save(self.model.state_dict(), f'models/{self.file_name}')
 
     def validate_model(self) -> None:
         """
@@ -198,8 +170,8 @@ class TrainValidTestManager:
         mean_accuracy = np.mean(accuracy_list)
 
         # Save mean loss and mean accuracy in the object
-        self.results['Validation Loss'].append(round(mean_loss,NB_SAVE_DIGITS))
-        self.results['Validation Accuracy'].append(round(mean_accuracy, NB_SAVE_DIGITS))
+        self.results['Validation Loss'].append(round(mean_loss, 5))
+        self.results['Validation Accuracy'].append(round(mean_accuracy, 5))
 
     def test_model(self, final_eval: bool = False) -> float:
         """
@@ -234,69 +206,95 @@ class TrainValidTestManager:
         mean_accuracy = np.mean(accuracy_list)
         return mean_accuracy
 
-    def evaluate_unlabeled(self, unlabeled_subset: Subset) -> tensor:
-        """
-        Returns softmax of the prediction
+    def load_model(self,
+                   name: str,
+                   num_classes: int,
+                   pretrained: bool = False,
+                   progress: bool = True,
+                   pretrained_backbone: bool = True,
+                   trainable_backbone_layers: Optional[int] = None):
 
-        :param unlabeled_subset: Subset containing unlabeled data
-        :return: tensor, softmax outputs
-        """
-        # We initialize a dataloader and an empty list of outputs
-        unlabeled_loader = DataLoader(unlabeled_subset, batch_size=self.batch_size*2)
-        outputs = []
+        if name == 'fasterrcnn_resnet50_fpn':
+            self.model = detection.fasterrcnn_resnet50_fpn(pretrained=pretrained,
+                                                           progress=progress,
+                                                           num_classes=num_classes,
+                                                           pretrained_backbone=pretrained_backbone,
+                                                           trainable_backbone_layers=trainable_backbone_layers)
+        elif name == 'fasterrcnn_mobilenet_v3_large_fpn':
+            self.model = detection.fasterrcnn_mobilenet_v3_large_fpn(pretrained=pretrained,
+                                                                     progress=progress,
+                                                                     num_classes=num_classes,
+                                                                     pretrained_backbone=pretrained_backbone,
+                                                                     trainable_backbone_layers=trainable_backbone_layers)
+        elif name == 'fasterrcnn_mobilenet_v3_large_320_fpn':
+            self.model = detection.fasterrcnn_mobilenet_v3_large_320_fpn(pretrained=pretrained,
+                                                                         progress=progress,
+                                                                         num_classes=num_classes,
+                                                                         pretrained_backbone=pretrained_backbone,
+                                                                         trainable_backbone_layers=trainable_backbone_layers)
+        elif name == 'retinanet_resnet50_fpn':
+            self.model = detection.retinanet_resnet50_fpn(pretrained=pretrained,
+                                                          progress=progress,
+                                                          num_classes=num_classes,
+                                                          pretrained_backbone=pretrained_backbone,
+                                                          trainable_backbone_layers=trainable_backbone_layers)
+        elif name == 'maskrcnn_resnet50_fpn':
+            self.model = detection.maskrcnn_resnet50_fpn(pretrained=pretrained,
+                                                         progress=progress,
+                                                         num_classes=num_classes,
+                                                         pretrained_backbone=pretrained_backbone,
+                                                         trainable_backbone_layers=trainable_backbone_layers)
+        elif name == 'keypointrcnn_resnet50_fpn':
+            self.model = detection.keypointrcnn_resnet50_fpn(pretrained=pretrained,
+                                                             progress=progress,
+                                                             num_classes=num_classes,
+                                                             pretrained_backbone=pretrained_backbone,
+                                                             trainable_backbone_layers=trainable_backbone_layers)
 
-        # Specify that the model will be evaluated
-        self.model.eval()
+        # model = self.replace_model_head(name, model, num_classes)
 
-        # Deactivate the autograd engine
-        with torch.no_grad():
-            for images, _ in unlabeled_loader:
+    # @staticmethod
+    # def replace_model_head(name, model, num_classes):
+    #     in_features = model.roi_heads.box_predictor.cls_score.in_features
+    #
+    #     if name.instr('fasterrcnn'):
+    #         model.roi_heads.box_predictor = detection.faster_rcnn.FastRCNNPredictor(in_features=in_features,
+    #                                                                                 num_classes=num_classes)
+    #     elif name.instr('retinanet'):
+    #         model.roi_heads.box_predictor = detection.retinanet.RetinaNetHead(in_features=in_features,
+    #                                                                           num_classes=num_classes)
+    #     elif name.instr('')
+    #             f
+    #         a
+    #
+    #
 
-                # Send images to the device
-                images = images.to(self.device)
+    # from .faster_rcnn import *
+    # from .mask_rcnn import *
+    # from .keypoint_rcnn import *
+    # from .retinanet import *
 
-                # Perform a forward pass
-                outputs.append(self.model.forward(images))
-
-        outputs = torch.cat(outputs)
-        return softmax(outputs, dim=1)
-
-    @staticmethod
-    def load_zoo_models(name: str, num_classes: int, pretrained: bool = False) -> nn.Module:
-        """
-        Loads model from torchvision and changes last layer if pretrained = True
-
-        :param name: Name of the model must be in MODELS list
-        :param num_classes: Number of classes in the last fully connected layer (nn.Linear)
-        :param pretrained: bool indicating if we want the pretrained version of the model on ImageNet
-        :return: PyTorch Model
-
-        The finetuning procedure is inspired from :
-        https://pytorch.org/tutorials/beginner/finetuning_torchvision_models_tutorial.html
-        """
-        assert name in MODELS, f"The name provided must be in {MODELS}"
-
-        if name == RESNET18:
-            if pretrained:
-                # If pretrained, an error occur if num_classes != 1000,
-                # we have to initialize and THEN change the last layer
-                m = models.resnet18(pretrained)
-                m.fc = nn.Linear(512, num_classes)
-            else:
-                # If not pretrained, the last layer can be of any size, hence we can do both step
-                # in one and avoid initializing last layer twice
-                m = models.resnet18(pretrained, num_classes=num_classes)
-        else:
-            if pretrained:
-                # If pretrained, an error occur if num_classes != 1000,
-                # we have to initialize and THEN change the last layer
-                m = models.squeezenet1_1(pretrained)
-                m.classifier[1] = nn.Conv2d(512, num_classes, kernel_size=(1, 1), stride=(1, 1))
-            else:
-                # If not pretrained, the last layer can be of any size, hence we can do both step
-                # in one and avoid initializing last layer twice
-                m = models.squeezenet1_1(pretrained, num_classes=num_classes)
-        return m
+    # if name == RESNET18:
+    #     if pretrained:
+    #         # If pretrained, an error occur if num_classes != 1000,
+    #         # we have to initialize and THEN change the last layer
+    #         m = models.resnet18(pretrained)
+    #         m.fc = nn.Linear(512, num_classes)
+    #     else:
+    #         # If not pretrained, the last layer can be of any size, hence we can do both step
+    #         # in one and avoid initializing last layer twice
+    #         m = models.resnet18(pretrained, num_classes=num_classes)
+    # else:
+    #     if pretrained:
+    #         # If pretrained, an error occur if num_classes != 1000,
+    #         # we have to initialize and THEN change the last layer
+    #         m = models.squeezenet1_1(pretrained)
+    #         m.classifier[1] = nn.Conv2d(512, num_classes, kernel_size=(1, 1), stride=(1, 1))
+    #     else:
+    #         # If not pretrained, the last layer can be of any size, hence we can do both step
+    #         # in one and avoid initializing last layer twice
+    #         m = models.squeezenet1_1(pretrained, num_classes=num_classes)
+    # return m
 
     @staticmethod
     def get_accuracy(outputs: torch.Tensor, labels: torch.Tensor) -> float:

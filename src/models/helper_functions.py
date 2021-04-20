@@ -17,47 +17,12 @@ import torch.cuda.amp as amp
 import torchvision
 from PIL import Image, ImageDraw, ImageFont
 from fuzzywuzzy import fuzz
-from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
+
 from torchvision import transforms
 from src.models.early_stopping import EarlyStopping
 from constants import *
 
 import ray
-
-
-
-
-
-
-def get_model_instance_segmentation(num_classes):
-    # load an instance segmentation model pre-trained pre-trained on COCO
-    model = torchvision.models.detection.fasterrcnn_resnet50_fpn(
-        pretrained=False)
-    # get number of input features for the classifier
-    in_features = model.roi_heads.box_predictor.cls_score.in_features
-    # replace the pre-trained head with a new one
-    model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
-    return model
-
-
-# def save_graph(t, r, a, f, filename):
-#     # print(t,r,a,f)
-#     x = np.arange(0, len(t))
-#     df = pd.DataFrame({"time": x, "t": t, "r": r, "a": a, "f": f})
-#     sns.set_style("darkgrid")
-#     sns.lineplot(x="time", y="t", data=df, label="total")
-#     sns.lineplot(x="time", y="r", data=df, label="reserved")
-#     sns.lineplot(x="time", y="a", data=df, label="allocated")
-#     sns.lineplot(x="time", y="f", data=df, label="free")
-#     title = filename.split("_")
-#     epoch_string = title[1][1:]
-#     batch_string = title[2][1:]
-#     downsample_string = title[3][1:]
-#     mp_string = title[4][2:]
-#     gradient_string = title[5][1:]
-#     plt.title("Epochs: " + epoch_string + " Batch Size: " + batch_string + " \nDownsample: " +
-#               downsample_string + " Mixed Prec: " + mp_string + " Gradient Acc: " + gradient_string)
-#     plt.savefig("plots/" + filename + '.png')
 
 
 def train_model(epochs, accumulation_size, train_data_loader, device, mixed_precision,
