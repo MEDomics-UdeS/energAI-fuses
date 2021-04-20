@@ -27,8 +27,6 @@ import ray
 
 
 
-def collate_fn(batch):
-    return tuple(zip(*batch))
 
 
 def get_model_instance_segmentation(num_classes):

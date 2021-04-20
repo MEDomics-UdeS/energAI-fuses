@@ -6,9 +6,11 @@ from multiprocessing import cpu_count
 from src.data.FuseDataset import FuseDataset
 from src.data.resize_images import resize_images
 from src.models.helper_functions import *
-from src.models.reproducibility import seed_worker, set_seed
-from constants import *
+from src.utils.seed import seed_worker, set_seed
 
+from constants import *
+from src.data.DatasetManager import DatasetManager
+from src.data.DataLoaderManager import DataLoaderManager
 
 if __name__ == '__main__':
     # Get number of cpu threads for PyTorch DataLoader and Ray paralleling
@@ -120,48 +122,24 @@ if __name__ == '__main__':
     if args.data == 'raw':
         resize_images(args.size, num_workers)
 
-    # # Declare training, validation and testing datasets
-    # train_dataset = FuseDataset(images_path, annotations_path, num_workers)
-    # val_dataset = FuseDataset()
-    # test_dataset = FuseDataset()
-    #
-    # train_dataset, val_dataset, test_dataset = split_train_valid_test(train_dataset, val_dataset, test_dataset,
-    #                                                                   args.validation_size, args.test_size)
-    # if args.mean_std:
-    #     mean, std = calculate_mean_std(train_dataset.image_paths, num_workers)
-    # else:
-    #     mean, std = MEAN, STD
-    #
-    # train_dataset.transforms = train_transform(mean, std, args.data_aug)
-    # val_dataset.transforms = base_transform(mean, std)
-    # test_dataset.transforms = base_transform(mean, std)
-    dataset_manager = DatasetManager()
+    dataset_manager = DatasetManager(images_path, annotations_path, num_workers,
+                                     args.data_aug, args.validation_size, args.test_size, args.mean_std)
 
-    train_data_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=int(args.batch / args.gradient_accumulation),
-        shuffle=True, num_workers=num_workers, collate_fn=collate_fn, worker_init_fn=seed_worker)
-
-    val_data_loader = torch.utils.data.DataLoader(
-        val_dataset, batch_size=int(args.batch / args.gradient_accumulation),
-        shuffle=False, num_workers=num_workers, collate_fn=collate_fn, worker_init_fn=seed_worker)
-
-    test_data_loader = torch.utils.data.DataLoader(
-        test_dataset, batch_size=int(args.batch / args.gradient_accumulation),
-        shuffle=False, num_workers=num_workers, collate_fn=collate_fn, worker_init_fn=seed_worker)
+    dataloader_manager = DataLoaderManager(dataset_manager, args.batch, args.gradient_accumulation, num_workers)
 
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
     print(f'=== Dataset Sizes ===\n'
-          f'Training:\t{len(train_dataset)}\n'
-          f'Validation:\t{len(val_dataset)}\n'
-          f'Testing:\t{len(test_dataset)}')
+          f'Training:\t{len(dataset_manager.train_dataset)}\n'
+          f'Validation:\t{len(dataset_manager.valid_dataset)}\n'
+          f'Testing:\t{len(dataset_manager.test_dataset)}')
 
     writer = SummaryWriter('logdir/' + filename)
     if args.train:
         train_start = time.time()
-        train_model(args.epochs, args.gradient_accumulation, train_data_loader, device,
+        train_model(args.epochs, args.gradient_accumulation, dataloader_manager.train_data_loader, device,
                     args.mixed_precision, True if args.gradient_accumulation > 1 else False, filename,
-                    writer, args.early_stopping, args.validation_size, val_dataset)
+                    writer, args.early_stopping, args.validation_size, dataset_manager.valid_dataset)
         print('Total Time Taken (minutes): ', round((time.time() - train_start) / 60, 2))
     if args.test:
         test_model(test_dataset, device, filename, writer)

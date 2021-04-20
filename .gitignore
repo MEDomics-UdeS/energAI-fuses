@@ -76,7 +76,7 @@ target/
 .ipynb_checkpoints/
 
 # exclude data from source control by default
-data/
+/data/
 
 # Mac OS-specific storage files
 .DS_Store
@@ -89,4 +89,7 @@ data/
 .mypy_cache/
 
 # Tensorboard logs
-logdir/
+/logdir/
+
+# Trained models
+/models/
