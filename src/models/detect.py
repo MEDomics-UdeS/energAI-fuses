@@ -122,7 +122,7 @@ if __name__ == '__main__':
 
     # Resize images if 'raw' has been specified as the data source
     if args.data == 'raw':
-        resize_images(max_image_size=args.size, num_workers=num_workers)
+        resize_images(args.size, num_workers)
 
     # Declare training, validation and testing datasets
     train_dataset = FuseDataset(images_path, annotations_path, num_workers)
