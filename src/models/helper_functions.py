@@ -19,7 +19,7 @@ from PIL import Image, ImageDraw, ImageFont
 from fuzzywuzzy import fuzz
 
 from torchvision import transforms
-from src.models.early_stopping import EarlyStopping
+# from src.models.early_stopping import EarlyStopping
 from constants import *
 
 import ray

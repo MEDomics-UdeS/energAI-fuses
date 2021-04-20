@@ -1,6 +1,6 @@
 import argparse
 import datetime
-from torch.utils.tensorboard import SummaryWriter
+
 from multiprocessing import cpu_count
 
 from src.data.FuseDataset import FuseDataset
@@ -11,6 +11,7 @@ from src.utils.seed import seed_worker, set_seed
 from constants import *
 from src.data.DatasetManager import DatasetManager
 from src.data.DataLoaderManager import DataLoaderManager
+from src.models.TrainValidTestManager import TrainValidTestManager
 
 if __name__ == '__main__':
     # Get number of cpu threads for PyTorch DataLoader and Ray paralleling
@@ -90,10 +91,10 @@ if __name__ == '__main__':
     start = time.time()
 
     # Declare file name as yyyy-mm-dd_hh-mm-ss
-    filename = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    file_name = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 
     # Display arguments in console
-    print('\nFilename:\t\t\t\t\t', filename)
+    print('\nFilename:\t\t\t\t\t', file_name)
 
     print('\nData Source:\t\t\t\t', args.data)
 
@@ -125,16 +126,18 @@ if __name__ == '__main__':
     dataset_manager = DatasetManager(images_path, annotations_path, num_workers,
                                      args.data_aug, args.validation_size, args.test_size, args.mean_std)
 
-    dataloader_manager = DataLoaderManager(dataset_manager, args.batch, args.gradient_accumulation, num_workers)
+    data_loader_manager = DataLoaderManager(dataset_manager, args.batch, args.gradient_accumulation, num_workers)
 
-    device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+    train_valid_test_manager = TrainValidTestManager(data_loader_manager=data_loader_manager,
+                                                     file_name=file_name,
+                                                     model_name='fasterrcnn_mobilenet_v3_large_fpn',
+                                                     learning_rate=LEARNING_RATE,
+                                                     weight_decay=0,
+                                                     early_stopping=args.early_stopping,
+                                                     mixed_precision=args.mixed_precision,
+                                                     gradient_accumulation=args.gradient_accumulation)
+    train_valid_test_manager.train_model(args.epochs)
 
-    print(f'=== Dataset Sizes ===\n'
-          f'Training:\t{len(dataset_manager.train_dataset)}\n'
-          f'Validation:\t{len(dataset_manager.valid_dataset)}\n'
-          f'Testing:\t{len(dataset_manager.test_dataset)}')
-
-    writer = SummaryWriter('logdir/' + filename)
     if args.train:
         train_start = time.time()
         train_model(args.epochs, args.gradient_accumulation, dataloader_manager.train_data_loader, device,

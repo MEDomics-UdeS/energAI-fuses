@@ -27,7 +27,7 @@ if __name__ == '__main__':
     main()
 
     cmds = [
-        ['python', 'detect.py', '--data', 'resized'],
+        ['python', 'detect.py', '--data', 'resized', '--epochs', '3'],
     ]
 
     start = time.time()
