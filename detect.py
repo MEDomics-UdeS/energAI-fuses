@@ -3,7 +3,7 @@ import datetime
 from torch.utils.tensorboard import SummaryWriter
 from multiprocessing import cpu_count
 
-from src.data.Fuse_Class import FuseDataset
+from src.data.FuseDataset import FuseDataset
 from src.data.resize_images import resize_images
 from src.models.helper_functions import *
 from src.models.reproducibility import seed_worker, set_seed
@@ -120,21 +120,22 @@ if __name__ == '__main__':
     if args.data == 'raw':
         resize_images(args.size, num_workers)
 
-    # Declare training, validation and testing datasets
-    train_dataset = FuseDataset(images_path, annotations_path, num_workers)
-    val_dataset = FuseDataset()
-    test_dataset = FuseDataset()
-
-    train_dataset, val_dataset, test_dataset = split_train_valid_test(train_dataset, val_dataset, test_dataset,
-                                                                      args.validation_size, args.test_size)
-    if args.mean_std:
-        mean, std = calculate_mean_std(train_dataset.image_paths, num_workers)
-    else:
-        mean, std = MEAN, STD
-
-    train_dataset.transforms = train_transform(mean, std, args.data_aug)
-    val_dataset.transforms = base_transform(mean, std)
-    test_dataset.transforms = base_transform(mean, std)
+    # # Declare training, validation and testing datasets
+    # train_dataset = FuseDataset(images_path, annotations_path, num_workers)
+    # val_dataset = FuseDataset()
+    # test_dataset = FuseDataset()
+    #
+    # train_dataset, val_dataset, test_dataset = split_train_valid_test(train_dataset, val_dataset, test_dataset,
+    #                                                                   args.validation_size, args.test_size)
+    # if args.mean_std:
+    #     mean, std = calculate_mean_std(train_dataset.image_paths, num_workers)
+    # else:
+    #     mean, std = MEAN, STD
+    #
+    # train_dataset.transforms = train_transform(mean, std, args.data_aug)
+    # val_dataset.transforms = base_transform(mean, std)
+    # test_dataset.transforms = base_transform(mean, std)
+    dataset_manager = DatasetManager()
 
     train_data_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=int(args.batch / args.gradient_accumulation),

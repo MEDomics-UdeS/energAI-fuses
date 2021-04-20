@@ -24,24 +24,7 @@ from constants import *
 
 import ray
 
-def train_transform(mean, std, data_aug_value):
-    transforms_list = [
-        transforms.ColorJitter(brightness=data_aug_value,
-                               contrast=data_aug_value,
-                               saturation=data_aug_value,
-                               hue=data_aug_value),
-        transforms.ToTensor(),
-        transforms.Normalize(mean, std)
-    ]
-    return transforms.Compose(transforms_list)
 
-
-def base_transform(mean, std):
-    transforms_list = [
-        transforms.ToTensor(),
-        transforms.Normalize(mean, std)
-    ]
-    return transforms.Compose(transforms_list)
 
 
 def collate_fn(batch):
@@ -520,70 +503,3 @@ def view_test_image(idx, test_dataset, filename):
     image = image.save("image_save_1/" + img_name)
 
 
-def split_train_valid_test(train_set, valid_set, test_set, validation_split, test_split):
-    total_size = len(train_set)
-    train_set, valid_set = split_dataset(train_set, valid_set, validation_split, total_size)
-    train_set, test_set = split_dataset(train_set, test_set, test_split, total_size)
-
-    return train_set, valid_set, test_set
-
-
-def split_dataset(dataset_in, dataset_out, split, total_size):
-    dataset_size = len(dataset_in)
-    indices = list(range(dataset_size))
-    split_idx = int(np.floor(split * total_size))
-    np.random.shuffle(indices)
-    indices = indices[0:split_idx]
-
-    imgs, targets = dataset_in.extract_data(idx_list=indices)
-    dataset_out.add_data(imgs, targets)
-
-    return dataset_in, dataset_out
-
-
-def calculate_mean_std(image_paths, num_workers):
-    # Calculate dataset mean & std for normalization
-    ray.init(include_dashboard=False)
-
-    ids = [ray_get_rgb.remote(image_paths, i) for i in range(num_workers)]
-    size = len(image_paths)
-    r = [None] * size
-    g = [None] * size
-    b = [None] * size
-    nb_job_left = size - num_workers
-
-    for _ in trange(size, desc='Getting RGB values of each pixel...'):
-        ready, ids = ray.wait(ids, num_returns=1)
-        r_val, g_val, b_val, idx = ray.get(ready)[0]
-        r[idx] = r_val
-        g[idx] = g_val
-        b[idx] = b_val
-
-        if nb_job_left > 0:
-            ids.extend([ray_get_rgb.remote(image_paths, size - nb_job_left)])
-            nb_job_left -= 1
-
-    ray.shutdown()
-
-    r = np.array(r)
-    g = np.array(g)
-    b = np.array(b)
-
-    print('Calculating RGB values means...')
-    mean = (np.mean(r) / 255, np.mean(g) / 255, np.mean(b) / 255)
-
-    print('Calculating RGB values standard deviations...')
-    std = (np.std(r) / 255, np.std(g) / 255, np.std(b) / 255)
-
-    return mean, std
-
-
-@ray.remote
-def ray_get_rgb(image_paths, idx):
-    image = Image.open(image_paths[idx]).convert("RGB")
-
-    r = np.dstack(np.array(image)[:, :, 0])
-    g = np.dstack(np.array(image)[:, :, 1])
-    b = np.dstack(np.array(image)[:, :, 2])
-
-    return r, g, b, idx
