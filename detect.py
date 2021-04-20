@@ -1,22 +1,18 @@
 import argparse
 import datetime
-import torch
-import time
 from torch.utils.tensorboard import SummaryWriter
-import multiprocessing
-import numpy as np
-from tqdm import trange
-from PIL import ImageStat
+from multiprocessing import cpu_count
 
-from reproducibility import seed_worker, set_seed
 from src.data.Fuse_Class import FuseDataset
 from src.data.resize_images import resize_images
 from src.models.helper_functions import *
+from src.models.reproducibility import seed_worker, set_seed
+from constants import *
 
 
 if __name__ == '__main__':
     # Get number of cpu threads for PyTorch DataLoader and Ray paralleling
-    num_workers = multiprocessing.cpu_count()
+    num_workers = cpu_count()
 
     # Declare argument parser
     parser = argparse.ArgumentParser(description='Processing inputs')

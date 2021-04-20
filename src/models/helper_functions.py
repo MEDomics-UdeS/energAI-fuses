@@ -19,8 +19,8 @@ from PIL import Image, ImageDraw, ImageFont
 from fuzzywuzzy import fuzz
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from torchvision import transforms
-from early_stopping import EarlyStopping
-from fuse_config import *
+from src.models.early_stopping import EarlyStopping
+from constants import *
 
 import ray
 

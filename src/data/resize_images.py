@@ -1,4 +1,4 @@
-from fuse_config import CLASS_DICT
+from constants import CLASS_DICT
 import ray
 import os
 import pandas as pd
