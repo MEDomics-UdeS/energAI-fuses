@@ -49,7 +49,7 @@ if __name__ == '__main__':
                         help='Number of epochs')
 
     # Batch size argument
-    parser.add_argument('-b', '--batch', action='store', type=int, default=24,
+    parser.add_argument('-b', '--batch', action='store', type=int, default=30,
                         help='Batch size')
 
     # Early stopping argument

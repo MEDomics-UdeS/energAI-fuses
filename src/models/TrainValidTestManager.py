@@ -33,7 +33,7 @@ class TrainValidTestManager:
                  early_stopping,
                  mixed_precision,
                  gradient_accumulation,
-                 pretrained: bool = False) -> None:
+                 pretrained: bool = True) -> None:
         self.train_step = 0
         self.valid_step = 0
         self.total_step = 0
@@ -151,7 +151,7 @@ class TrainValidTestManager:
 
                 loss_list_epoch.append(losses.item())
 
-                self.train_step = self.save_batch('Training', losses, 0, self.train_step)
+                self.train_step = self.save_batch('Training', losses, self.train_step)
                 self.total_step = self.save_memory(self.total_step)
 
                 # Update progress bar
@@ -249,19 +249,13 @@ class TrainValidTestManager:
 
         :return: None
         """
-        # Specify that the model will be evaluated
-        # self.model.eval()
 
-        # # Declare empty loss and accuracy lists
-        # loss_list = []
-        # accuracy_list = []
-        # Declare tqdm progress bar
+        self.model.train()
 
         pbar = tqdm(total=len(self.data_loader_valid), leave=False,
-                    desc='Validation Epoch 0', postfix='Loss: 0')
+                    desc=f'Validation Epoch {epoch}', postfix='Loss: 0')
 
         loss_list_epoch = []
-        accuracy_list_epoch = []
 
         # Deactivate the autograd engine
         with torch.no_grad():
@@ -275,11 +269,40 @@ class TrainValidTestManager:
 
                 loss_list_epoch.append(losses.item())
 
-                self.valid_step = self.save_batch('Validation', losses, 0, self.valid_step)
+                self.valid_step = self.save_batch('Validation', losses, self.valid_step)
                 self.total_step = self.save_memory(self.total_step)
 
                 # Update progress bar
-                pbar.set_description_str(f'Validation Epoch {epoch}')
+                pbar.set_postfix_str(f'Loss: {losses:.5f}')
+                pbar.update()
+
+        self.save_epoch('Validation', np.mean(loss_list_epoch), 0, epoch)
+
+        pbar.close()
+
+        accuracy_list_epoch = []
+
+        self.model.eval()
+
+        pbar = tqdm(total=len(self.data_loader_valid), leave=False,
+                    desc=f'Validation Epoch {epoch}', postfix='Accuracy: 0')
+
+        # Deactivate the autograd engine
+        with torch.no_grad():
+            for i, (images, targets) in enumerate(self.data_loader_valid):
+                images = torch.stack(images).to(self.device)
+                targets = [{k: v.to(self.device) for k, v in t.items()} for t in targets]
+
+                # with amp.autocast(enabled=self.mixed_precision):
+                preds = self.model(images)
+                losses = sum(loss for loss in loss_dict.values())
+
+                loss_list_epoch.append(losses.item())
+
+                self.valid_step = self.save_batch('Validation', losses, self.valid_step)
+                self.total_step = self.save_memory(self.total_step)
+
+                # Update progress bar
                 pbar.set_postfix_str(f'Loss: {losses:.5f}')
                 pbar.update()
 
@@ -341,6 +364,51 @@ class TrainValidTestManager:
         mean_accuracy = np.mean(accuracy_list)
         return mean_accuracy
 
+    @staticmethod
+    def iou(label, box1, box2, score, name, index, label_ocr="No OCR", verbose=False):
+        name = ''.join(chr(i) for i in name)
+        # print('{:^30}'.format(name[-1]))
+        iou_list = []
+        iou_label = []
+        label_index = -1
+        for item in box2:
+            try:
+                x11, y11, x21, y21 = item["boxes"]
+                x12, y12, x22, y22 = box1
+                xi1 = max(x11, x12)
+                yi1 = max(y11, y12)
+                xi2 = min(x21, x22)
+                yi2 = min(y21, y22)
+
+                inter_area = max(0, xi2 - xi1 + 1) * max(0, yi2 - yi1 + 1)
+                # Calculate the Union area by using Formula: Union(A,B) = A + B - Inter(A,B)
+                box1_area = (x21 - x11 + 1) * (y21 - y11 + 1)
+                box2_area = (x22 - x12 + 1) * (y22 - y12 + 1)
+                union_area = float(box1_area + box2_area - inter_area)
+                # compute the IoU
+                iou = inter_area / union_area
+                iou_list.append(iou)
+                label_index = iou_list.index(max(iou_list))
+            except Exception as e:
+                print("Error: ", e)
+                print(iou_list)
+                continue
+        score1 = '%.2f' % score
+        if verbose:
+            try:
+                print('{:^3} {:^20} {:^20} {:^25} {:^20} {:^10} {:^10}'.format(index,
+                                                                               name, box2[label_index]["label"], label,
+                                                                               label_index, score1,
+                                                                               round(max(iou_list), 2)))
+            except Exception:
+                print('{:^3} {:^20} {:^20} {:^25} {:^20} {:^10} {:^10}'.format(index,
+                                                                               name, "None", label, label_index, score1,
+                                                                               "None"))
+        if box2[label_index]["label"] == label:
+            return float(score1)
+        else:
+            return 0
+
     def load_model(self,
                    progress: bool = True,
                    pretrained_backbone: bool = True,
@@ -371,45 +439,51 @@ class TrainValidTestManager:
         if self.model_name == 'fasterrcnn_resnet50_fpn':
             self.model = detection.fasterrcnn_resnet50_fpn(pretrained=self.pretrained,
                                                            progress=progress,
-                                                           num_classes=self.num_classes,
+                                                           # num_classes=self.num_classes,
                                                            pretrained_backbone=pretrained_backbone,
                                                            trainable_backbone_layers=
                                                            trainable_backbone_layers)
+
         elif self.model_name == 'fasterrcnn_mobilenet_v3_large_fpn':
             self.model = detection.fasterrcnn_mobilenet_v3_large_fpn(pretrained=self.pretrained,
                                                                      progress=progress,
-                                                                     num_classes=self.num_classes,
+                                                                     # num_classes=self.num_classes,
                                                                      pretrained_backbone=pretrained_backbone,
                                                                      trainable_backbone_layers=
                                                                      trainable_backbone_layers)
+
         elif self.model_name == 'fasterrcnn_mobilenet_v3_large_320_fpn':
             self.model = detection.fasterrcnn_mobilenet_v3_large_320_fpn(pretrained=self.pretrained,
                                                                          progress=progress,
-                                                                         num_classes=self.num_classes,
+                                                                         # num_classes=self.num_classes,
                                                                          pretrained_backbone=pretrained_backbone,
                                                                          trainable_backbone_layers=
                                                                          trainable_backbone_layers)
+
         elif self.model_name == 'retinanet_resnet50_fpn':
             self.model = detection.retinanet_resnet50_fpn(pretrained=self.pretrained,
                                                           progress=progress,
-                                                          num_classes=self.num_classes,
+                                                          # num_classes=self.num_classes,
                                                           pretrained_backbone=pretrained_backbone,
                                                           trainable_backbone_layers=
                                                           trainable_backbone_layers)
+
         elif self.model_name == 'maskrcnn_resnet50_fpn':
             self.model = detection.maskrcnn_resnet50_fpn(pretrained=self.pretrained,
                                                          progress=progress,
-                                                         num_classes=self.num_classes,
+                                                         # num_classes=self.num_classes,
                                                          pretrained_backbone=pretrained_backbone,
                                                          trainable_backbone_layers=
                                                          trainable_backbone_layers)
+
         elif self.model_name == 'keypointrcnn_resnet50_fpn':
             self.model = detection.keypointrcnn_resnet50_fpn(pretrained=self.pretrained,
                                                              progress=progress,
-                                                             num_classes=self.num_classes,
+                                                             # num_classes=self.num_classes,
                                                              pretrained_backbone=pretrained_backbone,
                                                              trainable_backbone_layers=
                                                              trainable_backbone_layers)
+
         elif self.model_name == 'detr':
             """
             To Do: Implement DETR
@@ -429,15 +503,19 @@ class TrainValidTestManager:
             Unofficial Repo:    https://github.com/louislva/deepmind-perceiver
             """
             raise NotImplementedError
-        # model = self.replace_model_head(name, model, num_classes)
 
-    # @staticmethod
-    # def replace_model_head(name, model, num_classes):
-    #     in_features = model.roi_heads.box_predictor.cls_score.in_features
-    #
-    #     if name.instr('fasterrcnn'):
-    #         model.roi_heads.box_predictor = detection.faster_rcnn.FastRCNNPredictor(in_features=in_features,
-    #                                                                                 num_classes=num_classes)
+        # if self.pretrained:
+        self.replace_model_head()
+
+    def replace_model_head(self):
+        in_features = self.model.roi_heads.box_predictor.cls_score.in_features
+
+        if 'fasterrcnn' in self.model_name:
+            self.model.roi_heads.box_predictor = detection.faster_rcnn.FastRCNNPredictor(in_channels=in_features,
+                                                                                         num_classes=self.num_classes)
+        else:
+            raise NotImplementedError
+
     #     elif name.instr('retinanet'):
     #         model.roi_heads.box_predictor = detection.retinanet.RetinaNetHead(in_features=in_features,
     #                                                                           num_classes=num_classes)
@@ -485,9 +563,8 @@ class TrainValidTestManager:
         """
         return (outputs.argmax(dim=1) == labels).sum().item() / labels.shape[0]
 
-    def save_batch(self, bucket, loss, accuracy, step):
+    def save_batch(self, bucket, loss, step):
         self.writer.add_scalar(f'Loss (total per batch)/{bucket}', loss, step)
-        self.writer.add_scalar(f'Accuracy (mean per batch)/{bucket}', accuracy, step)
 
         return step + 1
 
