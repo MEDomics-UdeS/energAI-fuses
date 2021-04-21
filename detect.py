@@ -49,7 +49,7 @@ if __name__ == '__main__':
                         help='Number of epochs')
 
     # Batch size argument
-    parser.add_argument('-b', '--batch', action='store', type=int, default=20,
+    parser.add_argument('-b', '--batch', action='store', type=int, default=24,
                         help='Batch size')
 
     # Early stopping argument
@@ -130,7 +130,7 @@ if __name__ == '__main__':
 
     train_valid_test_manager = TrainValidTestManager(data_loader_manager=data_loader_manager,
                                                      file_name=file_name,
-                                                     model_name='fasterrcnn_mobilenet_v3_large_fpn',
+                                                     model_name='fasterrcnn_resnet50_fpn',
                                                      learning_rate=LEARNING_RATE,
                                                      weight_decay=0,
                                                      early_stopping=args.early_stopping,

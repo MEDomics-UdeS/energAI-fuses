@@ -105,6 +105,9 @@ class TrainValidTestManager:
         scaler = amp.grad_scaler.GradScaler(enabled=self.mixed_precision)
 
         for epoch in range(epochs):
+            loss_list_epoch = []
+            accuracy_list_epoch = []
+
             # Declare tqdm progress bar
             pbar = tqdm(total=len(self.data_loader_train), leave=False,
                         desc=f'Training Epoch {epoch}', postfix='Loss: 0')
@@ -146,13 +149,17 @@ class TrainValidTestManager:
                     losses.backward()
                     self.optimizer.step()
 
-                self.train_step = self.save_losses_accuracy('train', losses, 0, self.train_step)
+                loss_list_epoch.append(losses.item())
+
+                self.train_step = self.save_batch('Training', losses, 0, self.train_step)
                 self.total_step = self.save_memory(self.total_step)
 
                 # Update progress bar
                 pbar.set_description_str(f'Training Epoch {epoch}')
                 pbar.set_postfix_str(f'Loss: {losses:.5f}')
                 pbar.update()
+
+            self.save_epoch('Training', np.mean(loss_list_epoch), 0, epoch)
 
             # We close the tqdm bar
             pbar.close()
@@ -253,6 +260,9 @@ class TrainValidTestManager:
         pbar = tqdm(total=len(self.data_loader_valid), leave=False,
                     desc='Validation Epoch 0', postfix='Loss: 0')
 
+        loss_list_epoch = []
+        accuracy_list_epoch = []
+
         # Deactivate the autograd engine
         with torch.no_grad():
             for i, (images, targets) in enumerate(self.data_loader_valid):
@@ -263,13 +273,17 @@ class TrainValidTestManager:
                 loss_dict = self.model(images, targets)
                 losses = sum(loss for loss in loss_dict.values())
 
-                self.valid_step = self.save_losses_accuracy('validation', losses, 0, self.valid_step)
+                loss_list_epoch.append(losses.item())
+
+                self.valid_step = self.save_batch('Validation', losses, 0, self.valid_step)
                 self.total_step = self.save_memory(self.total_step)
 
                 # Update progress bar
                 pbar.set_description_str(f'Validation Epoch {epoch}')
                 pbar.set_postfix_str(f'Loss: {losses:.5f}')
                 pbar.update()
+
+        self.save_epoch('Validation', np.mean(loss_list_epoch), 0, epoch)
 
         pbar.close()
 
@@ -471,20 +485,24 @@ class TrainValidTestManager:
         """
         return (outputs.argmax(dim=1) == labels).sum().item() / labels.shape[0]
 
-    def save_losses_accuracy(self, bucket, losses, accuracy, step):
-        self.writer.add_scalar(f'Loss per iteration/{bucket}', losses, step)
-        self.writer.add_scalar(f'Accuracy per iteration/{bucket}', accuracy, step)
+    def save_batch(self, bucket, loss, accuracy, step):
+        self.writer.add_scalar(f'Loss (total per batch)/{bucket}', loss, step)
+        self.writer.add_scalar(f'Accuracy (mean per batch)/{bucket}', accuracy, step)
 
         return step + 1
+
+    def save_epoch(self, bucket, loss, accuracy, epoch):
+        self.writer.add_scalar(f'Loss (mean per epoch)/{bucket}', loss, epoch)
+        self.writer.add_scalar(f'Accuracy (mean per epoch)/{bucket}', accuracy, epoch)
 
     def save_memory(self, step, scale=1e-9):
         mem_reserved = memory_reserved(0) * scale
         mem_allocated = memory_allocated(0) * scale
         mem_free = mem_reserved - mem_allocated
 
-        self.writer.add_scalar('Memory/reserved', mem_reserved, step)
-        self.writer.add_scalar('Memory/allocated', mem_allocated, step)
-        self.writer.add_scalar('Memory/free', mem_free, step)
+        self.writer.add_scalar('Memory/Reserved', mem_reserved, step)
+        self.writer.add_scalar('Memory/Allocated', mem_allocated, step)
+        self.writer.add_scalar('Memory/Free', mem_free, step)
 
         return step + 1
 
