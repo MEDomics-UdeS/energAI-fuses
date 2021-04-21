@@ -18,6 +18,7 @@ from src.models.EarlyStopping import EarlyStopping
 from torch.utils.tensorboard import SummaryWriter
 import torch.cuda.amp as amp
 from torch.cuda import memory_reserved, memory_allocated
+from torchvision.ops import box_iou, nms
 
 
 class TrainValidTestManager:
@@ -29,14 +30,18 @@ class TrainValidTestManager:
                  file_name: Optional[str],
                  model_name: str,
                  learning_rate: float,
+                 momentum: float,
                  weight_decay: float,
                  early_stopping,
                  mixed_precision,
                  gradient_accumulation,
-                 pretrained: bool = True) -> None:
+                 pretrained: bool,
+                 iou_threshold: float) -> None:
         self.train_step = 0
         self.valid_step = 0
         self.total_step = 0
+
+        self.iou_threshold = iou_threshold
 
         self.pretrained = pretrained
         self.model_name = model_name
@@ -71,8 +76,8 @@ class TrainValidTestManager:
         params = [p for p in self.model.parameters() if p.requires_grad]
 
         # Define Adam optimizer
-        # self.optimizer = torch.optim.Adam(params, lr=learning_rate, weight_decay=0.0005)
-        self.optimizer = torch.optim.SGD(params, lr=learning_rate, momentum=0.9, weight_decay=0.0005)
+        self.optimizer = torch.optim.Adam(params, lr=learning_rate, weight_decay=weight_decay)
+        # self.optimizer = torch.optim.SGD(params, lr=learning_rate, momentum=momentum, weight_decay=weight_decay)
 
         # Send the model to the device
         self.model.to(self.device)
@@ -96,8 +101,7 @@ class TrainValidTestManager:
 
         :param epochs: int, number of epochs
         """
-        # Specify that the model will be trained
-        self.model.train()
+
 
         if self.early_stopping:
             es = EarlyStopping(patience=self.early_stopping)
@@ -105,6 +109,9 @@ class TrainValidTestManager:
         scaler = amp.grad_scaler.GradScaler(enabled=self.mixed_precision)
 
         for epoch in range(epochs):
+            # Specify that the model will be trained
+            self.model.train()
+
             loss_list_epoch = []
             accuracy_list_epoch = []
 
@@ -249,11 +256,8 @@ class TrainValidTestManager:
 
         :return: None
         """
-
-        self.model.train()
-
         pbar = tqdm(total=len(self.data_loader_valid), leave=False,
-                    desc=f'Validation Epoch {epoch}', postfix='Loss: 0')
+                    desc=f'Validation Epoch {epoch}')#, postfix='Loss: 0')
 
         loss_list_epoch = []
 
@@ -276,16 +280,17 @@ class TrainValidTestManager:
                 pbar.set_postfix_str(f'Loss: {losses:.5f}')
                 pbar.update()
 
-        self.save_epoch('Validation', np.mean(loss_list_epoch), 0, epoch)
-
-        pbar.close()
+        # pbar.close()
+        pbar.reset()
 
         accuracy_list_epoch = []
 
         self.model.eval()
 
-        pbar = tqdm(total=len(self.data_loader_valid), leave=False,
-                    desc=f'Validation Epoch {epoch}', postfix='Accuracy: 0')
+        # pbar = tqdm(total=len(self.data_loader_valid), leave=False,
+        #             desc=f'Validation Epoch {epoch}', postfix='Accuracy: 0')
+
+
 
         # Deactivate the autograd engine
         with torch.no_grad():
@@ -295,18 +300,48 @@ class TrainValidTestManager:
 
                 # with amp.autocast(enabled=self.mixed_precision):
                 preds = self.model(images)
-                losses = sum(loss for loss in loss_dict.values())
 
-                loss_list_epoch.append(losses.item())
+                # if slow, try batched_nms()
+                # keep_nms = [nms(pred['boxes'], pred['scores'], self.iou_threshold) for pred in preds]
+                # preds = [] # filter out using nms results
+                targets_boxes = [target['boxes'] for target in targets]
+                targets_labels = [target['labels'] for target in targets]
+                preds_boxes = [pred['boxes'] for pred in preds]
 
-                self.valid_step = self.save_batch('Validation', losses, self.valid_step)
+                iou_list = []
+                max_iou_list = []
+                type_list = []
+                class_list = []
+
+                for pred_boxes, target_boxes in zip(preds_boxes, targets_boxes):
+                    iou_list.append(box_iou(pred_boxes, target_boxes))
+
+                for j, iou in enumerate(iou_list):
+                    max_iou_list.append(torch.max(iou, dim=1))
+                    type_list.append(['Positive' if value > self.iou_threshold else 'Negative'
+                                      for value in max_iou_list[-1].values])
+                    class_list_iter = []
+                    for value, index in zip(max_iou_list[-1].values, max_iou_list[-1].indices):
+                        class_list_iter.append(targets_labels[j].data[index].item()
+                                               if torch.greater(value, 0) else 0)
+                    class_list.append(class_list_iter)
+
+
+
+                acc = sum(loss for loss in loss_dict.values())
+
+
+
+                accuracy_list_epoch.append(losses.item())
+
+                self.valid_step = self.save_batch('Validation', acc, self.valid_step)
                 self.total_step = self.save_memory(self.total_step)
 
                 # Update progress bar
-                pbar.set_postfix_str(f'Loss: {losses:.5f}')
+                pbar.set_postfix_str(f'mAP: {losses:.5f}')
                 pbar.update()
 
-        self.save_epoch('Validation', np.mean(loss_list_epoch), 0, epoch)
+        self.save_epoch('Validation', np.mean(loss_list_epoch), np.mean(accuracy_list_epoch), epoch)
 
         pbar.close()
 
@@ -552,16 +587,16 @@ class TrainValidTestManager:
     #         m = models.squeezenet1_1(pretrained, num_classes=num_classes)
     # return m
 
-    @staticmethod
-    def get_accuracy(outputs: torch.Tensor, labels: torch.Tensor) -> float:
-        """
-        Method to calculate accuracy of predicted outputs vs ground truth labels.
-
-        :param outputs: torch.Tensor, predicted outputs classes
-        :param labels: torch.Tensor, ground truth labels classes
-        :return: float, accuracy of the predicted outputs vs the ground truth labels
-        """
-        return (outputs.argmax(dim=1) == labels).sum().item() / labels.shape[0]
+    # @staticmethod
+    # def get_accuracy(outputs: torch.Tensor, labels: torch.Tensor) -> float:
+    #     """
+    #     Method to calculate accuracy of predicted outputs vs ground truth labels.
+    #
+    #     :param outputs: torch.Tensor, predicted outputs classes
+    #     :param labels: torch.Tensor, ground truth labels classes
+    #     :return: float, accuracy of the predicted outputs vs the ground truth labels
+    #     """
+    #     return (outputs.argmax(dim=1) == labels).sum().item() / labels.shape[0]
 
     def save_batch(self, bucket, loss, step):
         self.writer.add_scalar(f'Loss (total per batch)/{bucket}', loss, step)

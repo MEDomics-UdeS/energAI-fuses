@@ -130,12 +130,15 @@ if __name__ == '__main__':
 
     train_valid_test_manager = TrainValidTestManager(data_loader_manager=data_loader_manager,
                                                      file_name=file_name,
-                                                     model_name='fasterrcnn_resnet50_fpn',
-                                                     learning_rate=LEARNING_RATE,
+                                                     model_name='fasterrcnn_mobilenet_v3_large_fpn',
+                                                     learning_rate=0.0003,
+                                                     momentum=0.9,
                                                      weight_decay=0,
                                                      early_stopping=args.early_stopping,
                                                      mixed_precision=args.mixed_precision,
-                                                     gradient_accumulation=args.gradient_accumulation)
+                                                     gradient_accumulation=args.gradient_accumulation,
+                                                     pretrained=True,
+                                                     iou_threshold=0.5)
     train_valid_test_manager.train_model(args.epochs)
 
     if args.train:
