@@ -1,4 +1,6 @@
-GRAD_CLIP = 5
+# Assign image and annotations file paths
+IMAGES_PATH = 'data/resized/'
+ANNOTATIONS_PATH = 'data/annotations/targets_resized.json'
 
 MEAN = (0.6221349083958952, 0.6097851650674193, 0.592938912173587)
 STD = (0.33986575693672466, 0.3446239730624245, 0.3541046569741213)

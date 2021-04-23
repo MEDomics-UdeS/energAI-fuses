@@ -12,12 +12,17 @@ def seed_worker(worker_id):
 
 
 def set_seed(seed):
-    # Ensure reproducibility
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
     torch.cuda.manual_seed(seed)
     np.random.seed(seed)
     random.seed(seed)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
-    torch.use_deterministic_algorithms(True)
+
+
+def set_deterministic(deterministic, seed):
+    torch.backends.cudnn.deterministic = deterministic
+    torch.backends.cudnn.benchmark = not deterministic
+    torch.use_deterministic_algorithms(deterministic)
+
+    if deterministic:
+        set_seed(seed)

@@ -1,24 +1,17 @@
-import os
+from typing import Optional
+
 import numpy as np
 import torch
-from torch.utils.data import Subset, DataLoader
-from torch import tensor
-from torch.nn.functional import softmax
-from src.data.DataLoaderManager import DataLoaderManager
-from tqdm import tqdm
-from typing import Optional
-import torchvision.models as models
-import torch.nn as nn
-from constants import *
-# from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
-# from torchvision.models.detection import fasterrcnn_resnet50_fpn
-import torchvision.models.detection as detection
-from constants import CLASS_DICT
-from src.models.EarlyStopping import EarlyStopping
-from torch.utils.tensorboard import SummaryWriter
 import torch.cuda.amp as amp
+import torchvision.models.detection as detection
 from torch.cuda import memory_reserved, memory_allocated
-from torchvision.ops import box_iou, nms
+from src.data.SummaryWriter import SummaryWriter
+from torchvision.ops import box_iou
+from tqdm import tqdm
+
+from constants import CLASS_DICT
+from src.data.DataLoaderManager import DataLoaderManager
+from src.models.EarlyStopping import EarlyStopping
 
 
 class TrainValidTestManager:
@@ -30,16 +23,22 @@ class TrainValidTestManager:
                  file_name: Optional[str],
                  model_name: str,
                  learning_rate: float,
-                 momentum: float,
                  weight_decay: float,
                  early_stopping,
                  mixed_precision,
                  gradient_accumulation,
                  pretrained: bool,
-                 iou_threshold: float) -> None:
+                 iou_threshold: float,
+                 gradient_clip: float,
+                 args_dic) -> None:
+        self.args_dic = args_dic
+
         self.train_step = 0
-        self.valid_step = 0
+        self.valid_acc_step = 0
+        self.valid_loss_step = 0
         self.total_step = 0
+
+        self.gradient_clip = gradient_clip
 
         self.iou_threshold = iou_threshold
 
@@ -47,6 +46,7 @@ class TrainValidTestManager:
         self.model_name = model_name
 
         self.writer = SummaryWriter('logdir/' + file_name)
+
         self.mixed_precision = mixed_precision
         self.accumulation_size = gradient_accumulation
         self.gradient_accumulation = False if gradient_accumulation == 1 else True
@@ -59,7 +59,10 @@ class TrainValidTestManager:
         self.data_loader_valid = data_loader_manager.data_loader_valid
         self.data_loader_test = data_loader_manager.data_loader_test
         # self.batch_size = data_loader_manager.batch_size
-
+        print(f'=== Dataset & Data Loader Sizes ===\n\n'
+              f'Training:\t\t{len(self.data_loader_train.dataset)} images\t\t{len(self.data_loader_train)} batches\n'
+              f'Validation:\t\t{len(self.data_loader_valid.dataset)} images\t\t{len(self.data_loader_valid)} batches\n'
+              f'Testing:\t\t{len(self.data_loader_test.dataset)} images\t\t{len(self.data_loader_test)} batches\n')
         # Save the file name
         self.file_name = file_name
 
@@ -77,7 +80,6 @@ class TrainValidTestManager:
 
         # Define Adam optimizer
         self.optimizer = torch.optim.Adam(params, lr=learning_rate, weight_decay=weight_decay)
-        # self.optimizer = torch.optim.SGD(params, lr=learning_rate, momentum=momentum, weight_decay=weight_decay)
 
         # Send the model to the device
         self.model.to(self.device)
@@ -90,10 +92,12 @@ class TrainValidTestManager:
         #     'Validation Accuracy': []
         # }
 
-        print(f'\n=== Dataset & Data Loader Sizes ===\n\n'
-              f'Training:\t\t{len(self.data_loader_train.dataset)} images\t\t{len(self.data_loader_train)} batches\n'
-              f'Validation:\t\t{len(self.data_loader_valid.dataset)} images\t\t{len(self.data_loader_valid)} batches\n'
-              f'Testing:\t\t{len(self.data_loader_test.dataset)} images\t\t{len(self.data_loader_test)} batches\n')
+    def __call__(self, epochs):
+        self.train_model(epochs)
+        # self.test_model()
+        self.writer.add_hparams(self.args_dic, metric_dict={'metric/loss': 1})
+        self.writer.flush()
+        self.writer.close()
 
     def train_model(self, epochs: int) -> None:
         """
@@ -102,22 +106,23 @@ class TrainValidTestManager:
         :param epochs: int, number of epochs
         """
 
-
         if self.early_stopping:
             es = EarlyStopping(patience=self.early_stopping)
 
         scaler = amp.grad_scaler.GradScaler(enabled=self.mixed_precision)
 
-        for epoch in range(epochs):
+        for epoch in range(1, epochs + 1):
+            # Declare tqdm progress bar
+            pbar = tqdm(total=len(self.data_loader_train), leave=False,
+                        desc=f'Training Epoch {epoch}', postfix='Loss: 0')
+
             # Specify that the model will be trained
             self.model.train()
 
             loss_list_epoch = []
             accuracy_list_epoch = []
 
-            # Declare tqdm progress bar
-            pbar = tqdm(total=len(self.data_loader_train), leave=False,
-                        desc=f'Training Epoch {epoch}', postfix='Loss: 0')
+
 
             if self.gradient_accumulation:
                 self.optimizer.zero_grad()
@@ -135,7 +140,7 @@ class TrainValidTestManager:
 
                     if (i + 1) % self.accumulation_size == 0:
                         scaler.unscale_(self.optimizer)
-                        torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=GRAD_CLIP)
+                        torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=self.gradient_clip)
                         scaler.step(self.optimizer)
                         scaler.update()
                         self.optimizer.zero_grad(set_to_none=True)
@@ -143,7 +148,7 @@ class TrainValidTestManager:
                     losses.backward()
 
                     if (i + 1) % self.accumulation_size == 0:
-                        torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=GRAD_CLIP)
+                        torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=self.gradient_clip)
                         self.optimizer.step()
                         self.optimizer.zero_grad()
                 elif not self.gradient_accumulation and self.mixed_precision:
@@ -158,8 +163,8 @@ class TrainValidTestManager:
 
                 loss_list_epoch.append(losses.item())
 
-                self.train_step = self.save_batch('Training', losses, self.train_step)
-                self.total_step = self.save_memory(self.total_step)
+                self.train_step = self.save_batch_loss('Training', losses, self.train_step)
+                self.save_memory()
 
                 # Update progress bar
                 pbar.set_description_str(f'Training Epoch {epoch}')
@@ -170,6 +175,7 @@ class TrainValidTestManager:
 
             # We close the tqdm bar
             pbar.close()
+            # print('\n')
 
             # Validate the model
             self.validate_model(epoch)
@@ -196,7 +202,7 @@ class TrainValidTestManager:
         #
         # torch.save(model.state_dict(), "models/" + filename)
 
-        print('Training done!')
+        # print('Training done!')
 
         # # Main training loop, loop through each epoch
         # for epoch in range(epochs):
@@ -257,7 +263,7 @@ class TrainValidTestManager:
         :return: None
         """
         pbar = tqdm(total=len(self.data_loader_valid), leave=False,
-                    desc=f'Validation Epoch {epoch}')#, postfix='Loss: 0')
+                    desc=f'Validation Loss Epoch {epoch}')
 
         loss_list_epoch = []
 
@@ -273,8 +279,8 @@ class TrainValidTestManager:
 
                 loss_list_epoch.append(losses.item())
 
-                self.valid_step = self.save_batch('Validation', losses, self.valid_step)
-                self.total_step = self.save_memory(self.total_step)
+                self.valid_loss_step = self.save_batch_loss('Validation', losses, self.valid_loss_step)
+                self.save_memory()
 
                 # Update progress bar
                 pbar.set_postfix_str(f'Loss: {losses:.5f}')
@@ -282,6 +288,11 @@ class TrainValidTestManager:
 
         # pbar.close()
         pbar.reset()
+        pbar.set_postfix_str('')
+        pbar.set_description_str(f'Validation Accuracy Epoch {epoch}')
+
+        # pbar = tqdm(total=len(self.data_loader_valid),# leave=False,
+        #             desc=f'Validation Accuracy Epoch {epoch}')
 
         accuracy_list_epoch = []
 
@@ -289,8 +300,6 @@ class TrainValidTestManager:
 
         # pbar = tqdm(total=len(self.data_loader_valid), leave=False,
         #             desc=f'Validation Epoch {epoch}', postfix='Accuracy: 0')
-
-
 
         # Deactivate the autograd engine
         with torch.no_grad():
@@ -317,28 +326,25 @@ class TrainValidTestManager:
                     iou_list.append(box_iou(pred_boxes, target_boxes))
 
                 for j, iou in enumerate(iou_list):
-                    max_iou_list.append(torch.max(iou, dim=1))
-                    type_list.append(['Positive' if value > self.iou_threshold else 'Negative'
-                                      for value in max_iou_list[-1].values])
-                    class_list_iter = []
-                    for value, index in zip(max_iou_list[-1].values, max_iou_list[-1].indices):
-                        class_list_iter.append(targets_labels[j].data[index].item()
-                                               if torch.greater(value, 0) else 0)
-                    class_list.append(class_list_iter)
+                    if iou.nelement() > 0:
+                        max_iou_list.append(torch.max(iou, dim=1))
+                        type_list.append(['Positive' if value > self.iou_threshold else 'Negative'
+                                          for value in max_iou_list[-1].values])
+                        class_list_iter = []
+                        for value, index in zip(max_iou_list[-1].values, max_iou_list[-1].indices):
+                            class_list_iter.append(targets_labels[j].data[index].item()
+                                                   if torch.greater(value, 0) else 0)
+                        class_list.append(class_list_iter)
 
+                acc = 0
 
+                accuracy_list_epoch.append(acc)
 
-                acc = sum(loss for loss in loss_dict.values())
-
-
-
-                accuracy_list_epoch.append(losses.item())
-
-                self.valid_step = self.save_batch('Validation', acc, self.valid_step)
-                self.total_step = self.save_memory(self.total_step)
+                self.valid_acc_step = self.save_batch_acc('Validation', acc, self.valid_acc_step)
+                self.save_memory()
 
                 # Update progress bar
-                pbar.set_postfix_str(f'mAP: {losses:.5f}')
+                pbar.set_postfix_str(f'mAP: {acc:.5f}')
                 pbar.update()
 
         self.save_epoch('Validation', np.mean(loss_list_epoch), np.mean(accuracy_list_epoch), epoch)
@@ -366,7 +372,7 @@ class TrainValidTestManager:
         # self.results['Validation Loss'].append(round(mean_loss, 5))
         # self.results['Validation Accuracy'].append(round(mean_accuracy, 5))
 
-    def test_model(self, final_eval: bool = False) -> float:
+    def test_model(self) -> float:
         """
         Method to test the model saved in the self.model class attribute.
 
@@ -380,12 +386,9 @@ class TrainValidTestManager:
         # Initialize empty accuracy list
         accuracy_list = []
 
-        # We select the good loader
-        loader = self.data_loader_test if final_eval else self.data_loader_valid_2
-
         # Deactivate the autograd engine
         with torch.no_grad():
-            for i, (images, labels) in enumerate(loader):
+            for i, (images, labels) in enumerate(self.data_loader_test):
                 # Send images and labels to the device
                 images, labels = images.to(self.device), labels.to(self.device)
 
@@ -399,50 +402,50 @@ class TrainValidTestManager:
         mean_accuracy = np.mean(accuracy_list)
         return mean_accuracy
 
-    @staticmethod
-    def iou(label, box1, box2, score, name, index, label_ocr="No OCR", verbose=False):
-        name = ''.join(chr(i) for i in name)
-        # print('{:^30}'.format(name[-1]))
-        iou_list = []
-        iou_label = []
-        label_index = -1
-        for item in box2:
-            try:
-                x11, y11, x21, y21 = item["boxes"]
-                x12, y12, x22, y22 = box1
-                xi1 = max(x11, x12)
-                yi1 = max(y11, y12)
-                xi2 = min(x21, x22)
-                yi2 = min(y21, y22)
-
-                inter_area = max(0, xi2 - xi1 + 1) * max(0, yi2 - yi1 + 1)
-                # Calculate the Union area by using Formula: Union(A,B) = A + B - Inter(A,B)
-                box1_area = (x21 - x11 + 1) * (y21 - y11 + 1)
-                box2_area = (x22 - x12 + 1) * (y22 - y12 + 1)
-                union_area = float(box1_area + box2_area - inter_area)
-                # compute the IoU
-                iou = inter_area / union_area
-                iou_list.append(iou)
-                label_index = iou_list.index(max(iou_list))
-            except Exception as e:
-                print("Error: ", e)
-                print(iou_list)
-                continue
-        score1 = '%.2f' % score
-        if verbose:
-            try:
-                print('{:^3} {:^20} {:^20} {:^25} {:^20} {:^10} {:^10}'.format(index,
-                                                                               name, box2[label_index]["label"], label,
-                                                                               label_index, score1,
-                                                                               round(max(iou_list), 2)))
-            except Exception:
-                print('{:^3} {:^20} {:^20} {:^25} {:^20} {:^10} {:^10}'.format(index,
-                                                                               name, "None", label, label_index, score1,
-                                                                               "None"))
-        if box2[label_index]["label"] == label:
-            return float(score1)
-        else:
-            return 0
+    # @staticmethod
+    # def iou(label, box1, box2, score, name, index, label_ocr="No OCR", verbose=False):
+    #     name = ''.join(chr(i) for i in name)
+    #     # print('{:^30}'.format(name[-1]))
+    #     iou_list = []
+    #     iou_label = []
+    #     label_index = -1
+    #     for item in box2:
+    #         try:
+    #             x11, y11, x21, y21 = item["boxes"]
+    #             x12, y12, x22, y22 = box1
+    #             xi1 = max(x11, x12)
+    #             yi1 = max(y11, y12)
+    #             xi2 = min(x21, x22)
+    #             yi2 = min(y21, y22)
+    #
+    #             inter_area = max(0, xi2 - xi1 + 1) * max(0, yi2 - yi1 + 1)
+    #             # Calculate the Union area by using Formula: Union(A,B) = A + B - Inter(A,B)
+    #             box1_area = (x21 - x11 + 1) * (y21 - y11 + 1)
+    #             box2_area = (x22 - x12 + 1) * (y22 - y12 + 1)
+    #             union_area = float(box1_area + box2_area - inter_area)
+    #             # compute the IoU
+    #             iou = inter_area / union_area
+    #             iou_list.append(iou)
+    #             label_index = iou_list.index(max(iou_list))
+    #         except Exception as e:
+    #             print("Error: ", e)
+    #             print(iou_list)
+    #             continue
+    #     score1 = '%.2f' % score
+    #     if verbose:
+    #         try:
+    #             print('{:^3} {:^20} {:^20} {:^25} {:^20} {:^10} {:^10}'.format(index,
+    #                                                                            name, box2[label_index]["label"], label,
+    #                                                                            label_index, score1,
+    #                                                                            round(max(iou_list), 2)))
+    #         except Exception:
+    #             print('{:^3} {:^20} {:^20} {:^25} {:^20} {:^10} {:^10}'.format(index,
+    #                                                                            name, "None", label, label_index, score1,
+    #                                                                            "None"))
+    #     if box2[label_index]["label"] == label:
+    #         return float(score1)
+    #     else:
+    #         return 0
 
     def load_model(self,
                    progress: bool = True,
@@ -598,8 +601,13 @@ class TrainValidTestManager:
     #     """
     #     return (outputs.argmax(dim=1) == labels).sum().item() / labels.shape[0]
 
-    def save_batch(self, bucket, loss, step):
+    def save_batch_loss(self, bucket, loss, step):
         self.writer.add_scalar(f'Loss (total per batch)/{bucket}', loss, step)
+
+        return step + 1
+
+    def save_batch_acc(self, bucket, acc, step):
+        self.writer.add_scalar(f'mAP (per batch)/{bucket}', acc, step)
 
         return step + 1
 
@@ -607,15 +615,15 @@ class TrainValidTestManager:
         self.writer.add_scalar(f'Loss (mean per epoch)/{bucket}', loss, epoch)
         self.writer.add_scalar(f'Accuracy (mean per epoch)/{bucket}', accuracy, epoch)
 
-    def save_memory(self, step, scale=1e-9):
+    def save_memory(self, scale=1e-9):
         mem_reserved = memory_reserved(0) * scale
         mem_allocated = memory_allocated(0) * scale
         mem_free = mem_reserved - mem_allocated
 
-        self.writer.add_scalar('Memory/Reserved', mem_reserved, step)
-        self.writer.add_scalar('Memory/Allocated', mem_allocated, step)
-        self.writer.add_scalar('Memory/Free', mem_free, step)
+        self.writer.add_scalar('Memory/Reserved', mem_reserved, self.total_step)
+        self.writer.add_scalar('Memory/Allocated', mem_allocated, self.total_step)
+        self.writer.add_scalar('Memory/Free', mem_free, self.total_step)
 
-        return step + 1
+        self.total_step += 1
 
 

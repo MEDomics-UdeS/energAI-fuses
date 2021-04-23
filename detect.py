@@ -1,19 +1,19 @@
 import argparse
-import datetime
-
+from datetime import datetime
 from multiprocessing import cpu_count
 
-from src.data.FuseDataset import FuseDataset
-from src.data.resize_images import resize_images
-from src.models.helper_functions import *
-from src.utils.seed import seed_worker, set_seed
-
-from constants import *
-from src.data.DatasetManager import DatasetManager
 from src.data.DataLoaderManager import DataLoaderManager
+from src.data.DatasetManager import DatasetManager
+from src.data.resize_images import resize_images
 from src.models.TrainValidTestManager import TrainValidTestManager
+from src.utils.reproducibility import set_deterministic
+from constants import IMAGES_PATH, ANNOTATIONS_PATH
 
 if __name__ == '__main__':
+    # Record start time
+    # Record start time
+    start = datetime.now()
+
     # Get number of cpu threads for PyTorch DataLoader and Ray paralleling
     num_workers = cpu_count()
 
@@ -27,10 +27,6 @@ if __name__ == '__main__':
     # Resizing argument
     parser.add_argument('-s', '--size', action='store', type=int, default=1000,
                         help='Resize the images to size*size (takes an argument: max_resize value (int))')
-
-    # Training argument
-    parser.add_argument('-tr', '--train', action='store_false',
-                        help='Train a new model')
 
     # Data augmentation argument
     parser.add_argument('-da', '--data_aug', action='store', type=float, default=0.25,
@@ -49,7 +45,7 @@ if __name__ == '__main__':
                         help='Number of epochs')
 
     # Batch size argument
-    parser.add_argument('-b', '--batch', action='store', type=int, default=30,
+    parser.add_argument('-b', '--batch', action='store', type=int, default=20,
                         help='Batch size')
 
     # Early stopping argument
@@ -64,100 +60,146 @@ if __name__ == '__main__':
     parser.add_argument('-g', '--gradient_accumulation', action='store', type=int, default=1,
                         help='To use gradient accumulation (takes an argument: accumulation_size (int))')
 
+    # Gradient clipping argument
+    parser.add_argument('-gc', '--gradient_clip', action='store', type=float, default=5,
+                        help='Gradient clipping value')
+
     # Random seed argument
-    parser.add_argument('-r', '--random', action='store', type=int, required=False,
-                        help='Set random seed', default=1)
+    parser.add_argument('-rs', '--random_seed', action='store', type=int, default=42,
+                        help='Set random seed')
 
-    # View images using a saved model argument
-    parser.add_argument('-i', '--image', action='store', type=str,
-                        help='to view images, input - model name')
+    # Deterministic argument
+    parser.add_argument('-dt', '--deterministic', action='store_true',
+                        help='Set deterministic behaviour')
 
-    # Test saved model argument
-    parser.add_argument('-tst_f', '--test_file', action='store', type=str,
-                        help='Filename of saved model to test (located in models/)')
+    # # View images using a saved model argument
+    # parser.add_argument('-i', '--image', action='store', type=str,
+    #                     help='to view images, input - model name')
+    #
+    # # Test saved model argument
+    # parser.add_argument('-tst_f', '--test_file', action='store', type=str,
+    #                     help='Filename of saved model to test (located in models/)')
 
     # To compute mean & std deviation on training set
     parser.add_argument('-ms', '--mean_std', action='store_true',
                         help='Compute mean & standard deviation on training set if true, '
                              'otherwise use precalculated values')
 
+    # To load IOU Threshold
+    parser.add_argument('-iou', '--iou_threshold', action='store', type=float, default=0.5,
+                        help='IOU threshold for true/false positive box predictions')
+
+    # To load learning rate
+    parser.add_argument('-lr', '--learning_rate', action='store', type=float, default=0.0003,
+                        help='Learning rate for optimizer')
+
+    # To load weight decay
+    parser.add_argument('-wd', '--weight_decay', action='store', type=float, default=0,
+                        help='Weight decay for optimizer')
+
+    # To load model
+    parser.add_argument('-mo', '--model', action='store', type=str,
+                        choices=['fasterrcnn_resnet50_fpn',
+                                 'fasterrcnn_mobilenet_v3_large_fpn',
+                                 'fasterrcnn_mobilenet_v3_large_320_fpn',
+                                 'retinanet_resnet50_fpn',
+                                 'maskrcnn_resnet50_fpn',
+                                 'keypointrcnn_resnet50_fpn',
+                                 'detr', 'perceiver'],
+                        default='fasterrcnn_resnet50_fpn',
+                        help='Specify which object detection model to use')
+
+    # To load pretrained model
+    parser.add_argument('-pt', '--pretrained', action='store_false',
+                        help='Load pretrained model')
+
     # Parsing arguments
     args = parser.parse_args()
+    args_dic = vars(args)
 
-    # Set random seed to ensure reproducibility of results
-    set_seed(args.random)
-
-    # Record start time
-    start = time.time()
+    set_deterministic(args.deterministic, args.random_seed)
 
     # Declare file name as yyyy-mm-dd_hh-mm-ss
-    file_name = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    file_name = start.strftime('%Y-%m-%d_%H-%M-%S')
 
     # Display arguments in console
-    print('\nFilename:\t\t\t\t\t', file_name)
-
-    print('\nData Source:\t\t\t\t', args.data)
-
-    if args.data == 'raw':
-        print(f'Image Size:\t\t\t\t\t{args.size} x {args.size}')
-
-    print('Train:\t\t\t\t\t\t', args.train)
-    print('Validation Size:\t\t\t', args.validation_size)
-    print('Test Size:\t\t\t\t\t', args.test_size)
-    print('Epochs:\t\t\t\t\t\t', args.epochs)
-    print('Batch Size:\t\t\t\t\t', args.batch)
-    print('Early Stopping:\t\t\t\t', args.early_stopping)
-    print('Mixed Precision:\t\t\t', args.mixed_precision)
-    print('Gradient Accumulation Size:\t', args.gradient_accumulation)
-    print('Random Seed:\t\t\t\t', args.random)
-    print('View Images Mode:\t\t\t', args.image)
-    print('Test File Mode:\t\t\t\t', args.test_file)
-    print('Compute Mean & Std:\t\t\t', args.mean_std)
-    print('-' * 100)
-
-    # Assign image and annotations file paths depending on data source
-    images_path = 'data/resized/'
-    annotations_path = 'data/annotations/targets_resized.json'
+    print('\n=== Arguments & Hyperparameters ===\n')
+    for key, value in args_dic.items():
+        print(f'{key}:{" " * (27 - len(key))}{value}')
+    print('\n')
+    # print(f'\nFilename:\t\t\t\t\t{file_name}')
+    # print(f'Data Source:\t\t\t\t{args.data}')
+    # if args.data == 'raw':
+    #     print(f'Image Size:\t\t\t\t\t{args.size} x {args.size}')
+    # print(f'Validation Size:\t\t\t{args.validation_size}')
+    # print(f'Test Size:\t\t\t\t\t{args.test_size}')
+    # print(f'Epochs:\t\t\t\t\t\t{args.epochs}')
+    # print(f'Batch Size:\t\t\t\t\t{args.batch}')
+    # print(f'Early Stopping:\t\t\t\t{args.early_stopping}')
+    # print(f'Mixed Precision:\t\t\t{args.mixed_precision}')
+    # print(f'Gradient Accumulation Size:\t{args.gradient_accumulation}')
+    # if args.gradient_accumulation > 1:
+    #     print(f'Gradient Clipping Size:\t{args.gradient_clip}')
+    # print(f'Deterministic:\t\t\t\t{args.deterministic}')
+    # if args.deterministic:
+    #     print(f'Random Seed:\t\t\t\t{args.random_seed}')
+    # # print('View Images Mode:\t\t\t', args.image)
+    # # print('Test File Mode:\t\t\t\t', args.test_file)
+    # print(f'Compute Mean & Std:\t\t\t{args.mean_std}')
+    # print(f'IOU Threshold:\t\t\t\t{args.iou_threshold}')
+    # print(f'Learning Rate:\t\t\t\t{args.learning_rate}')
+    # print(f'Weight Decay:\t\t\t\t{args.weight_decay}')
+    # print(f'Model:\t\t\t\t\t\t{args.model}')
+    # print(f'Pretrained:\t\t\t\t\t{args.pretrained}\n')
 
     # Resize images if 'raw' has been specified as the data source
+
     if args.data == 'raw':
         resize_images(args.size, num_workers)
 
-    dataset_manager = DatasetManager(images_path, annotations_path, num_workers,
-                                     args.data_aug, args.validation_size, args.test_size, args.mean_std)
+    dataset_manager = DatasetManager(images_path=IMAGES_PATH,
+                                     annotations_path=ANNOTATIONS_PATH,
+                                     num_workers=num_workers,
+                                     data_aug=args.data_aug,
+                                     validation_size=args.validation_size,
+                                     test_size=args.test_size,
+                                     mean_std=args.mean_std)
 
-    data_loader_manager = DataLoaderManager(dataset_manager, args.batch, args.gradient_accumulation, num_workers)
+    data_loader_manager = DataLoaderManager(dataset_manager=dataset_manager,
+                                            batch_size=args.batch,
+                                            gradient_accumulation=args.gradient_accumulation,
+                                            num_workers=num_workers,
+                                            deterministic=args.deterministic)
 
     train_valid_test_manager = TrainValidTestManager(data_loader_manager=data_loader_manager,
                                                      file_name=file_name,
-                                                     model_name='fasterrcnn_mobilenet_v3_large_fpn',
-                                                     learning_rate=0.0003,
-                                                     momentum=0.9,
-                                                     weight_decay=0,
+                                                     model_name=args.model,
+                                                     learning_rate=args.learning_rate,
+                                                     weight_decay=args.weight_decay,
                                                      early_stopping=args.early_stopping,
                                                      mixed_precision=args.mixed_precision,
                                                      gradient_accumulation=args.gradient_accumulation,
-                                                     pretrained=True,
-                                                     iou_threshold=0.5)
-    train_valid_test_manager.train_model(args.epochs)
+                                                     pretrained=args.pretrained,
+                                                     iou_threshold=args.iou_threshold,
+                                                     gradient_clip=args.gradient_clip,
+                                                     args_dic=args_dic)
+    train_valid_test_manager(args.epochs)
 
-    if args.train:
-        train_start = time.time()
-        train_model(args.epochs, args.gradient_accumulation, dataloader_manager.train_data_loader, device,
-                    args.mixed_precision, True if args.gradient_accumulation > 1 else False, filename,
-                    writer, args.early_stopping, args.validation_size, dataset_manager.valid_dataset)
-        print('Total Time Taken (minutes): ', round((time.time() - train_start) / 60, 2))
-    if args.test:
-        test_model(test_dataset, device, filename, writer)
+    # if args.train:
+    #     train_start = time.time()
+    #     train_model(args.epochs, args.gradient_accumulation, dataloader_manager.train_data_loader, device,
+    #                 args.mixed_precision, True if args.gradient_accumulation > 1 else False, filename,
+    #                 writer, args.early_stopping, args.validation_size, dataset_manager.valid_dataset)
+    #     print('Total Time Taken (minutes): ', round((time.time() - train_start) / 60, 2))
+    # if args.test:
+    #     test_model(test_dataset, device, filename, writer)
+    #
+    # if args.testfile:
+    #     test_model(test_dataset, device, args.testfile, writer)
+    #
+    # if args.image:
+    #     for i in range(len(total_dataset)):
+    #         print(i, len(total_dataset), end=' ')
+    #         view_test_image(i, total_dataset, filename)
+    print(f'Total time for current experiment:\t{str(datetime.now() - start).split(".")[0]}')
 
-    if args.testfile:
-        test_model(test_dataset, device, args.testfile, writer)
-
-    if args.image:
-        for i in range(len(total_dataset)):
-            print(i, len(total_dataset), end=' ')
-            view_test_image(i, total_dataset, filename)
-    print('Total Time Taken (minutes): ', round((time.time() - start) / 60, 2))
-
-    writer.flush()
-    writer.close()

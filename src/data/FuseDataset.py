@@ -21,7 +21,7 @@ class FuseDataset(torch.utils.data.Dataset):
 
             nb_job_left = size - num_workers
 
-            for _ in trange(size, desc='Loading images to RAM'):
+            for _ in trange(size, desc='Loading images to RAM', leave=False):
                 ready, ids = ray.wait(ids, num_returns=1)
                 image, idx = ray.get(ready)[0]
                 self.images[idx] = image

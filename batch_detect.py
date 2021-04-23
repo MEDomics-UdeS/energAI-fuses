@@ -1,6 +1,6 @@
 import sys
 import subprocess as sp
-import time
+from datetime import datetime
 
 REQUIRED_PYTHON = "python3"
 
@@ -27,14 +27,16 @@ if __name__ == '__main__':
     main()
 
     cmds = [
-        ['python', 'detect.py', '--data', 'resized', '--epochs', '3'],
+        ['python', 'detect.py', '--data', 'resized', '--epochs', '1', '--model', 'fasterrcnn_mobilenet_v3_large_fpn'],
     ]
 
-    start = time.time()
+    start = datetime.now()
 
-    for cmd in cmds:
-        print(cmd)
+    for i, cmd in enumerate(cmds, start=1):
+        print('-' * 100)
+        print(f'Experiment {i}/{len(cmds)}:\t\t\t\t{" ".join(cmd)}')
         p = sp.Popen(cmd)
         p.wait()
 
-    print("Time Taken (minutes): ", round((time.time() - start) / 60, 2))
+    print('-' * 100)
+    print(f'Total time for all experiments:\t\t{str(datetime.now() - start).split(".")[0]}')
