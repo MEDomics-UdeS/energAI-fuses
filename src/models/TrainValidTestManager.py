@@ -322,40 +322,43 @@ class TrainValidTestManager:
         preds_nms = []
 
         for pred, keep in zip(preds_list, keep_nms):
-            preds_nms.append([torch.index_select(val, dim=0, index=keep) for val in pred.values()])
+            preds_nms.append({key: torch.index_select(val, dim=0, index=keep) for key, val in pred.items()})
 
         return preds_nms
 
     def calculate_metrics(self, preds_list, targets_list):
-        # if slow, try batched_nms()
-
-
-
-
-
-
         targets_boxes = [target['boxes'] for target in targets_list]
         targets_labels = [target['labels'] for target in targets_list]
         preds_boxes = [pred['boxes'] for pred in preds_list]
+        preds_labels = [pred['labels'] for pred in preds_list]
 
         iou_list = []
-        max_iou_list = []
-        type_list = []
-        class_list = []
 
         for pred_boxes, target_boxes in zip(preds_boxes, targets_boxes):
             iou_list.append(box_iou(pred_boxes, target_boxes))
 
-        for j, iou in enumerate(iou_list):
+        max_iou_list = []
+        types_list = []
+
+        for iou, target_labels, pred_labels in zip(iou_list, targets_labels, preds_labels):
             if iou.nelement() > 0:
                 max_iou_list.append(torch.max(iou, dim=1))
-                type_list.append(['Positive' if value > self.iou_threshold else 'Negative'
-                                  for value in max_iou_list[-1].values])
-                class_list_iter = []
-                for value, index in zip(max_iou_list[-1].values, max_iou_list[-1].indices):
-                    class_list_iter.append(targets_labels[j].data[index].item()
-                                           if torch.greater(value, 0) else 0)
-                class_list.append(class_list_iter)
+
+                type_list_iter = []
+
+                for i, (value, index) in enumerate(zip(max_iou_list[-1].values, max_iou_list[-1].indices)):
+                    if torch.greater(value, self.iou_threshold) and \
+                       torch.equal(target_labels.data[index], pred_labels.data[i]):
+                        type_list_iter.append(True)
+                    else:
+                        type_list_iter.append(False)
+
+                types_list.append(type_list_iter)
+            else:
+                types_list.append([])
+
+        recall_list = [sum(types)/len(targets_labels[i]) for i, types in enumerate(types_list)]
+        precision_list = [0 if len(types) == 0 else sum(types)/len(types) for types in types_list]
 
         return 0
 
