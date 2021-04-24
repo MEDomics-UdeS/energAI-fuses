@@ -1,12 +1,13 @@
 from typing import Optional
 
 import numpy as np
+import pandas as pd
 import torch
 import torch.cuda.amp as amp
 import torchvision.models.detection as detection
 from torch.cuda import memory_reserved, memory_allocated
 from src.data.SummaryWriter import SummaryWriter
-from torchvision.ops import box_iou
+from torchvision.ops import box_iou, nms
 from tqdm import tqdm
 
 from constants import CLASS_DICT
@@ -286,20 +287,13 @@ class TrainValidTestManager:
                 pbar.set_postfix_str(f'Loss: {losses:.5f}')
                 pbar.update()
 
-        # pbar.close()
         pbar.reset()
         pbar.set_postfix_str('')
-        pbar.set_description_str(f'Validation Accuracy Epoch {epoch}')
-
-        # pbar = tqdm(total=len(self.data_loader_valid),# leave=False,
-        #             desc=f'Validation Accuracy Epoch {epoch}')
-
-        accuracy_list_epoch = []
+        pbar.set_description_str(f'Validation Metrics Epoch {epoch}')
 
         self.model.eval()
-
-        # pbar = tqdm(total=len(self.data_loader_valid), leave=False,
-        #             desc=f'Validation Epoch {epoch}', postfix='Accuracy: 0')
+        preds_list = []
+        targets_list = []
 
         # Deactivate the autograd engine
         with torch.no_grad():
@@ -307,70 +301,63 @@ class TrainValidTestManager:
                 images = torch.stack(images).to(self.device)
                 targets = [{k: v.to(self.device) for k, v in t.items()} for t in targets]
 
-                # with amp.autocast(enabled=self.mixed_precision):
                 preds = self.model(images)
 
-                # if slow, try batched_nms()
-                # keep_nms = [nms(pred['boxes'], pred['scores'], self.iou_threshold) for pred in preds]
-                # preds = [] # filter out using nms results
-                targets_boxes = [target['boxes'] for target in targets]
-                targets_labels = [target['labels'] for target in targets]
-                preds_boxes = [pred['boxes'] for pred in preds]
+                preds_list += preds
+                targets_list += targets
 
-                iou_list = []
-                max_iou_list = []
-                type_list = []
-                class_list = []
-
-                for pred_boxes, target_boxes in zip(preds_boxes, targets_boxes):
-                    iou_list.append(box_iou(pred_boxes, target_boxes))
-
-                for j, iou in enumerate(iou_list):
-                    if iou.nelement() > 0:
-                        max_iou_list.append(torch.max(iou, dim=1))
-                        type_list.append(['Positive' if value > self.iou_threshold else 'Negative'
-                                          for value in max_iou_list[-1].values])
-                        class_list_iter = []
-                        for value, index in zip(max_iou_list[-1].values, max_iou_list[-1].indices):
-                            class_list_iter.append(targets_labels[j].data[index].item()
-                                                   if torch.greater(value, 0) else 0)
-                        class_list.append(class_list_iter)
-
-                acc = 0
-
-                accuracy_list_epoch.append(acc)
-
-                self.valid_acc_step = self.save_batch_acc('Validation', acc, self.valid_acc_step)
                 self.save_memory()
-
-                # Update progress bar
-                pbar.set_postfix_str(f'mAP: {acc:.5f}')
                 pbar.update()
 
-        self.save_epoch('Validation', np.mean(loss_list_epoch), np.mean(accuracy_list_epoch), epoch)
+        preds_list = self.apply_nms(preds_list)
+        metrics = self.calculate_metrics(preds_list, targets_list)
+
+        self.save_epoch('Validation', np.mean(loss_list_epoch), metrics, epoch)
 
         pbar.close()
 
-        # # Send images and labels to the device
-        # images, labels = images.to(self.device), labels.to(self.device)
-        #
-        # # Perform a forward pass
-        # outputs = self.model.forward(images)
-        #
-        # # Calculate the loss, comparing outputs with the ground truth labels
-        # loss = self.criterion(outputs, labels)
+    def apply_nms(self, preds_list):
+        keep_nms = [nms(pred['boxes'], pred['scores'], self.iou_threshold) for pred in preds_list]
 
-        # # Appending the current loss to the loss list and current accuracy to the accuracy list
-        # loss_list.append(loss.item())
-        # accuracy_list.append(self.get_accuracy(outputs, labels))
+        preds_nms = []
 
-        # # Calculate mean loss and mean accuracy over all batches
-        # mean_loss = np.mean(loss_list)
-        # mean_accuracy = np.mean(accuracy_list)
-        #
-        # # Save mean loss and mean accuracy in the object
-        # self.results['Validation Loss'].append(round(mean_loss, 5))
-        # self.results['Validation Accuracy'].append(round(mean_accuracy, 5))
+        for pred, keep in zip(preds_list, keep_nms):
+            preds_nms.append([torch.index_select(val, dim=0, index=keep) for val in pred.values()])
+
+        return preds_nms
+
+    def calculate_metrics(self, preds_list, targets_list):
+        # if slow, try batched_nms()
+
+
+
+
+
+
+        targets_boxes = [target['boxes'] for target in targets_list]
+        targets_labels = [target['labels'] for target in targets_list]
+        preds_boxes = [pred['boxes'] for pred in preds_list]
+
+        iou_list = []
+        max_iou_list = []
+        type_list = []
+        class_list = []
+
+        for pred_boxes, target_boxes in zip(preds_boxes, targets_boxes):
+            iou_list.append(box_iou(pred_boxes, target_boxes))
+
+        for j, iou in enumerate(iou_list):
+            if iou.nelement() > 0:
+                max_iou_list.append(torch.max(iou, dim=1))
+                type_list.append(['Positive' if value > self.iou_threshold else 'Negative'
+                                  for value in max_iou_list[-1].values])
+                class_list_iter = []
+                for value, index in zip(max_iou_list[-1].values, max_iou_list[-1].indices):
+                    class_list_iter.append(targets_labels[j].data[index].item()
+                                           if torch.greater(value, 0) else 0)
+                class_list.append(class_list_iter)
+
+        return 0
 
     def test_model(self) -> float:
         """
@@ -606,10 +593,10 @@ class TrainValidTestManager:
 
         return step + 1
 
-    def save_batch_acc(self, bucket, acc, step):
-        self.writer.add_scalar(f'mAP (per batch)/{bucket}', acc, step)
-
-        return step + 1
+    # def save_batch_acc(self, bucket, acc, step):
+    #     self.writer.add_scalar(f'mAP (per batch)/{bucket}', acc, step)
+    #
+    #     return step + 1
 
     def save_epoch(self, bucket, loss, accuracy, epoch):
         self.writer.add_scalar(f'Loss (mean per epoch)/{bucket}', loss, epoch)
