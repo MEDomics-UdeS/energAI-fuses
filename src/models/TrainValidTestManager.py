@@ -7,7 +7,7 @@ from torch.cuda.amp import autocast
 from torch.cuda.amp.grad_scaler import GradScaler
 import torchvision.models.detection as detection
 from torch.cuda import memory_reserved, memory_allocated
-from src.data.SummaryWriter import SummaryWriter
+from src.models.SummaryWriter import SummaryWriter
 from torchvision.ops import box_iou, nms
 from tqdm import tqdm
 

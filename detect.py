@@ -11,7 +11,6 @@ from constants import IMAGES_PATH, ANNOTATIONS_PATH
 
 if __name__ == '__main__':
     # Record start time
-    # Record start time
     start = datetime.now()
 
     # Get number of cpu threads for PyTorch DataLoader and Ray paralleling
