@@ -27,7 +27,7 @@ if __name__ == '__main__':
     main()
 
     cmds = [
-        ['python', 'detect.py', '--data', 'resized', '--epochs', '1', '--model', 'fasterrcnn_mobilenet_v3_large_fpn'],
+        ['python', 'detect.py', '--data', 'resized', '--epochs', '10'],
     ]
 
     start = datetime.now()
