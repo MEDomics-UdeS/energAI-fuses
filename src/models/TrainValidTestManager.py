@@ -64,11 +64,12 @@ class TrainValidTestManager:
         self.data_loader_train = data_loader_manager.data_loader_train
         self.data_loader_valid = data_loader_manager.data_loader_valid
         self.data_loader_test = data_loader_manager.data_loader_test
-        # self.batch_size = data_loader_manager.batch_size
+
         print(f'=== Dataset & Data Loader Sizes ===\n\n'
               f'Training:\t\t{len(self.data_loader_train.dataset)} images\t\t{len(self.data_loader_train)} batches\n'
               f'Validation:\t\t{len(self.data_loader_valid.dataset)} images\t\t{len(self.data_loader_valid)} batches\n'
               f'Testing:\t\t{len(self.data_loader_test.dataset)} images\t\t{len(self.data_loader_test)} batches\n')
+
         # Save the file name
         self.file_name = file_name
 
@@ -77,9 +78,6 @@ class TrainValidTestManager:
 
         # Get model and set last fully-connected layer with the right number of classes
         self.load_model()
-
-        # Define loss function
-        # self.criterion = torch.nn.CrossEntropyLoss()
 
         # Find which parameters to train (those with .requires_grad = True)
         params = [p for p in self.model.parameters() if p.requires_grad]
@@ -90,16 +88,9 @@ class TrainValidTestManager:
         # Send the model to the device
         self.model.to(self.device)
 
-        # Results dictionary
-        # self.results = {
-        #     'Training Loss': [],
-        #     'Training Accuracy': [],
-        #     'Validation Loss': [],
-        #     'Validation Accuracy': []
-        # }
-
     def __call__(self, epochs):
         self.train_model(epochs)
+
         self.test_model()
 
         self.writer.flush()
@@ -107,8 +98,8 @@ class TrainValidTestManager:
 
     def train_model(self, epochs: int) -> None:
         for epoch in range(1, epochs + 1):
-            loss = self.evaluate(self.data_loader_train, f'Training Epoch {epoch}', 'Training', self.train_step)
-            self.save_epoch('Training', loss, None, None, epoch)
+            loss = self.evaluate(self.data_loader_train, 'Training', epoch)
+            self.save_epoch('Training', loss, None, epoch)
 
             # Validate the model
             metric = self.validate_model(epoch)
@@ -123,58 +114,31 @@ class TrainValidTestManager:
 
     def validate_model(self, epoch) -> float:
         """
-        Method to validate the model saved in the self.model class attribute.
 
-        :return: None
+
         """
-        # pbar = tqdm(total=len(self.data_loader_valid), leave=False,
-        #             desc=f'Validation Loss Epoch {epoch}')
-        #
-        # loss_list_epoch = []
-        #
-        # # Deactivate the autograd engine
-        # with torch.no_grad():
-        #     for i, (images, targets) in enumerate(self.data_loader_valid):
-        #         images = torch.stack(images).to(self.device)
-        #         targets = [{k: v.to(self.device) for k, v in t.items()} for t in targets]
-        #
-        #         loss_dict = self.model(images, targets)
-        #         losses = sum(loss for loss in loss_dict.values())
-        #
-        #         loss_list_epoch.append(losses.item())
-        #
-        #         self.valid_loss_step = self.save_batch_loss('Validation', losses, self.valid_loss_step)
-        #         self.save_memory()
-        #
-        #         # Update progress bar
-        #         pbar.set_postfix_str(f'Loss: {losses:.5f}')
-        #         pbar.update()
-        #
-        # pbar.close()
-        #
-        # loss = np.mean(loss_list_epoch)
-        loss = self.evaluate(self.data_loader_valid, f'Validation Epoch {epoch}', 'Validation', self.valid_step)
-        recall, precision = self.predict(self.data_loader_valid, f'Validation Metrics Epoch {epoch}')
 
-        self.save_epoch('Validation', loss, recall, precision, epoch)
+        loss = self.evaluate(self.data_loader_valid, 'Validation', epoch)
+        metrics_dict = self.predict(self.data_loader_valid, f'Validation Metrics Epoch {epoch}')
 
-        return recall
+        self.save_epoch('Validation', loss, metrics_dict, epoch)
+
+        return metrics_dict['Recall (mean per image)']
 
     def test_model(self) -> None:
-        recall, precision = self.predict(self.data_loader_test, 'Testing Metrics')
+        metrics_dict = self.predict(self.data_loader_test, 'Testing Metrics')
 
         print('=== Testing Results ===\n')
-        print(f'Recall (mean per image):\t\t\t{recall:.2%}')
-        print(f'Precision (mean per image):\t\t\t{precision:.2%}\n')
 
-        metrics_dict = {
-            'hparam/Recall': recall,
-            'hparam/Precision': precision
-        }
+        for key, value in metrics_dict.items():
+            print(f'{key}:\t\t\t{value:.2%}')
+
+        for key in metrics_dict.fromkeys(metrics_dict):
+            metrics_dict[f'hparam/{key}'] = metrics_dict.pop(key)
 
         self.writer.add_hparams(self.args_dic, metric_dict=metrics_dict)
 
-    def evaluate(self, data_loader, phase, epoch, step):
+    def evaluate(self, data_loader, phase, epoch):
         # Declare tqdm progress bar
         pbar = tqdm(total=len(data_loader), leave=False, desc=f'{phase} Epoch {epoch}')
 
@@ -225,7 +189,7 @@ class TrainValidTestManager:
 
             loss_list_epoch.append(losses.item())
 
-            step = self.save_batch_loss(phase, losses, step)
+            self.save_batch(phase, losses)
             self.save_memory()
 
             # Update progress bar
@@ -308,11 +272,15 @@ class TrainValidTestManager:
         recall_list = [sum(types) / len(targets_labels[i]) for i, types in enumerate(types_list)]
         precision_list = [0 if len(types) == 0 else sum(types) / len(types) for types in types_list]
 
-        return np.mean(recall_list), np.mean(precision_list)
+        metrics_dict = {
+            'Recall (mean per image)':      np.mean(recall_list),
+            'Precision (mean per image)':   np.mean(precision_list)
+        }
+
+        return metrics_dict
 
     def load_model(self,
                    progress: bool = True,
-                   pretrained_backbone: bool = True,
                    trainable_backbone_layers: Optional[int] = None):
         """
         pretrained (bool) – If True, returns a model pre-trained on COCO train2017
@@ -340,7 +308,7 @@ class TrainValidTestManager:
         if self.model_name == 'fasterrcnn_resnet50_fpn':
             self.model = detection.fasterrcnn_resnet50_fpn(pretrained=self.pretrained,
                                                            progress=progress,
-                                                           pretrained_backbone=pretrained_backbone,
+                                                           pretrained_backbone=self.pretrained,
                                                            trainable_backbone_layers=
                                                            trainable_backbone_layers)
             self.replace_model_head()
@@ -348,7 +316,7 @@ class TrainValidTestManager:
         elif self.model_name == 'fasterrcnn_mobilenet_v3_large_fpn':
             self.model = detection.fasterrcnn_mobilenet_v3_large_fpn(pretrained=self.pretrained,
                                                                      progress=progress,
-                                                                     pretrained_backbone=pretrained_backbone,
+                                                                     pretrained_backbone=self.pretrained,
                                                                      trainable_backbone_layers=
                                                                      trainable_backbone_layers)
             self.replace_model_head()
@@ -356,8 +324,7 @@ class TrainValidTestManager:
         elif self.model_name == 'fasterrcnn_mobilenet_v3_large_320_fpn':
             self.model = detection.fasterrcnn_mobilenet_v3_large_320_fpn(pretrained=self.pretrained,
                                                                          progress=progress,
-                                                                         # num_classes=self.num_classes,
-                                                                         pretrained_backbone=pretrained_backbone,
+                                                                         pretrained_backbone=self.pretrained,
                                                                          trainable_backbone_layers=
                                                                          trainable_backbone_layers)
             self.replace_model_head()
@@ -365,25 +332,9 @@ class TrainValidTestManager:
         elif self.model_name == 'retinanet_resnet50_fpn':
             self.model = detection.retinanet_resnet50_fpn(pretrained=self.pretrained,
                                                           progress=progress,
-                                                          pretrained_backbone=pretrained_backbone,
+                                                          pretrained_backbone=self.pretrained,
                                                           trainable_backbone_layers=
                                                           trainable_backbone_layers)
-            self.replace_model_head()
-
-        elif self.model_name == 'maskrcnn_resnet50_fpn':
-            self.model = detection.maskrcnn_resnet50_fpn(pretrained=self.pretrained,
-                                                         progress=progress,
-                                                         pretrained_backbone=pretrained_backbone,
-                                                         trainable_backbone_layers=
-                                                         trainable_backbone_layers)
-            self.replace_model_head()
-
-        elif self.model_name == 'keypointrcnn_resnet50_fpn':
-            self.model = detection.keypointrcnn_resnet50_fpn(pretrained=self.pretrained,
-                                                             progress=progress,
-                                                             pretrained_backbone=pretrained_backbone,
-                                                             trainable_backbone_layers=
-                                                             trainable_backbone_layers)
             self.replace_model_head()
 
         elif self.model_name == 'detr':
@@ -407,40 +358,39 @@ class TrainValidTestManager:
             raise NotImplementedError
 
     def replace_model_head(self):
-        in_features = self.model.roi_heads.box_predictor.cls_score.in_features
-
         if 'fasterrcnn' in self.model_name:
-            self.model.roi_heads.box_predictor = detection.faster_rcnn.FastRCNNPredictor(in_channels=in_features,
-                                                                                         num_classes=self.num_classes)
+            in_channels = self.model.roi_heads.box_predictor.cls_score.in_features
+
+            self.model.roi_heads.box_predictor = \
+                detection.faster_rcnn.FastRCNNPredictor(in_channels=in_channels,
+                                                        num_classes=self.num_classes)
 
         elif 'retinanet' in self.model_name:
-            self.model.roi_heads.box_predictor = detection.retinanet.RetinaNetHead(in_features=in_features,
-                                                                                   num_classes=self.num_classes)
+            in_channels = self.model.backbone.out_channels
+            num_anchors = self.model.head.classification_head.num_anchors
 
-        elif 'maskrcnn' in self.model_name:
-            # from .mask_rcnn import *
-            raise NotImplementedError
-
-        elif 'keypointrcnn' in self.model_name:
-            # from .keypoint_rcnn import *
-            raise NotImplementedError
+            self.model.head = \
+                detection.retinanet.RetinaNetHead(in_channels=in_channels,
+                                                  num_anchors=num_anchors,
+                                                  num_classes=self.num_classes)
 
         else:
             raise NotImplementedError
 
-    def save_batch_loss(self, bucket, loss, step):
-        self.writer.add_scalar(f'Loss (total per batch)/{bucket}', loss, step)
+    def save_batch(self, phase, loss):
+        if phase == 'Training':
+            self.writer.add_scalar(f'Loss (total per batch)/{phase}', loss, self.train_step)
+            self.train_step += 1
+        elif phase == 'Validation':
+            self.writer.add_scalar(f'Loss (total per batch)/{phase}', loss, self.valid_step)
+            self.valid_step += 1
 
-        return step + 1
+    def save_epoch(self, phase, loss, metrics_dict, epoch):
+        self.writer.add_scalar(f'Loss (mean per epoch)/{phase}', loss, epoch)
 
-    def save_epoch(self, bucket, loss, recall, precision, epoch):
-        self.writer.add_scalar(f'Loss (mean per epoch)/{bucket}', loss, epoch)
-
-        if recall is not None:
-            self.writer.add_scalar(f'Recall (mean per epoch)/{bucket}', recall, epoch)
-
-        if precision is not None:
-            self.writer.add_scalar(f'Precision (mean per epoch)/{bucket}', precision, epoch)
+        if metrics_dict is not None:
+            for key, value in metrics_dict.items():
+                self.writer.add_scalar(f'{key}/{phase}', value, epoch)
 
     def save_memory(self, scale=1e-9):
         mem_reserved = memory_reserved(0) * scale

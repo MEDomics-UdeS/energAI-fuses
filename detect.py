@@ -69,7 +69,7 @@ if __name__ == '__main__':
                         help='Set random seed')
 
     # Deterministic argument
-    parser.add_argument('-dt', '--deterministic', action='store_false',
+    parser.add_argument('-dt', '--deterministic', action='store_true',
                         help='Set deterministic behaviour')
 
     # # View images using a saved model argument
@@ -103,8 +103,6 @@ if __name__ == '__main__':
                                  'fasterrcnn_mobilenet_v3_large_fpn',
                                  'fasterrcnn_mobilenet_v3_large_320_fpn',
                                  'retinanet_resnet50_fpn',
-                                 'maskrcnn_resnet50_fpn',
-                                 'keypointrcnn_resnet50_fpn',
                                  'detr', 'perceiver'],
                         default='fasterrcnn_resnet50_fpn',
                         help='Specify which object detection model to use')
@@ -124,35 +122,11 @@ if __name__ == '__main__':
 
     # Display arguments in console
     print('\n=== Arguments & Hyperparameters ===\n')
+
     for key, value in args_dic.items():
         print(f'{key}:{" " * (27 - len(key))}{value}')
-    print('\n')
-    # print(f'\nFilename:\t\t\t\t\t{file_name}')
-    # print(f'Data Source:\t\t\t\t{args.data}')
-    # if args.data == 'raw':
-    #     print(f'Image Size:\t\t\t\t\t{args.size} x {args.size}')
-    # print(f'Validation Size:\t\t\t{args.validation_size}')
-    # print(f'Test Size:\t\t\t\t\t{args.test_size}')
-    # print(f'Epochs:\t\t\t\t\t\t{args.epochs}')
-    # print(f'Batch Size:\t\t\t\t\t{args.batch}')
-    # print(f'Early Stopping:\t\t\t\t{args.early_stopping}')
-    # print(f'Mixed Precision:\t\t\t{args.mixed_precision}')
-    # print(f'Gradient Accumulation Size:\t{args.gradient_accumulation}')
-    # if args.gradient_accumulation > 1:
-    #     print(f'Gradient Clipping Size:\t{args.gradient_clip}')
-    # print(f'Deterministic:\t\t\t\t{args.deterministic}')
-    # if args.deterministic:
-    #     print(f'Random Seed:\t\t\t\t{args.random_seed}')
-    # # print('View Images Mode:\t\t\t', args.image)
-    # # print('Test File Mode:\t\t\t\t', args.test_file)
-    # print(f'Compute Mean & Std:\t\t\t{args.mean_std}')
-    # print(f'IOU Threshold:\t\t\t\t{args.iou_threshold}')
-    # print(f'Learning Rate:\t\t\t\t{args.learning_rate}')
-    # print(f'Weight Decay:\t\t\t\t{args.weight_decay}')
-    # print(f'Model:\t\t\t\t\t\t{args.model}')
-    # print(f'Pretrained:\t\t\t\t\t{args.pretrained}\n')
 
-    # Resize images if 'raw' has been specified as the data source
+    print('\n')
 
     if args.data == 'raw':
         resize_images(args.size, num_workers)
@@ -185,21 +159,4 @@ if __name__ == '__main__':
                                                      args_dic=args_dic)
     train_valid_test_manager(args.epochs)
 
-    # if args.train:
-    #     train_start = time.time()
-    #     train_model(args.epochs, args.gradient_accumulation, dataloader_manager.train_data_loader, device,
-    #                 args.mixed_precision, True if args.gradient_accumulation > 1 else False, filename,
-    #                 writer, args.early_stopping, args.validation_size, dataset_manager.valid_dataset)
-    #     print('Total Time Taken (minutes): ', round((time.time() - train_start) / 60, 2))
-    # if args.test:
-    #     test_model(test_dataset, device, filename, writer)
-    #
-    # if args.testfile:
-    #     test_model(test_dataset, device, args.testfile, writer)
-    #
-    # if args.image:
-    #     for i in range(len(total_dataset)):
-    #         print(i, len(total_dataset), end=' ')
-    #         view_test_image(i, total_dataset, filename)
-    print(f'Total time for current experiment:\t{str(datetime.now() - start).split(".")[0]}')
-
+    print(f'\nTotal time for current experiment:\t{str(datetime.now() - start).split(".")[0]}')
