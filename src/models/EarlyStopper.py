@@ -3,7 +3,7 @@
 import torch
 
 
-class EarlyStopping:
+class EarlyStopper:
     def __init__(self, mode='max', min_delta=0, patience=10, percentage=False):
         self.mode = mode
         self.min_delta = min_delta

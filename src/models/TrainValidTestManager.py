@@ -2,7 +2,9 @@ from typing import Optional
 
 import numpy as np
 import torch
-import torch.cuda.amp as amp
+from torch.nn.utils import clip_grad_norm_
+from torch.cuda.amp import autocast
+from torch.cuda.amp.grad_scaler import GradScaler
 import torchvision.models.detection as detection
 from torch.cuda import memory_reserved, memory_allocated
 from src.data.SummaryWriter import SummaryWriter
@@ -11,7 +13,7 @@ from tqdm import tqdm
 
 from constants import CLASS_DICT
 from src.data.DataLoaderManager import DataLoaderManager
-from src.models.EarlyStopping import EarlyStopping
+from src.models.EarlyStopper import EarlyStopper
 
 
 class TrainValidTestManager:
@@ -34,8 +36,7 @@ class TrainValidTestManager:
         self.args_dic = args_dic
 
         self.train_step = 0
-        self.valid_acc_step = 0
-        self.valid_loss_step = 0
+        self.valid_step = 0
         self.total_step = 0
 
         self.gradient_clip = gradient_clip
@@ -53,6 +54,11 @@ class TrainValidTestManager:
 
         self.num_classes = len(CLASS_DICT) + 1 # + 1 to include background class
         self.early_stopping = early_stopping
+
+        if self.early_stopping is not None:
+            self.early_stopper = EarlyStopper(patience=self.early_stopping, min_delta=0)
+
+        self.scaler = GradScaler(enabled=self.mixed_precision)
 
         # Extract the training, validation and testing data loaders
         self.data_loader_train = data_loader_manager.data_loader_train
@@ -100,139 +106,66 @@ class TrainValidTestManager:
         self.writer.close()
 
     def train_model(self, epochs: int) -> None:
-        """
-        Trains the model and saves the trained model.
-
-        :param epochs: int, number of epochs
-        """
-
-        if self.early_stopping:
-            es = EarlyStopping(patience=self.early_stopping)
-
-        scaler = amp.grad_scaler.GradScaler(enabled=self.mixed_precision)
-
         for epoch in range(1, epochs + 1):
-            # Declare tqdm progress bar
-            pbar = tqdm(total=len(self.data_loader_train), leave=False,
-                        desc=f'Training Epoch {epoch}', postfix='Loss: 0')
-
-            # Specify that the model will be trained
-            self.model.train()
-
-            loss_list_epoch = []
-            accuracy_list_epoch = []
-
-
-
-            if self.gradient_accumulation:
-                self.optimizer.zero_grad()
-
-            for i, (images, targets) in enumerate(self.data_loader_train):
-                images = torch.stack(images).to(self.device)
-                targets = [{k: v.to(self.device) for k, v in t.items()} for t in targets]
-
-                with amp.autocast(enabled=self.mixed_precision):
-                    loss_dict = self.model(images, targets)
-                    losses = sum(loss for loss in loss_dict.values())
-
-                if self.gradient_accumulation and self.mixed_precision:
-                    scaler.scale(losses).backward()
-
-                    if (i + 1) % self.accumulation_size == 0:
-                        scaler.unscale_(self.optimizer)
-                        torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=self.gradient_clip)
-                        scaler.step(self.optimizer)
-                        scaler.update()
-                        self.optimizer.zero_grad(set_to_none=True)
-                elif self.gradient_accumulation and not self.mixed_precision:
-                    losses.backward()
-
-                    if (i + 1) % self.accumulation_size == 0:
-                        torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=self.gradient_clip)
-                        self.optimizer.step()
-                        self.optimizer.zero_grad()
-                elif not self.gradient_accumulation and self.mixed_precision:
-                    scaler.scale(losses).backward()
-                    scaler.step(self.optimizer)
-                    scaler.update()
-                    self.optimizer.zero_grad(set_to_none=True)
-                elif not self.gradient_accumulation and not self.mixed_precision:
-                    self.optimizer.zero_grad()
-                    losses.backward()
-                    self.optimizer.step()
-
-                loss_list_epoch.append(losses.item())
-
-                self.train_step = self.save_batch_loss('Training', losses, self.train_step)
-                self.save_memory()
-
-                # Update progress bar
-                pbar.set_description_str(f'Training Epoch {epoch}')
-                pbar.set_postfix_str(f'Loss: {losses:.5f}')
-                pbar.update()
-
-            pbar.close()
-
-            loss = np.mean(loss_list_epoch)
+            loss = self.evaluate(self.data_loader_train, f'Training Epoch {epoch}', 'Training', self.train_step)
             self.save_epoch('Training', loss, None, None, epoch)
 
             # Validate the model
-            self.validate_model(epoch)
+            metric = self.validate_model(epoch)
+
+            if self.early_stopping and self.early_stopper.step(torch.as_tensor(metric, dtype=torch.float16)):
+                print(f'Early stopping criterion has been reached for {self.early_stopping} epochs\n')
+                break
 
         # If file_name is specified, save the trained model
         if self.file_name is not None:
             torch.save(self.model.state_dict(), f'models/{self.file_name}')
 
-    def validate_model(self, epoch) -> None:
+    def validate_model(self, epoch) -> float:
         """
         Method to validate the model saved in the self.model class attribute.
 
         :return: None
         """
-        pbar = tqdm(total=len(self.data_loader_valid), leave=False,
-                    desc=f'Validation Loss Epoch {epoch}')
-
-        loss_list_epoch = []
-
-        # Deactivate the autograd engine
-        with torch.no_grad():
-            for i, (images, targets) in enumerate(self.data_loader_valid):
-                images = torch.stack(images).to(self.device)
-                targets = [{k: v.to(self.device) for k, v in t.items()} for t in targets]
-
-                # with amp.autocast(enabled=self.mixed_precision):
-                loss_dict = self.model(images, targets)
-                losses = sum(loss for loss in loss_dict.values())
-
-                loss_list_epoch.append(losses.item())
-
-                self.valid_loss_step = self.save_batch_loss('Validation', losses, self.valid_loss_step)
-                self.save_memory()
-
-                # Update progress bar
-                pbar.set_postfix_str(f'Loss: {losses:.5f}')
-                pbar.update()
-
-        pbar.close()
-
-        loss = np.mean(loss_list_epoch)
-        recall, precision = self.evaluate_preds(self.data_loader_valid, f'Validation Metrics Epoch {epoch}')
+        # pbar = tqdm(total=len(self.data_loader_valid), leave=False,
+        #             desc=f'Validation Loss Epoch {epoch}')
+        #
+        # loss_list_epoch = []
+        #
+        # # Deactivate the autograd engine
+        # with torch.no_grad():
+        #     for i, (images, targets) in enumerate(self.data_loader_valid):
+        #         images = torch.stack(images).to(self.device)
+        #         targets = [{k: v.to(self.device) for k, v in t.items()} for t in targets]
+        #
+        #         loss_dict = self.model(images, targets)
+        #         losses = sum(loss for loss in loss_dict.values())
+        #
+        #         loss_list_epoch.append(losses.item())
+        #
+        #         self.valid_loss_step = self.save_batch_loss('Validation', losses, self.valid_loss_step)
+        #         self.save_memory()
+        #
+        #         # Update progress bar
+        #         pbar.set_postfix_str(f'Loss: {losses:.5f}')
+        #         pbar.update()
+        #
+        # pbar.close()
+        #
+        # loss = np.mean(loss_list_epoch)
+        loss = self.evaluate(self.data_loader_valid, f'Validation Epoch {epoch}', 'Validation', self.valid_step)
+        recall, precision = self.predict(self.data_loader_valid, f'Validation Metrics Epoch {epoch}')
 
         self.save_epoch('Validation', loss, recall, precision, epoch)
 
+        return recall
+
     def test_model(self) -> None:
-        """
-        Method to test the model saved in the self.model class attribute.
+        recall, precision = self.predict(self.data_loader_test, 'Testing Metrics')
 
-        :param final_eval: bool indicating we are evaluating the model on the final test set
-                           after active learning is done
-        :return: None
-        """
-        recall, precision = self.evaluate_preds(self.data_loader_test, 'Testing Metrics')
-
-        print('=== Testing Results ===')
+        print('=== Testing Results ===\n')
         print(f'Recall (mean per image):\t\t\t{recall:.2%}')
-        print(f'Precision (mean per image):\t\t\t{precision:.2%}')
+        print(f'Precision (mean per image):\t\t\t{precision:.2%}\n')
 
         metrics_dict = {
             'hparam/Recall': recall,
@@ -240,6 +173,96 @@ class TrainValidTestManager:
         }
 
         self.writer.add_hparams(self.args_dic, metric_dict=metrics_dict)
+
+    def evaluate(self, data_loader, phase, epoch, step):
+        # Declare tqdm progress bar
+        pbar = tqdm(total=len(data_loader), leave=False, desc=f'{phase} Epoch {epoch}')
+
+        # Specify that the model will be trained
+        self.model.train()
+
+        loss_list_epoch = []
+
+        if self.gradient_accumulation:
+            self.optimizer.zero_grad()
+
+        for i, (images, targets) in enumerate(data_loader):
+            images = torch.stack(images).to(self.device)
+            targets = [{k: v.to(self.device) for k, v in t.items()} for t in targets]
+
+            with autocast(enabled=self.mixed_precision):
+                loss_dict = self.model(images, targets)
+                losses = sum(loss for loss in loss_dict.values())
+
+            if not self.gradient_accumulation and not self.mixed_precision:
+                self.optimizer.zero_grad()
+                losses.backward()
+                self.optimizer.step()
+
+            elif not self.gradient_accumulation and self.mixed_precision:
+                self.scaler.scale(losses).backward()
+                self.scaler.step(self.optimizer)
+                self.scaler.update()
+                self.optimizer.zero_grad(set_to_none=True)
+
+            elif self.gradient_accumulation and not self.mixed_precision:
+                losses.backward()
+
+                if (i + 1) % self.accumulation_size == 0:
+                    clip_grad_norm_(self.model.parameters(), max_norm=self.gradient_clip)
+                    self.optimizer.step()
+                    self.optimizer.zero_grad()
+
+            elif self.gradient_accumulation and self.mixed_precision:
+                self.scaler.scale(losses).backward()
+
+                if (i + 1) % self.accumulation_size == 0:
+                    self.scaler.unscale_(self.optimizer)
+                    clip_grad_norm_(self.model.parameters(), max_norm=self.gradient_clip)
+                    self.scaler.step(self.optimizer)
+                    self.scaler.update()
+                    self.optimizer.zero_grad(set_to_none=True)
+
+            loss_list_epoch.append(losses.item())
+
+            step = self.save_batch_loss(phase, losses, step)
+            self.save_memory()
+
+            # Update progress bar
+            pbar.set_postfix_str(f'Loss: {losses:.5f}')
+            pbar.update()
+
+        pbar.close()
+
+        return np.mean(loss_list_epoch)
+
+    def predict(self, data_loader, desc):
+        pbar = tqdm(total=len(data_loader), leave=False, desc=desc)
+
+        self.model.eval()
+
+        preds_list = []
+        targets_list = []
+
+        # Deactivate the autograd engine
+        with torch.no_grad():
+            for images, targets in data_loader:
+                images = torch.stack(images).to(self.device)
+                targets = [{k: v.to(self.device) for k, v in t.items()} for t in targets]
+
+                preds = self.model(images)
+
+                preds_list += preds
+                targets_list += targets
+
+                self.save_memory()
+                pbar.update()
+
+        pbar.close()
+
+        # preds_list = self.apply_nms(preds_list)
+
+        return self.calculate_metrics(preds_list, targets_list)
 
     def apply_nms(self, preds_list):
         keep_nms = [nms(pred['boxes'], pred['scores'], self.iou_threshold) for pred in preds_list]
@@ -273,7 +296,7 @@ class TrainValidTestManager:
 
                 for i, (value, index) in enumerate(zip(max_iou_list[-1].values, max_iou_list[-1].indices)):
                     if torch.greater(value, self.iou_threshold) and \
-                       torch.equal(target_labels.data[index], pred_labels.data[i]):
+                            torch.equal(target_labels.data[index], pred_labels.data[i]):
                         type_list_iter.append(True)
                     else:
                         type_list_iter.append(False)
@@ -282,38 +305,10 @@ class TrainValidTestManager:
             else:
                 types_list.append([])
 
-        recall_list = [sum(types)/len(targets_labels[i]) for i, types in enumerate(types_list)]
-        precision_list = [0 if len(types) == 0 else sum(types)/len(types) for types in types_list]
+        recall_list = [sum(types) / len(targets_labels[i]) for i, types in enumerate(types_list)]
+        precision_list = [0 if len(types) == 0 else sum(types) / len(types) for types in types_list]
 
         return np.mean(recall_list), np.mean(precision_list)
-
-    def evaluate_preds(self, data_loader, desc):
-        pbar = tqdm(total=len(data_loader), leave=False, desc=desc)
-
-        self.model.eval()
-
-        preds_list = []
-        targets_list = []
-
-        # Deactivate the autograd engine
-        with torch.no_grad():
-            for i, (images, targets) in enumerate(data_loader):
-                images = torch.stack(images).to(self.device)
-                targets = [{k: v.to(self.device) for k, v in t.items()} for t in targets]
-
-                preds = self.model(images)
-
-                preds_list += preds
-                targets_list += targets
-
-                self.save_memory()
-                pbar.update()
-
-        pbar.close()
-
-        preds_list = self.apply_nms(preds_list)
-
-        return self.calculate_metrics(preds_list, targets_list)
 
     def load_model(self,
                    progress: bool = True,

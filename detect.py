@@ -50,7 +50,7 @@ if __name__ == '__main__':
 
     # Early stopping argument
     parser.add_argument('-es', '--early_stopping', action='store', type=int,
-                        help='Early stopping')
+                        help='Early stopping patience')
 
     # Mixed precision argument
     parser.add_argument('-mp', '--mixed_precision', action='store_true',
@@ -69,7 +69,7 @@ if __name__ == '__main__':
                         help='Set random seed')
 
     # Deterministic argument
-    parser.add_argument('-dt', '--deterministic', action='store_true',
+    parser.add_argument('-dt', '--deterministic', action='store_false',
                         help='Set deterministic behaviour')
 
     # # View images using a saved model argument
