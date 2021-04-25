@@ -173,10 +173,8 @@ class TrainValidTestManager:
 
             pbar.close()
 
-            recall, precision = self.evaluate_preds(self.data_loader_valid, f'Validation Metrics Epoch {epoch}')
             loss = np.mean(loss_list_epoch)
-
-            self.save_epoch('Validation', loss, recall, precision, epoch)
+            self.save_epoch('Training', loss, None, None, epoch)
 
             # Validate the model
             self.validate_model(epoch)
@@ -442,8 +440,12 @@ class TrainValidTestManager:
 
     def save_epoch(self, bucket, loss, recall, precision, epoch):
         self.writer.add_scalar(f'Loss (mean per epoch)/{bucket}', loss, epoch)
-        self.writer.add_scalar(f'Recall (mean per epoch)/{bucket}', recall, epoch)
-        self.writer.add_scalar(f'Precision (mean per epoch)/{bucket}', precision, epoch)
+
+        if recall is not None:
+            self.writer.add_scalar(f'Recall (mean per epoch)/{bucket}', recall, epoch)
+
+        if precision is not None:
+            self.writer.add_scalar(f'Precision (mean per epoch)/{bucket}', precision, epoch)
 
     def save_memory(self, scale=1e-9):
         mem_reserved = memory_reserved(0) * scale
