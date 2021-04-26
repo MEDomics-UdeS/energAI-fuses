@@ -44,22 +44,27 @@ class FuseDataset(torch.utils.data.Dataset):
         else:
             self.targets = []
 
-    def __getitem__(self, idx):
-        return self.transforms(self.images[idx]), self.targets[idx]
+    def __getitem__(self, index):
+        return self.transforms(self.images[index]), self.targets[index]
 
     def __len__(self):
         return len(self.images)
 
-    def extract_data(self, idx_list):
-        idx_list = sorted(idx_list, reverse=True)
+    def load_image(self, index):
+        image_path = self.image_paths[index]
+        img = Image.open(image_path)
+        return img
+
+    def extract_data(self, index_list):
+        index_list = sorted(index_list, reverse=True)
         image_paths = []
         images = []
         targets = []
 
-        for idx in idx_list:
-            image_paths.append(self.image_paths.pop(idx))
-            images.append(self.images.pop(idx))
-            targets.append(self.targets.pop(idx))
+        for index in index_list:
+            image_paths.append(self.image_paths.pop(index))
+            images.append(self.images.pop(index))
+            targets.append(self.targets.pop(index))
 
         return image_paths, images, targets
 
@@ -70,5 +75,5 @@ class FuseDataset(torch.utils.data.Dataset):
 
 
 @ray.remote
-def ray_load_images(image_paths, idx):
-    return Image.open(image_paths[idx]).convert("RGB"), idx
+def ray_load_images(image_paths, index):
+    return Image.open(image_paths[index]).convert("RGB"), index

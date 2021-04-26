@@ -21,6 +21,9 @@ if __name__ == '__main__':
     # Model file name argument
     parser.add_argument('-mfn', '--model_file_name', action='store', type=str, default='2021-04-25_19-29-08',
                         help='Model file name located in models/')
+    # Data source argument
+    parser.add_argument('-d', '--data', action='store', type=str, choices=['raw', 'resized'], default='raw',
+                        help='Specify which data source')
 
     # To compute mean & std deviation on training set
     parser.add_argument('-ms', '--mean_std', action='store_true',
@@ -28,7 +31,7 @@ if __name__ == '__main__':
                              'otherwise use precalculated values')
 
     # Batch size argument
-    parser.add_argument('-b', '--batch', action='store', type=int, default=150,
+    parser.add_argument('-b', '--batch', action='store', type=int, default=20,
                         help='Batch size')
 
     args = parser.parse_args()
@@ -45,6 +48,6 @@ if __name__ == '__main__':
                                             batch_size=args.batch,
                                             gradient_accumulation=1,
                                             num_workers=num_workers,
-                                            deterministic=False)
+                                            deterministic=True)
 
     view_test_images(args.model_file_name, data_loader_manager.data_loader_test)

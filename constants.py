@@ -1,5 +1,6 @@
 # Assign image and annotations file paths
 IMAGES_PATH = 'data/resized/'
+INFERENCE_PATH = 'data/inference/'
 ANNOTATIONS_PATH = 'data/annotations/targets_resized.json'
 
 MEAN = (0.6221349083958952, 0.6097851650674193, 0.592938912173587)

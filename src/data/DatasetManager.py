@@ -70,7 +70,7 @@ class DatasetManager:
         np.random.shuffle(indices)
         indices = indices[0:split_idx]
 
-        image_paths, images, targets = dataset_in.extract_data(idx_list=indices)
+        image_paths, images, targets = dataset_in.extract_data(index_list=indices)
         dataset_out.add_data(image_paths, images, targets)
 
         return dataset_in, dataset_out
