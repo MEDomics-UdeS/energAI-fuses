@@ -254,8 +254,6 @@ class TrainValidTestManager:
                 type_list_iter = []
 
                 for i, (value, index) in enumerate(zip(max_iou_list[-1].values, max_iou_list[-1].indices)):
-                    # if torch.greater(value, self.iou_threshold) and \
-                    #         torch.equal(target_labels.data[index], pred_labels.data[i]):
                     if value.greater(self.iou_threshold) and \
                        target_labels.data[index].equal(pred_labels.data[i]):
                         type_list_iter.append(True)
