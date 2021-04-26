@@ -71,14 +71,6 @@ if __name__ == '__main__':
     parser.add_argument('-dt', '--deterministic', action='store_true',
                         help='Set deterministic behaviour')
 
-    # # View images using a saved model argument
-    # parser.add_argument('-i', '--image', action='store', type=str,
-    #                     help='to view images, input - model name')
-    #
-    # # Test saved model argument
-    # parser.add_argument('-tst_f', '--test_file', action='store', type=str,
-    #                     help='Filename of saved model to test (located in models/)')
-
     # To compute mean & std deviation on training set
     parser.add_argument('-ms', '--mean_std', action='store_true',
                         help='Compute mean & standard deviation on training set if true, '

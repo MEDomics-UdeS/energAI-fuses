@@ -32,7 +32,10 @@ class TrainValidTestManager:
                  pretrained: bool,
                  iou_threshold: float,
                  gradient_clip: float,
-                 args_dic) -> None:
+                 args_dic,
+                 save_model: bool = True) -> None:
+        self.save_model = save_model
+
         self.args_dic = args_dic
 
         self.train_step = 0
@@ -93,6 +96,10 @@ class TrainValidTestManager:
 
         self.test_model()
 
+        # If file_name is specified, save the trained model
+        if self.save_model:
+            torch.save(self.model, f'models/{self.file_name}')
+
         self.writer.flush()
         self.writer.close()
 
@@ -107,10 +114,6 @@ class TrainValidTestManager:
             if self.early_stopping and self.early_stopper.step(torch.as_tensor(metric, dtype=torch.float16)):
                 print(f'Early stopping criterion has been reached for {self.early_stopping} epochs\n')
                 break
-
-        # If file_name is specified, save the trained model
-        if self.file_name is not None:
-            torch.save(self.model.state_dict(), f'models/{self.file_name}')
 
     def validate_model(self, epoch) -> float:
         """

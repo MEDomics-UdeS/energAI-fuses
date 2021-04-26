@@ -1,6 +1,6 @@
 import json
 import csv
-from os import listdir, walk
+from os import listdir
 from os.path import isfile, join
 
 dir_list = ['final jsons/']
