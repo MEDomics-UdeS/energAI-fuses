@@ -33,3 +33,12 @@ def filter_by_score(preds_list, score_threshold):
                            for key, val in pred.items()})
 
     return preds_filt
+
+
+def print_args(args_dict):
+    print('\n=== Arguments & Hyperparameters ===\n')
+
+    for key, value in args_dict.items():
+        print(f'{key}:{" " * (27 - len(key))}{value}')
+
+    print('\n')

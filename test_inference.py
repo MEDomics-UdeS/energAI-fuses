@@ -1,16 +1,21 @@
 import argparse
+from datetime import datetime
 
 from multiprocessing import cpu_count
 
 
 from src.data.DataLoaderManager import DataLoaderManager
 from src.data.DatasetManager import DatasetManager
+from src.models.helper_functions import print_args
 from src.visualization.inference import view_test_images
 from env_tests import env_tests
-from constants import IMAGES_PATH, ANNOTATIONS_PATH
+from constants import IMAGES_PATH, ANNOTATIONS_PATH, INFERENCE_PATH
 
 if __name__ == '__main__':
     env_tests()
+
+    # Record start time
+    start = datetime.now()
 
     # Get number of cpu threads for PyTorch DataLoader and Ray paralleling
     num_workers = cpu_count()
@@ -21,9 +26,6 @@ if __name__ == '__main__':
     # Model file name argument
     parser.add_argument('-mfn', '--model_file_name', action='store', type=str, default='2021-04-26_14-46-04',
                         help='Model file name located in models/')
-    # # Data source argument
-    # parser.add_argument('-d', '--data', action='store', type=str, choices=['raw', 'resized'], default='raw',
-    #                     help='Specify which data source')
 
     # To compute mean & std deviation on training set
     parser.add_argument('-ms', '--mean_std', action='store_true',
@@ -40,6 +42,9 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
+    # Display arguments in console
+    print_args(vars(args))
+
     dataset_manager = DatasetManager(images_path=IMAGES_PATH,
                                      annotations_path=ANNOTATIONS_PATH,
                                      num_workers=num_workers,
@@ -55,3 +60,6 @@ if __name__ == '__main__':
                                             deterministic=True)
 
     view_test_images(args.model_file_name, data_loader_manager.data_loader_test, args.iou_threshold)
+
+    print(f'Inference results saved to: {INFERENCE_PATH}')
+    print(f'\nTotal time for inference testing: {str(datetime.now() - start).split(".")[0]}')

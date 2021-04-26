@@ -4,8 +4,8 @@ from multiprocessing import cpu_count
 
 from src.data.DataLoaderManager import DataLoaderManager
 from src.data.DatasetManager import DatasetManager
-from src.data.resize_images import resize_images
 from src.models.TrainValidTestManager import TrainValidTestManager
+from src.models.helper_functions import print_args
 from src.utils.reproducibility import set_deterministic
 from constants import IMAGES_PATH, ANNOTATIONS_PATH
 
@@ -104,7 +104,6 @@ if __name__ == '__main__':
 
     # Parsing arguments
     args = parser.parse_args()
-    args_dic = vars(args)
 
     set_deterministic(args.deterministic, args.random_seed)
 
@@ -112,18 +111,14 @@ if __name__ == '__main__':
     file_name = start.strftime('%Y-%m-%d_%H-%M-%S')
 
     # Display arguments in console
-    print('\n=== Arguments & Hyperparameters ===\n')
+    args_dict = vars(args)
 
-    for key, value in args_dic.items():
-        print(f'{key}:{" " * (27 - len(key))}{value}')
-
-    print('\n')
-
-    if args.data == 'raw':
-        resize_images(args.size, num_workers)
+    print_args(args_dict)
 
     dataset_manager = DatasetManager(images_path=IMAGES_PATH,
                                      annotations_path=ANNOTATIONS_PATH,
+                                     max_image_size=args.size,
+                                     data_source=args.data,
                                      num_workers=num_workers,
                                      data_aug=args.data_aug,
                                      validation_size=args.validation_size,
@@ -147,7 +142,7 @@ if __name__ == '__main__':
                                                      pretrained=args.pretrained,
                                                      iou_threshold=args.iou_threshold,
                                                      gradient_clip=args.gradient_clip,
-                                                     args_dic=args_dic)
+                                                     args_dic=args_dict)
     train_valid_test_manager(args.epochs)
 
     print(f'\nTotal time for current experiment:\t{str(datetime.now() - start).split(".")[0]}')

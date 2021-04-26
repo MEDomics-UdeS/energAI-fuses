@@ -30,12 +30,6 @@ def view_test_images(model_file_name, data_loader, iou_threshold):
 
             images = [data_loader.dataset.load_image(index) for index in indices]
 
-            # for index in indices:
-            #     try:
-            #         images.append()
-            #     except IndexError:
-            #         pass
-
             for index, image, target, pred in zip(indices, images, targets, preds):
                 draw = ImageDraw.Draw(image)
 
