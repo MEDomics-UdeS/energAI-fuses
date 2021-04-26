@@ -2,11 +2,11 @@ import torch
 from PIL import ImageDraw, ImageFont
 from tqdm import tqdm
 
-from constants import INFERENCE_PATH, CLASS_DICT
-from src.models.helper_functions import filter_by_nms, filter_by_score
+from src.utils.constants import CLASS_DICT
+from src.utils.helper_functions import filter_by_nms, filter_by_score
 
 
-def view_test_images(model_file_name, data_loader, iou_threshold):
+def save_test_images(model_file_name, data_loader, iou_threshold, save_path):
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
     pbar = tqdm(total=len(data_loader), leave=False, desc='Inference Test')
@@ -36,7 +36,7 @@ def view_test_images(model_file_name, data_loader, iou_threshold):
                 draw_boxes(draw, target, 'green', 3, font, (255, 255, 0, 0))
                 draw_boxes(draw, pred, 'red', 3, font, (255, 255, 255, 0))
 
-                image.save(f'{INFERENCE_PATH}'
+                image.save(f'{save_path}'
                            f'{data_loader.dataset.image_paths[index].rsplit("/", 1)[-1].split(".", 1)[0]}.png')
 
             pbar.update()

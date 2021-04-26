@@ -1,15 +1,12 @@
 import argparse
 from datetime import datetime
-
 from multiprocessing import cpu_count
-
 
 from src.data.DataLoaderManager import DataLoaderManager
 from src.data.DatasetManager import DatasetManager
-from src.models.helper_functions import print_args
-from src.visualization.inference import view_test_images
-from env_tests import env_tests
-from constants import IMAGES_PATH, ANNOTATIONS_PATH, INFERENCE_PATH
+from src.utils.helper_functions import print_args, env_tests
+from src.visualization.inference import save_test_images
+from src.utils.constants import RESIZED_PATH, TARGETS_PATH, INFERENCE_PATH
 
 if __name__ == '__main__':
     env_tests()
@@ -45,8 +42,8 @@ if __name__ == '__main__':
     # Display arguments in console
     print_args(vars(args))
 
-    dataset_manager = DatasetManager(images_path=IMAGES_PATH,
-                                     annotations_path=ANNOTATIONS_PATH,
+    dataset_manager = DatasetManager(images_path=RESIZED_PATH,
+                                     annotations_path=TARGETS_PATH,
                                      num_workers=num_workers,
                                      data_aug=0,
                                      validation_size=0,
@@ -59,7 +56,7 @@ if __name__ == '__main__':
                                             num_workers=num_workers,
                                             deterministic=True)
 
-    view_test_images(args.model_file_name, data_loader_manager.data_loader_test, args.iou_threshold)
+    save_test_images(args.model_file_name, data_loader_manager.data_loader_test, args.iou_threshold, INFERENCE_PATH)
 
     print(f'Inference results saved to: {INFERENCE_PATH}')
     print(f'\nTotal time for inference testing: {str(datetime.now() - start).split(".")[0]}')

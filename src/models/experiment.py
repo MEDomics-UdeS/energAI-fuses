@@ -5,9 +5,9 @@ from multiprocessing import cpu_count
 from src.data.DataLoaderManager import DataLoaderManager
 from src.data.DatasetManager import DatasetManager
 from src.models.TrainValidTestManager import TrainValidTestManager
-from src.models.helper_functions import print_args
+from src.utils.helper_functions import print_args
 from src.utils.reproducibility import set_deterministic
-from constants import IMAGES_PATH, ANNOTATIONS_PATH
+from src.utils.constants import RESIZED_PATH, TARGETS_PATH
 
 if __name__ == '__main__':
     # Record start time
@@ -115,8 +115,8 @@ if __name__ == '__main__':
 
     print_args(args_dict)
 
-    dataset_manager = DatasetManager(images_path=IMAGES_PATH,
-                                     annotations_path=ANNOTATIONS_PATH,
+    dataset_manager = DatasetManager(images_path=RESIZED_PATH,
+                                     annotations_path=TARGETS_PATH,
                                      max_image_size=args.size,
                                      data_source=args.data,
                                      num_workers=num_workers,

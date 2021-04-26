@@ -1,15 +1,17 @@
 import json
 import os
+import zipfile
 
 import numpy as np
 import pandas as pd
 import ray
+import requests
 from PIL import Image, ImageDraw
 from torchvision import transforms
+from tqdm import tqdm
 from tqdm import trange
 
-from constants import CLASS_DICT
-from constants import MEAN, STD
+from src.utils.constants import *
 from src.data.FuseDataset import FuseDataset
 
 
@@ -51,6 +53,56 @@ class DatasetManager:
         self.dataset_train.transforms = self.transforms_train(mean, std, data_aug)
         self.dataset_valid.transforms = self.transforms_base(mean, std)
         self.dataset_test.transforms = self.transforms_base(mean, std)
+
+    @staticmethod
+    def download_file_from_google_drive(file_id, dest, chunk_size=32768):
+        """
+
+        Inspired from :
+        https://stackoverflow.com/questions/38511444/python-download-files-from-google-drive-using-url
+
+        :param file_id:
+        :param dest:
+        :param chunk_size:
+        :return:
+        """
+        URL = "https://docs.google.com/uc?export=download"
+        session = requests.Session()
+        response = session.get(URL, params={'id': file_id}, stream=True)
+
+        token = None
+
+        for key, value in response.cookies.items():
+            if key.startswith('download_warning'):
+                token = value
+
+        if token:
+            params = {'id': file_id, 'confirm': token}
+            response = session.get(URL, params=params, stream=True)
+
+        if response.ok:
+            with open(dest, "wb") as f:
+                for chunk in tqdm(response.iter_content(chunk_size), desc='Please wait...'):
+                    if chunk:
+                        f.write(chunk)
+        else:
+            raise Exception(f'Error {response.status_code}: {response.reason}')
+
+    def fetch_data(self):
+        images_zip = os.path.join(RAW_PATH, 'images.zip')
+
+        print('Downloading images to:\t', RAW_PATH)
+        self.download_file_from_google_drive(IMAGES_ID, images_zip)
+        print('Done!\nUnzipping images...')
+
+        with zipfile.ZipFile(images_zip, 'r') as zip_ref:
+            zip_ref.extractall(RAW_PATH)
+
+        os.remove(images_zip)
+
+        print('Done!\n\nDownloading annotations to:\t', ANNOTATIONS_PATH)
+        self.download_file_from_google_drive(ANNOTATIONS_ID, ANNOTATIONS_PATH)
+        print('Done!')
 
     @staticmethod
     def transforms_train(mean, std, data_aug):
@@ -124,14 +176,12 @@ class DatasetManager:
         return mean, std
 
     @staticmethod
-    def resize_images(max_image_size, num_workers,
-                      root='data/raw/',
-                      annotations_path='data/annotations/annotations_raw.csv'):
+    def resize_images(max_image_size, num_workers):
         ray.init(include_dashboard=False)
 
-        imgs = [img for img in sorted(os.listdir(root)) if img.startswith('.') is False]
-        image_paths = [os.path.join(root, img) for img in imgs]
-        annotations = pd.read_csv(annotations_path)
+        imgs = [img for img in sorted(os.listdir(RAW_PATH)) if img.startswith('.') is False]
+        image_paths = [os.path.join(RAW_PATH, img) for img in imgs]
+        annotations = pd.read_csv(ANNOTATIONS_PATH)
 
         size = len(image_paths)
         resize_ratios = [None] * size

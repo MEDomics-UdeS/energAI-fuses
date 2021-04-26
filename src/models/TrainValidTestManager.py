@@ -11,10 +11,10 @@ from src.models.SummaryWriter import SummaryWriter
 from torchvision.ops import box_iou
 from tqdm import tqdm
 
-from constants import CLASS_DICT
+from src.utils.constants import CLASS_DICT
 from src.data.DataLoaderManager import DataLoaderManager
 from src.models.EarlyStopper import EarlyStopper
-from src.models.helper_functions import filter_by_nms, filter_by_score
+from src.utils.helper_functions import filter_by_nms, filter_by_score
 
 
 class TrainValidTestManager:
@@ -122,7 +122,7 @@ class TrainValidTestManager:
 
         """
 
-        loss = self.evaluate(self.data_loader_valid, 'Validation', epoch)
+        loss = self.evaluate(self.data_loader_valid, 'Validation Loss', epoch)
         metrics_dict = self.predict(self.data_loader_valid, f'Validation Metrics Epoch {epoch}')
 
         self.save_epoch('Validation', loss, metrics_dict, epoch)

@@ -1,7 +1,15 @@
+REQUIRED_PYTHON = "python3"
+
 # Assign image and annotations file paths
-IMAGES_PATH = 'data/resized/'
+RAW_PATH = 'data/raw/'
+RESIZED_PATH = 'data/resized/'
 INFERENCE_PATH = 'data/inference/'
-ANNOTATIONS_PATH = 'data/annotations/targets_resized.json'
+TARGETS_PATH = 'data/annotations/targets_resized.json'
+ANNOTATIONS_PATH = 'data/annotations/annotations_raw.csv'
+
+# Google Drive File ID Hashes
+IMAGES_ID = '12mZB0Or1FhzwZO_zUTYCbbuxwQ56-5PP'
+ANNOTATIONS_ID = '1y3BbSGF98Cs9eOTJF-V32JJ8s9dodSC-'
 
 MEAN = (0.6221349083958952, 0.6097851650674193, 0.592938912173587)
 STD = (0.33986575693672466, 0.3446239730624245, 0.3541046569741213)

@@ -1,13 +1,13 @@
 import subprocess as sp
 from datetime import datetime
 
-from env_tests import env_tests
+from src.utils.helper_functions import env_tests
 
 if __name__ == '__main__':
     env_tests()
 
     cmds = [
-        ['python', 'experiment.py', '--data', 'resized', '--epochs', '10',
+        ['python', 'src/models/experiment.py', '--data', 'resized', '--epochs', '10',
          '--model', 'fasterrcnn_mobilenet_v3_large_320_fpn'],
     ]
 
