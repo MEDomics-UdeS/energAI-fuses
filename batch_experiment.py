@@ -7,7 +7,7 @@ if __name__ == '__main__':
     env_tests()
 
     cmds = [
-        ['python', 'experiment.py', '--data', 'resized', '--epochs', '1',
+        ['python', 'experiment.py', '--data', 'resized', '--epochs', '10',
          '--model', 'fasterrcnn_mobilenet_v3_large_320_fpn'],
     ]
 

@@ -19,11 +19,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Processing inputs')
 
     # Model file name argument
-    parser.add_argument('-mfn', '--model_file_name', action='store', type=str, default='2021-04-25_19-29-08',
+    parser.add_argument('-mfn', '--model_file_name', action='store', type=str, default='2021-04-26_14-46-04',
                         help='Model file name located in models/')
-    # Data source argument
-    parser.add_argument('-d', '--data', action='store', type=str, choices=['raw', 'resized'], default='raw',
-                        help='Specify which data source')
+    # # Data source argument
+    # parser.add_argument('-d', '--data', action='store', type=str, choices=['raw', 'resized'], default='raw',
+    #                     help='Specify which data source')
 
     # To compute mean & std deviation on training set
     parser.add_argument('-ms', '--mean_std', action='store_true',
@@ -33,6 +33,10 @@ if __name__ == '__main__':
     # Batch size argument
     parser.add_argument('-b', '--batch', action='store', type=int, default=20,
                         help='Batch size')
+
+    # To load IOU Threshold
+    parser.add_argument('-iou', '--iou_threshold', action='store', type=float, default=0.5,
+                        help='IOU threshold for true/false positive box predictions')
 
     args = parser.parse_args()
 
@@ -50,4 +54,4 @@ if __name__ == '__main__':
                                             num_workers=num_workers,
                                             deterministic=True)
 
-    view_test_images(args.model_file_name, data_loader_manager.data_loader_test)
+    view_test_images(args.model_file_name, data_loader_manager.data_loader_test, args.iou_threshold)

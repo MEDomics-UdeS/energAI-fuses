@@ -8,12 +8,13 @@ from torch.cuda.amp.grad_scaler import GradScaler
 import torchvision.models.detection as detection
 from torch.cuda import memory_reserved, memory_allocated
 from src.models.SummaryWriter import SummaryWriter
-from torchvision.ops import box_iou, nms
+from torchvision.ops import box_iou
 from tqdm import tqdm
 
 from constants import CLASS_DICT
 from src.data.DataLoaderManager import DataLoaderManager
 from src.models.EarlyStopper import EarlyStopper
+from src.models.helper_functions import filter_by_nms, filter_by_score
 
 
 class TrainValidTestManager:
@@ -227,19 +228,10 @@ class TrainValidTestManager:
 
         pbar.close()
 
-        # preds_list = self.apply_nms(preds_list)
+        preds_list = filter_by_nms(preds_list, self.iou_threshold)
+        preds_list = filter_by_score(preds_list, self.iou_threshold)
 
         return self.calculate_metrics(preds_list, targets_list)
-
-    def apply_nms(self, preds_list):
-        keep_nms = [nms(pred['boxes'], pred['scores'], self.iou_threshold) for pred in preds_list]
-
-        preds_nms = []
-
-        for pred, keep in zip(preds_list, keep_nms):
-            preds_nms.append({key: torch.index_select(val, dim=0, index=keep) for key, val in pred.items()})
-
-        return preds_nms
 
     def calculate_metrics(self, preds_list, targets_list):
         targets_boxes = [target['boxes'] for target in targets_list]
@@ -262,8 +254,10 @@ class TrainValidTestManager:
                 type_list_iter = []
 
                 for i, (value, index) in enumerate(zip(max_iou_list[-1].values, max_iou_list[-1].indices)):
-                    if torch.greater(value, self.iou_threshold) and \
-                            torch.equal(target_labels.data[index], pred_labels.data[i]):
+                    # if torch.greater(value, self.iou_threshold) and \
+                    #         torch.equal(target_labels.data[index], pred_labels.data[i]):
+                    if value.greater(self.iou_threshold) and \
+                       target_labels.data[index].equal(pred_labels.data[i]):
                         type_list_iter.append(True)
                     else:
                         type_list_iter.append(False)
