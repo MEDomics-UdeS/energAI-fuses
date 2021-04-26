@@ -20,7 +20,7 @@ def view_test_images(model_file_name, data_loader, iou_threshold):
     with torch.no_grad():
         for batch_no, (images, targets) in enumerate(data_loader):
             indices = range(data_loader.batch_size * batch_no,
-                            data_loader.batch_size * (batch_no + 1))
+                            min(data_loader.batch_size * (batch_no + 1), len(data_loader.dataset)))
 
             images = torch.stack(images).to(device)
 
@@ -28,11 +28,13 @@ def view_test_images(model_file_name, data_loader, iou_threshold):
             preds = filter_by_nms(preds, iou_threshold)
             preds = filter_by_score(preds, iou_threshold)
 
-            try:
-                images = [data_loader.dataset.load_image(index) for index in indices]
+            images = [data_loader.dataset.load_image(index) for index in indices]
 
-            except IndexError:
-                continue
+            # for index in indices:
+            #     try:
+            #         images.append()
+            #     except IndexError:
+            #         pass
 
             for index, image, target, pred in zip(indices, images, targets, preds):
                 draw = ImageDraw.Draw(image)
@@ -42,8 +44,6 @@ def view_test_images(model_file_name, data_loader, iou_threshold):
 
                 image.save(f'{INFERENCE_PATH}'
                            f'{data_loader.dataset.image_paths[index].rsplit("/", 1)[-1].split(".", 1)[0]}.png')
-
-
 
             pbar.update()
 
