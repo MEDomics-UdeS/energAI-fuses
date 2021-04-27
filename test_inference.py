@@ -34,7 +34,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Processing inputs')
 
     # Model file name argument
-    parser.add_argument('-mfn', '--model_file_name', action='store', type=str, default='2021-04-26_14-46-04',
+    parser.add_argument('-mfn', '--model_file_name', action='store', type=str,
                         help=f'Model file name located in {MODELS_PATH}')
 
     # To compute mean & std deviation
@@ -77,7 +77,7 @@ if __name__ == '__main__':
     save_test_images(args.model_file_name, data_loader_manager.data_loader_test, args.iou_threshold, INFERENCE_PATH)
 
     # Print file save path location
-    print(f'Inference results saved to: {INFERENCE_PATH}')
+    print(f'\nInference results saved to: {INFERENCE_PATH}')
 
     # Print total time for inference testing
     print(f'\nTotal time for inference testing: {str(datetime.now() - start).split(".")[0]}')

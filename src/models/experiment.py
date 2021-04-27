@@ -98,7 +98,7 @@ if __name__ == '__main__':
 
     # Weight decay argument
     parser.add_argument('-wd', '--weight_decay', action='store', type=float, default=0,
-                        help='Weight decay for optimizer')
+                        help='Weight decay (L2 penalty) for optimizer')
 
     # Model argument
     parser.add_argument('-mo', '--model', action='store', type=str,
