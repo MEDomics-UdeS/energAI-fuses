@@ -102,6 +102,12 @@ class TrainValidTestManager:
         self.data_loader_valid = data_loader_manager.data_loader_valid
         self.data_loader_test = data_loader_manager.data_loader_test
 
+        # Display the datasets and data loaders sizes
+        print(f'\n=== Dataset & Data Loader Sizes ===\n\n'
+              f'Training:\t\t{len(self.data_loader_train.dataset)} images\t\t{len(self.data_loader_train)} batches\n'
+              f'Validation:\t\t{len(self.data_loader_valid.dataset)} images\t\t{len(self.data_loader_valid)} batches\n'
+              f'Testing:\t\t{len(self.data_loader_test.dataset)} images\t\t{len(self.data_loader_test)} batches\n')
+
         # Get model and set last fully-connected layer with the right number of classes
         self.load_model()
 
@@ -116,12 +122,6 @@ class TrainValidTestManager:
 
         # Send the model to the device
         self.model.to(self.device)
-
-        # Display the datasets and data loaders sizes
-        print(f'\n=== Dataset & Data Loader Sizes ===\n\n'
-              f'Training:\t\t{len(self.data_loader_train.dataset)} images\t\t{len(self.data_loader_train)} batches\n'
-              f'Validation:\t\t{len(self.data_loader_valid.dataset)} images\t\t{len(self.data_loader_valid)} batches\n'
-              f'Testing:\t\t{len(self.data_loader_test.dataset)} images\t\t{len(self.data_loader_test)} batches\n')
 
     def __call__(self, epochs: int) -> None:
         """
