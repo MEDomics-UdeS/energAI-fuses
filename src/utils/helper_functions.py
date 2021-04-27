@@ -117,10 +117,8 @@ def filter_by_score(preds_list, score_threshold):
     return preds_filt
 
 
-def print_args(args_dict):
+def print_args(args):
     print('\n=== Arguments & Hyperparameters ===\n')
 
-    for key, value in args_dict.items():
+    for key, value in vars(args).items():
         print(f'{key}:{" " * (27 - len(key))}{value}')
-
-    print('\n')

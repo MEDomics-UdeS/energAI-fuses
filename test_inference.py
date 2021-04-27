@@ -40,7 +40,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # Display arguments in console
-    print_args(vars(args))
+    print_args(args)
 
     dataset_manager = DatasetManager(images_path=RESIZED_PATH,
                                      annotations_path=TARGETS_PATH,

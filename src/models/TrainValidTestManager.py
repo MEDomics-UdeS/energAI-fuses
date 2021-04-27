@@ -11,7 +11,7 @@ from src.models.SummaryWriter import SummaryWriter
 from torchvision.ops import box_iou
 from tqdm import tqdm
 
-from src.utils.constants import CLASS_DICT
+from src.utils.constants import CLASS_DICT, LOG_PATH
 from src.data.DataLoaderManager import DataLoaderManager
 from src.models.EarlyStopper import EarlyStopper
 from src.utils.helper_functions import filter_by_nms, filter_by_score
@@ -23,21 +23,22 @@ class TrainValidTestManager:
     """
 
     def __init__(self, data_loader_manager: DataLoaderManager,
-                 file_name: Optional[str],
+                 file_name: str,
                  model_name: str,
                  learning_rate: float,
                  weight_decay: float,
-                 early_stopping,
+                 es_patience,
+                 es_delta,
                  mixed_precision,
                  gradient_accumulation,
                  pretrained: bool,
                  iou_threshold: float,
                  gradient_clip: float,
-                 args_dic,
-                 save_model: bool = True) -> None:
+                 args_dict: dict,
+                 save_model: bool) -> None:
         self.save_model = save_model
 
-        self.args_dic = args_dic
+        self.args_dict = args_dict
 
         self.train_step = 0
         self.valid_step = 0
@@ -50,17 +51,18 @@ class TrainValidTestManager:
         self.pretrained = pretrained
         self.model_name = model_name
 
-        self.writer = SummaryWriter('logdir/' + file_name)
+        self.writer = SummaryWriter(LOG_PATH + file_name)
 
         self.mixed_precision = mixed_precision
         self.accumulation_size = gradient_accumulation
         self.gradient_accumulation = False if gradient_accumulation == 1 else True
 
-        self.num_classes = len(CLASS_DICT) + 1 # + 1 to include background class
-        self.early_stopping = early_stopping
+        self.num_classes = len(CLASS_DICT)
 
-        if self.early_stopping is not None:
-            self.early_stopper = EarlyStopper(patience=self.early_stopping, min_delta=0)
+        self.es_patience = es_patience
+
+        if self.es_patience is not None:
+            self.early_stopper = EarlyStopper(patience=es_patience, min_delta=es_delta)
 
         self.scaler = GradScaler(enabled=self.mixed_precision)
 
@@ -69,7 +71,7 @@ class TrainValidTestManager:
         self.data_loader_valid = data_loader_manager.data_loader_valid
         self.data_loader_test = data_loader_manager.data_loader_test
 
-        print(f'=== Dataset & Data Loader Sizes ===\n\n'
+        print(f'\n=== Dataset & Data Loader Sizes ===\n\n'
               f'Training:\t\t{len(self.data_loader_train.dataset)} images\t\t{len(self.data_loader_train)} batches\n'
               f'Validation:\t\t{len(self.data_loader_valid.dataset)} images\t\t{len(self.data_loader_valid)} batches\n'
               f'Testing:\t\t{len(self.data_loader_test.dataset)} images\t\t{len(self.data_loader_test)} batches\n')
@@ -97,7 +99,6 @@ class TrainValidTestManager:
 
         self.test_model()
 
-        # If file_name is specified, save the trained model
         if self.save_model:
             torch.save(self.model, f'models/{self.file_name}')
 
@@ -112,8 +113,8 @@ class TrainValidTestManager:
             # Validate the model
             metric = self.validate_model(epoch)
 
-            if self.early_stopping and self.early_stopper.step(torch.as_tensor(metric, dtype=torch.float16)):
-                print(f'Early stopping criterion has been reached for {self.early_stopping} epochs\n')
+            if self.es_patience and self.early_stopper.step(torch.as_tensor(metric, dtype=torch.float16)):
+                print(f'Early stopping criterion has been reached for {self.es_patience} epochs\n')
                 break
 
     def validate_model(self, epoch) -> float:
@@ -140,7 +141,7 @@ class TrainValidTestManager:
         for key in metrics_dict.fromkeys(metrics_dict):
             metrics_dict[f'hparam/{key}'] = metrics_dict.pop(key)
 
-        self.writer.add_hparams(self.args_dic, metric_dict=metrics_dict)
+        self.writer.add_hparams(self.args_dict, metric_dict=metrics_dict)
 
     def evaluate(self, data_loader, phase, epoch):
         # Declare tqdm progress bar

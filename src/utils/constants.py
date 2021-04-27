@@ -6,6 +6,7 @@ RESIZED_PATH = 'data/resized/'
 INFERENCE_PATH = 'data/inference/'
 TARGETS_PATH = 'data/annotations/targets_resized.json'
 ANNOTATIONS_PATH = 'data/annotations/annotations_raw.csv'
+LOG_PATH = 'logdir/'
 
 # Google Drive File ID Hashes
 IMAGES_ID = '12mZB0Or1FhzwZO_zUTYCbbuxwQ56-5PP'
@@ -15,6 +16,7 @@ MEAN = (0.6221349083958952, 0.6097851650674193, 0.592938912173587)
 STD = (0.33986575693672466, 0.3446239730624245, 0.3541046569741213)
 
 CLASS_DICT = {
+    "Background":               0,
     "Gould-Ferraz Shawmut A4J": 1,
     "Ferraz Shawmut AJT":       2,
     "English Electric C-J":     3,

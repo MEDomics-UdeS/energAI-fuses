@@ -1,5 +1,6 @@
 import json
 import os
+import sys
 import zipfile
 
 import numpy as np
@@ -23,15 +24,35 @@ class DatasetManager:
                  images_path,
                  annotations_path,
                  max_image_size,
-                 data_source,
                  num_workers,
                  data_aug,
                  validation_size,
                  test_size,
                  mean_std) -> None:
 
-        if data_source == 'raw':
-            self.resize_images(max_image_size, num_workers)
+        image_ext = '.JPG'
+
+        if any(file.endswith(image_ext) for file in os.listdir(RESIZED_PATH)):
+            for file in os.listdir(RESIZED_PATH):
+                if file.endswith(image_ext):
+                    img = Image.open(f'{RESIZED_PATH}{file}')
+                    break
+
+            if img.size != (max_image_size, max_image_size):
+                print(f'Max image size argument is {(max_image_size, max_image_size)} '
+                      f'but a resized image of {img.size} was found')
+                print(f'All images will be resized to {(max_image_size, max_image_size)}')
+
+                self.resize_images(max_image_size, num_workers)
+        else:
+            if any(file.endswith(image_ext) for file in os.listdir(RAW_PATH)):
+                self.resize_images(max_image_size, num_workers)
+            else:
+                if input('Raw data folder contains no images. Do you want to download them? (~ 12 GB) (y/n): ') == 'y':
+                    self.fetch_data(IMAGES_ID, ANNOTATIONS_ID)
+                    self.resize_images(max_image_size, num_workers)
+                else:
+                    sys.exit(1)
 
         # Declare training, validation and testing datasets
         self.dataset_train = FuseDataset(images_path, annotations_path, num_workers)
@@ -82,17 +103,17 @@ class DatasetManager:
 
         if response.ok:
             with open(dest, "wb") as f:
-                for chunk in tqdm(response.iter_content(chunk_size), desc='Please wait...'):
+                for chunk in tqdm(response.iter_content(chunk_size), desc='Downloading'):
                     if chunk:
                         f.write(chunk)
         else:
             raise Exception(f'Error {response.status_code}: {response.reason}')
 
-    def fetch_data(self):
+    def fetch_data(self, images_id, annotations_id):
         images_zip = os.path.join(RAW_PATH, 'images.zip')
 
-        print('Downloading images to:\t', RAW_PATH)
-        self.download_file_from_google_drive(IMAGES_ID, images_zip)
+        print('\nDownloading images to:\t\t', RAW_PATH)
+        self.download_file_from_google_drive(images_id, images_zip)
         print('Done!\nUnzipping images...')
 
         with zipfile.ZipFile(images_zip, 'r') as zip_ref:
@@ -101,7 +122,7 @@ class DatasetManager:
         os.remove(images_zip)
 
         print('Done!\n\nDownloading annotations to:\t', ANNOTATIONS_PATH)
-        self.download_file_from_google_drive(ANNOTATIONS_ID, ANNOTATIONS_PATH)
+        self.download_file_from_google_drive(annotations_id, ANNOTATIONS_PATH)
         print('Done!')
 
     @staticmethod
@@ -204,12 +225,12 @@ class DatasetManager:
         ray.shutdown()
 
         average_ratio = sum(resize_ratios) / len(resize_ratios)
-        print(f'Average resize ratio: {average_ratio:.2%}')
+        print(f'\nAverage resize ratio: {average_ratio:.2%}')
         print(f'Maximum resize ratio: {max(resize_ratios):.2%}')
         print(f'Minimum resize ratio: {min(resize_ratios):.2%}')
 
         json.dump(targets_list, open('data/annotations/targets_resized.json', 'w'), ensure_ascii=False)
-        print('Resized images have been saved to:\t\tdata/resized/')
+        print('\nResized images have been saved to:\t\tdata/resized/')
         print('Resized targets have been saved to:\t\tdata/annotations/targets_resized.json')
 
 

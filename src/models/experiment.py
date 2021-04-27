@@ -19,12 +19,8 @@ if __name__ == '__main__':
     # Declare argument parser
     parser = argparse.ArgumentParser(description='Processing inputs')
 
-    # Data source argument
-    parser.add_argument('-d', '--data', action='store', type=str, choices=['raw', 'resized'], default='raw',
-                        help='Specify which data source')
-
     # Resizing argument
-    parser.add_argument('-s', '--size', action='store', type=int, default=1000,
+    parser.add_argument('-s', '--size', action='store', type=int, default=1024,
                         help='Resize the images to size*size (takes an argument: max_resize value (int))')
 
     # Data augmentation argument
@@ -48,8 +44,12 @@ if __name__ == '__main__':
                         help='Batch size')
 
     # Early stopping argument
-    parser.add_argument('-es', '--early_stopping', action='store', type=int,
+    parser.add_argument('-esp', '--es_patience', action='store', type=int,
                         help='Early stopping patience')
+
+    # Early stopping argument
+    parser.add_argument('-esd', '--es_delta', action='store', type=float, default=0,
+                        help='Early stopping delta')
 
     # Mixed precision argument
     parser.add_argument('-mp', '--mixed_precision', action='store_true',
@@ -102,6 +102,10 @@ if __name__ == '__main__':
     parser.add_argument('-pt', '--pretrained', action='store_false',
                         help='Load pretrained model')
 
+    # To save trained model
+    parser.add_argument('-sv', '--save_model', action='store_false',
+                        help='Save trained model')
+
     # Parsing arguments
     args = parser.parse_args()
 
@@ -111,14 +115,12 @@ if __name__ == '__main__':
     file_name = start.strftime('%Y-%m-%d_%H-%M-%S')
 
     # Display arguments in console
-    args_dict = vars(args)
 
-    print_args(args_dict)
+    print_args(args)
 
     dataset_manager = DatasetManager(images_path=RESIZED_PATH,
                                      annotations_path=TARGETS_PATH,
                                      max_image_size=args.size,
-                                     data_source=args.data,
                                      num_workers=num_workers,
                                      data_aug=args.data_aug,
                                      validation_size=args.validation_size,
@@ -136,13 +138,15 @@ if __name__ == '__main__':
                                                      model_name=args.model,
                                                      learning_rate=args.learning_rate,
                                                      weight_decay=args.weight_decay,
-                                                     early_stopping=args.early_stopping,
+                                                     es_patience=args.es_patience,
+                                                     es_delta=args.es_delta,
                                                      mixed_precision=args.mixed_precision,
                                                      gradient_accumulation=args.gradient_accumulation,
                                                      pretrained=args.pretrained,
                                                      iou_threshold=args.iou_threshold,
                                                      gradient_clip=args.gradient_clip,
-                                                     args_dic=args_dict)
+                                                     args_dict=vars(args),
+                                                     save_model=args.save_model)
     train_valid_test_manager(args.epochs)
 
     print(f'\nTotal time for current experiment:\t{str(datetime.now() - start).split(".")[0]}')
