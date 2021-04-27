@@ -5,10 +5,11 @@ from tqdm import trange
 import json
 from PIL import Image
 import ray
+from typing import Tuple, List
 
 
 class FuseDataset(torch.utils.data.Dataset):
-    def __init__(self, root=None, targets_path=None, num_workers=None):
+    def __init__(self, root: str = None, targets_path: str = None, num_workers: int = None) -> None:
         if root is not None:
             ray.init(include_dashboard=False)
 
@@ -44,18 +45,18 @@ class FuseDataset(torch.utils.data.Dataset):
         else:
             self.targets = []
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: int) -> Tuple[torch.Tensor, dict]:
         return self.transforms(self.images[index]), self.targets[index]
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.images)
 
-    def load_image(self, index):
+    def load_image(self, index: int) -> Image:
         image_path = self.image_paths[index]
         img = Image.open(image_path)
         return img
 
-    def extract_data(self, index_list):
+    def extract_data(self, index_list: List[int]) -> Tuple[List[str], List[Image.Image], List[dict]]:
         index_list = sorted(index_list, reverse=True)
         image_paths = []
         images = []
@@ -68,12 +69,12 @@ class FuseDataset(torch.utils.data.Dataset):
 
         return image_paths, images, targets
 
-    def add_data(self, image_paths, images, targets):
+    def add_data(self, image_paths: List[str], images: List[Image.Image], targets: List[dict]) -> None:
         self.image_paths.extend(image_paths)
         self.images.extend(images)
         self.targets.extend(targets)
 
 
 @ray.remote
-def ray_load_images(image_paths, index):
+def ray_load_images(image_paths: List[str], index: int) -> Tuple[Image.Image, int]:
     return Image.open(image_paths[index]).convert("RGB"), index

@@ -10,6 +10,9 @@ from torch.cuda import memory_reserved, memory_allocated
 from src.models.SummaryWriter import SummaryWriter
 from torchvision.ops import box_iou
 from tqdm import tqdm
+from torch.utils.data import DataLoader
+from typing import List
+
 
 from src.utils.constants import CLASS_DICT, LOG_PATH
 from src.data.DataLoaderManager import DataLoaderManager
@@ -27,10 +30,10 @@ class TrainValidTestManager:
                  model_name: str,
                  learning_rate: float,
                  weight_decay: float,
-                 es_patience,
-                 es_delta,
-                 mixed_precision,
-                 gradient_accumulation,
+                 es_patience: int,
+                 es_delta: float,
+                 mixed_precision: bool,
+                 gradient_accumulation: int,
                  pretrained: bool,
                  iou_threshold: float,
                  gradient_clip: float,
@@ -94,7 +97,7 @@ class TrainValidTestManager:
         # Send the model to the device
         self.model.to(self.device)
 
-    def __call__(self, epochs):
+    def __call__(self, epochs: int) -> None:
         self.train_model(epochs)
 
         self.test_model()
@@ -117,7 +120,7 @@ class TrainValidTestManager:
                 print(f'Early stopping criterion has been reached for {self.es_patience} epochs\n')
                 break
 
-    def validate_model(self, epoch) -> float:
+    def validate_model(self, epoch: int) -> float:
         """
 
 
@@ -139,11 +142,11 @@ class TrainValidTestManager:
             print(f'{key}:\t\t\t{value:.2%}')
 
         for key in metrics_dict.fromkeys(metrics_dict):
-            metrics_dict[f'hparam/{key}'] = metrics_dict.pop(key)
+            metrics_dict[f'hparams/{key}'] = metrics_dict.pop(key)
 
         self.writer.add_hparams(self.args_dict, metric_dict=metrics_dict)
 
-    def evaluate(self, data_loader, phase, epoch):
+    def evaluate(self, data_loader: DataLoader, phase: str, epoch: int) -> float:
         # Declare tqdm progress bar
         pbar = tqdm(total=len(data_loader), leave=False, desc=f'{phase} Epoch {epoch}')
 
@@ -205,7 +208,7 @@ class TrainValidTestManager:
 
         return np.mean(loss_list_epoch)
 
-    def predict(self, data_loader, desc):
+    def predict(self, data_loader: DataLoader, desc: str) -> dict:
         pbar = tqdm(total=len(data_loader), leave=False, desc=desc)
 
         self.model.eval()
@@ -234,7 +237,7 @@ class TrainValidTestManager:
 
         return self.calculate_metrics(preds_list, targets_list)
 
-    def calculate_metrics(self, preds_list, targets_list):
+    def calculate_metrics(self, preds_list: List[dict], targets_list: List[dict]) -> dict:
         targets_boxes = [target['boxes'] for target in targets_list]
         targets_labels = [target['labels'] for target in targets_list]
         preds_boxes = [pred['boxes'] for pred in preds_list]
@@ -275,9 +278,7 @@ class TrainValidTestManager:
 
         return metrics_dict
 
-    def load_model(self,
-                   progress: bool = True,
-                   trainable_backbone_layers: Optional[int] = None):
+    def load_model(self, progress: bool = True, trainable_backbone_layers: Optional[int] = None) -> None:
         """
         pretrained (bool) – If True, returns a model pre-trained on COCO train2017
         progress (bool) – If True, displays a progress bar of the download to stderr
@@ -353,7 +354,7 @@ class TrainValidTestManager:
             """
             raise NotImplementedError
 
-    def replace_model_head(self):
+    def replace_model_head(self) -> None:
         if 'fasterrcnn' in self.model_name:
             in_channels = self.model.roi_heads.box_predictor.cls_score.in_features
 
@@ -373,7 +374,7 @@ class TrainValidTestManager:
         else:
             raise NotImplementedError
 
-    def save_batch(self, phase, loss):
+    def save_batch(self, phase: str, loss: float) -> None:
         if phase == 'Training':
             self.writer.add_scalar(f'Loss (total per batch)/{phase}', loss, self.train_step)
             self.train_step += 1
@@ -381,14 +382,14 @@ class TrainValidTestManager:
             self.writer.add_scalar(f'Loss (total per batch)/{phase}', loss, self.valid_step)
             self.valid_step += 1
 
-    def save_epoch(self, phase, loss, metrics_dict, epoch):
+    def save_epoch(self, phase: str, loss: float, metrics_dict: dict, epoch: int) -> None:
         self.writer.add_scalar(f'Loss (mean per epoch)/{phase}', loss, epoch)
 
         if metrics_dict is not None:
             for key, value in metrics_dict.items():
                 self.writer.add_scalar(f'{key}/{phase}', value, epoch)
 
-    def save_memory(self, scale=1e-9):
+    def save_memory(self, scale: float = 1e-9) -> None:
         mem_reserved = memory_reserved(0) * scale
         mem_allocated = memory_allocated(0) * scale
         mem_free = mem_reserved - mem_allocated

@@ -44,6 +44,7 @@ if __name__ == '__main__':
 
     dataset_manager = DatasetManager(images_path=RESIZED_PATH,
                                      annotations_path=TARGETS_PATH,
+                                     max_image_size=0,
                                      num_workers=num_workers,
                                      data_aug=0,
                                      validation_size=0,

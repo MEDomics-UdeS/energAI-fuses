@@ -4,13 +4,16 @@ import os
 import sys
 
 import torch
+import matplotlib.pyplot as plt
 from google_images_download import google_images_download
 from torchvision.ops import nms
+from typing import List
+from argparse import Namespace
 
 from src.utils.constants import REQUIRED_PYTHON
 
 
-def env_tests():
+def env_tests() -> None:
     system_major = sys.version_info.major
     if REQUIRED_PYTHON == "python":
         required_major = 2
@@ -28,35 +31,35 @@ def env_tests():
         print(">>> Development environment passes all tests!")
 
 
-def rename_photos(root_dir='C:/Users/simon.giard-leroux/Google Drive/'
-                           'Maîtrise SGL CIMA+/General/Fuses Survey Dataset 2'):
+def rename_photos(root_dir: str = 'C:/Users/simon.giard-leroux/Google Drive/'
+                                  'Maîtrise SGL CIMA+/General/Fuses Survey Dataset 2') -> None:
     for subdir, dirs, files in os.walk(root_dir):
         for i, file in enumerate(files, start=1):
             os.rename(subdir + os.sep + file, subdir + "-" + str(i) + ".JPG")
 
 
-def google_image_scraper(chrome_driver_path='C:/Users/simon.giard-leroux/Google Drive/'
-                                            'Maîtrise/Python/fuseFinder/chromedriver.exe',
-                         prefix="English Electric C",
-                         postfix="J"):
+def google_image_scraper(chrome_driver_path: str = 'C:/Users/simon.giard-leroux/Google Drive/'
+                                                   'Maîtrise/Python/fuseFinder/chromedriver.exe',
+                         prefix: str = 'English Electric C',
+                         postfix: str = 'J') -> None:
     response = google_images_download.googleimagesdownload()
 
     amps = [10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 75, 80, 90, 100,
             110, 125, 150, 175, 200, 225, 250, 300, 350, 400, 450, 500, 600]
 
     for i in amps:
-        keywords = prefix + str(i) + postfix
+        keywords = f'{prefix}{i}{postfix}'
 
         arguments = {
-            "keywords": keywords,
-            "limit": 100,
-            "save_source": "source_" + keywords,
-            "chromedriver": chrome_driver_path
+            'keywords': keywords,
+            'limit': 100,
+            'save_source': f'source_{keywords}',
+            'chromedriver': chrome_driver_path
         }
         paths = response.download(arguments)
 
 
-def json_to_csv(dir_list=['final jsons/']):
+def json_to_csv(dir_list: List[str] = ['final jsons/']) -> None:
     for directory in dir_list:
         files = [f for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))]
         print(directory)
@@ -85,7 +88,7 @@ def json_to_csv(dir_list=['final jsons/']):
                 csv_file.close()
 
 
-def filter_by_nms(preds_list, iou_threshold):
+def filter_by_nms(preds_list: List[dict], iou_threshold: float) -> List[dict]:
     keep_nms = [nms(pred['boxes'], pred['scores'], iou_threshold) for pred in preds_list]
 
     preds_nms = []
@@ -96,7 +99,7 @@ def filter_by_nms(preds_list, iou_threshold):
     return preds_nms
 
 
-def filter_by_score(preds_list, score_threshold):
+def filter_by_score(preds_list: List[dict], score_threshold: float) -> List[dict]:
     preds_filt = []
 
     device = None
@@ -117,8 +120,33 @@ def filter_by_score(preds_list, score_threshold):
     return preds_filt
 
 
-def print_args(args):
+def print_args(args: Namespace) -> None:
     print('\n=== Arguments & Hyperparameters ===\n')
 
     for key, value in vars(args).items():
         print(f'{key}:{" " * (27 - len(key))}{value}')
+
+
+def count_images(path: str = "C:/Users/gias2402/Google Drive/"
+                             "Maîtrise SGL CIMA+/General/Fuses Survey Dataset 2",
+                 minimum: int = 20) -> None:
+    fuse_dict = {}
+
+    folders = ([name for name in os.listdir(path)
+                if os.path.isdir(os.path.join(path, name))])
+
+    for folder in folders:
+        contents = os.listdir(os.path.join(path, folder))
+
+        if len(contents) > minimum:
+            fuse_dict[folder] = len(contents)
+
+    x = sorted(fuse_dict, key=fuse_dict.get, reverse=True)
+    y = sorted(fuse_dict.values(), reverse=True)
+
+    plt.bar(x, y)
+    plt.show()
+    plt.xticks(rotation=90)
+    plt.ylabel("# of images")
+    plt.grid(axis='y')
+    plt.tight_layout()

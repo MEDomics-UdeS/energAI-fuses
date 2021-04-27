@@ -4,7 +4,7 @@ import torch
 
 
 class EarlyStopper:
-    def __init__(self, mode='max', min_delta=0, patience=10, percentage=False):
+    def __init__(self, patience: int, min_delta: float, mode: str = 'max', percentage: bool = False) -> None:
         self.mode = mode
         self.min_delta = min_delta
         self.patience = patience
@@ -17,7 +17,7 @@ class EarlyStopper:
             self.is_better = lambda a, b: True
             self.step = lambda a: False
 
-    def step(self, metrics):
+    def step(self, metrics: float) -> bool:
         if self.best is None:
             self.best = metrics
             return False
@@ -36,7 +36,7 @@ class EarlyStopper:
 
         return False
 
-    def _init_is_better(self, mode, min_delta, percentage):
+    def _init_is_better(self, mode: str, min_delta: float, percentage: bool) -> None:
         if mode not in {'min', 'max'}:
             raise ValueError('mode ' + mode + ' is unknown!')
         if not percentage:

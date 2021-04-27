@@ -8,6 +8,8 @@ TARGETS_PATH = 'data/annotations/targets_resized.json'
 ANNOTATIONS_PATH = 'data/annotations/annotations_raw.csv'
 LOG_PATH = 'logdir/'
 
+FONT_PATH = '/usr/share/fonts/truetype/liberation/LiberationSansNarrow-Regular.ttf'
+
 # Google Drive File ID Hashes
 IMAGES_ID = '12mZB0Or1FhzwZO_zUTYCbbuxwQ56-5PP'
 ANNOTATIONS_ID = '1y3BbSGF98Cs9eOTJF-V32JJ8s9dodSC-'

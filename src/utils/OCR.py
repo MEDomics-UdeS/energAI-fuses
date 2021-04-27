@@ -6,11 +6,11 @@ from itertools import chain
 import cv2
 import pytesseract
 from fuzzywuzzy import fuzz
-
+from typing import Tuple
 from constants import *
 
 
-def label_ocr(img, box, label):
+def label_ocr(img: str, box: Tuple[float]) -> str:
     name = ''.join(chr(i) for i in img)
     path = os.path.join("data/raw", name)
     image = cv2.imread(path)

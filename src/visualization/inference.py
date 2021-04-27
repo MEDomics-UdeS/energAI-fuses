@@ -1,12 +1,14 @@
 import torch
 from PIL import ImageDraw, ImageFont
 from tqdm import tqdm
+from torch.utils.data import DataLoader
+from typing import Tuple
 
-from src.utils.constants import CLASS_DICT
+from src.utils.constants import CLASS_DICT, FONT_PATH
 from src.utils.helper_functions import filter_by_nms, filter_by_score
 
 
-def save_test_images(model_file_name, data_loader, iou_threshold, save_path):
+def save_test_images(model_file_name: str, data_loader: DataLoader, iou_threshold: float, save_path: str) -> None:
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
     pbar = tqdm(total=len(data_loader), leave=False, desc='Inference Test')
@@ -14,7 +16,7 @@ def save_test_images(model_file_name, data_loader, iou_threshold, save_path):
     model = torch.load(f'models/{model_file_name}')
     model.eval()
 
-    font = ImageFont.truetype("/usr/share/fonts/truetype/liberation/LiberationSansNarrow-Regular.ttf", 12)
+    font = ImageFont.truetype(FONT_PATH, 12)
 
     # Deactivate the autograd engine
     with torch.no_grad():
@@ -32,7 +34,6 @@ def save_test_images(model_file_name, data_loader, iou_threshold, save_path):
 
             for index, image, target, pred in zip(indices, images, targets, preds):
                 draw = ImageDraw.Draw(image)
-
                 draw_boxes(draw, target, 'green', 3, font, (255, 255, 0, 0))
                 draw_boxes(draw, pred, 'red', 3, font, (255, 255, 255, 0))
 
@@ -44,7 +45,8 @@ def save_test_images(model_file_name, data_loader, iou_threshold, save_path):
     pbar.close()
 
 
-def draw_boxes(draw, box_dict, outline_color, outline_width, font, font_color):
+def draw_boxes(draw: ImageDraw.ImageDraw, box_dict: dict, outline_color: str, outline_width: int,
+               font: ImageFont.ImageFont, font_color: Tuple[int, int, int, int]) -> None:
     boxes = box_dict['boxes'].tolist()
     labels = [list(CLASS_DICT.keys())[list(CLASS_DICT.values()).index(label)]
               for label in box_dict['labels'].tolist()]

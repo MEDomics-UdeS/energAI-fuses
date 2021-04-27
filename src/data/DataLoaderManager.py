@@ -40,5 +40,5 @@ class DataLoaderManager:
                                                worker_init_fn=seed_worker if deterministic else None)
 
     @staticmethod
-    def collate_fn(batch):
+    def collate_fn(batch: list) -> tuple:
         return tuple(zip(*batch))

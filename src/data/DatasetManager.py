@@ -11,6 +11,7 @@ from PIL import Image, ImageDraw
 from torchvision import transforms
 from tqdm import tqdm
 from tqdm import trange
+from typing import Tuple, List
 
 from src.utils.constants import *
 from src.data.FuseDataset import FuseDataset
@@ -21,38 +22,39 @@ class DatasetManager:
     Dataset Manager class, handles the creation of the training, validation and testing datasets.
     """
     def __init__(self,
-                 images_path,
-                 annotations_path,
-                 max_image_size,
-                 num_workers,
-                 data_aug,
-                 validation_size,
-                 test_size,
-                 mean_std) -> None:
+                 images_path: str,
+                 annotations_path: str,
+                 max_image_size: int,
+                 num_workers: int,
+                 data_aug: float,
+                 validation_size: float,
+                 test_size: float,
+                 mean_std: bool) -> None:
 
-        image_ext = '.JPG'
+        if max_image_size > 0:
+            image_ext = '.JPG'
 
-        if any(file.endswith(image_ext) for file in os.listdir(RESIZED_PATH)):
-            for file in os.listdir(RESIZED_PATH):
-                if file.endswith(image_ext):
-                    img = Image.open(f'{RESIZED_PATH}{file}')
-                    break
+            if any(file.endswith(image_ext) for file in os.listdir(RESIZED_PATH)):
+                for file in os.listdir(RESIZED_PATH):
+                    if file.endswith(image_ext):
+                        img = Image.open(f'{RESIZED_PATH}{file}')
+                        break
 
-            if img.size != (max_image_size, max_image_size):
-                print(f'Max image size argument is {(max_image_size, max_image_size)} '
-                      f'but a resized image of {img.size} was found')
-                print(f'All images will be resized to {(max_image_size, max_image_size)}')
+                if img.size != (max_image_size, max_image_size):
+                    print(f'Max image size argument is {(max_image_size, max_image_size)} '
+                          f'but a resized image of {img.size} was found')
+                    print(f'All images will be resized to {(max_image_size, max_image_size)}')
 
-                self.resize_images(max_image_size, num_workers)
-        else:
-            if any(file.endswith(image_ext) for file in os.listdir(RAW_PATH)):
-                self.resize_images(max_image_size, num_workers)
+                    self.resize_images(max_image_size, num_workers)
             else:
-                if input('Raw data folder contains no images. Do you want to download them? (~ 12 GB) (y/n): ') == 'y':
-                    self.fetch_data(IMAGES_ID, ANNOTATIONS_ID)
+                if any(file.endswith(image_ext) for file in os.listdir(RAW_PATH)):
                     self.resize_images(max_image_size, num_workers)
                 else:
-                    sys.exit(1)
+                    if input('Raw data folder contains no images. Do you want to download them? (~ 12 GB) (y/n): ') == 'y':
+                        self.fetch_data(IMAGES_ID, ANNOTATIONS_ID)
+                        self.resize_images(max_image_size, num_workers)
+                    else:
+                        sys.exit(1)
 
         # Declare training, validation and testing datasets
         self.dataset_train = FuseDataset(images_path, annotations_path, num_workers)
@@ -76,7 +78,7 @@ class DatasetManager:
         self.dataset_test.transforms = self.transforms_base(mean, std)
 
     @staticmethod
-    def download_file_from_google_drive(file_id, dest, chunk_size=32768):
+    def download_file_from_google_drive(file_id: str, dest: str, chunk_size: int = 32768) -> None:
         """
 
         Inspired from :
@@ -109,7 +111,7 @@ class DatasetManager:
         else:
             raise Exception(f'Error {response.status_code}: {response.reason}')
 
-    def fetch_data(self, images_id, annotations_id):
+    def fetch_data(self, images_id: str, annotations_id: str) -> None:
         images_zip = os.path.join(RAW_PATH, 'images.zip')
 
         print('\nDownloading images to:\t\t', RAW_PATH)
@@ -126,7 +128,7 @@ class DatasetManager:
         print('Done!')
 
     @staticmethod
-    def transforms_train(mean, std, data_aug):
+    def transforms_train(mean: float, std: float, data_aug: float) -> transforms.Compose:
         transforms_list = [
             transforms.ColorJitter(brightness=data_aug,
                                    contrast=data_aug,
@@ -135,18 +137,21 @@ class DatasetManager:
             transforms.ToTensor(),
             transforms.Normalize(mean, std)
         ]
+
         return transforms.Compose(transforms_list)
 
     @staticmethod
-    def transforms_base(mean, std):
+    def transforms_base(mean: float, std: float) -> transforms.Compose:
         transforms_list = [
             transforms.ToTensor(),
             transforms.Normalize(mean, std)
         ]
+
         return transforms.Compose(transforms_list)
 
     @staticmethod
-    def split_dataset(dataset_in, dataset_out, split, total_size):
+    def split_dataset(dataset_in: FuseDataset, dataset_out: FuseDataset, split: float, total_size: int) \
+            -> Tuple[FuseDataset, FuseDataset]:
         dataset_size = len(dataset_in)
         indices = list(range(dataset_size))
         split_idx = int(np.floor(split * total_size))
@@ -158,7 +163,7 @@ class DatasetManager:
 
         return dataset_in, dataset_out
 
-    def calculate_mean_std(self, num_workers):
+    def calculate_mean_std(self, num_workers: int) -> Tuple[Tuple[float, float, float], Tuple[float, float, float]]:
         # Calculate dataset mean & std for normalization
         ray.init(include_dashboard=False)
 
@@ -197,7 +202,7 @@ class DatasetManager:
         return mean, std
 
     @staticmethod
-    def resize_images(max_image_size, num_workers):
+    def resize_images(max_image_size: int, num_workers: int) -> None:
         ray.init(include_dashboard=False)
 
         imgs = [img for img in sorted(os.listdir(RAW_PATH)) if img.startswith('.') is False]
@@ -235,7 +240,8 @@ class DatasetManager:
 
 
 @ray.remote
-def ray_resize_images(image_paths, max_image_size, annotations, idx, show_bounding_boxes=False):
+def ray_resize_images(image_paths: List[str], max_image_size: int, annotations: pd.DataFrame,
+                      idx: int, show_bounding_boxes: bool = False) -> Tuple[float, int, np.array, dict]:
     f = image_paths[idx].rsplit('/', 1)[-1].split(".")
     func = lambda x: x.split(".")[0]
 
@@ -299,7 +305,7 @@ def ray_resize_images(image_paths, max_image_size, annotations, idx, show_boundi
 
 
 @ray.remote
-def ray_get_rgb(image_paths, idx):
+def ray_get_rgb(image_paths: List[str], idx: int) -> Tuple[float, float, float, int]:
     image = Image.open(image_paths[idx]).convert("RGB")
 
     r = np.dstack(np.array(image)[:, :, 0])
