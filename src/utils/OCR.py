@@ -16,15 +16,21 @@ import operator
 import os
 import re
 from itertools import chain
-
 import cv2
 import pytesseract
 from fuzzywuzzy import fuzz
 from typing import Tuple
+
 from constants import RAW_PATH, OCR_DICT
 
 
 def label_ocr(img: str, box: Tuple[float]) -> str:
+    """
+
+    :param img:
+    :param box:
+    :return:
+    """
     name = ''.join(chr(i) for i in img)
     path = os.path.join(RAW_PATH, name)
     image = cv2.imread(path)

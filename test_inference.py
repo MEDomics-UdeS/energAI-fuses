@@ -19,7 +19,7 @@ from src.data.DataLoaderManager import DataLoaderManager
 from src.data.DatasetManager import DatasetManager
 from src.utils.helper_functions import print_args, env_tests
 from src.visualization.inference import save_test_images
-from src.utils.constants import RESIZED_PATH, TARGETS_PATH, INFERENCE_PATH
+from src.utils.constants import RESIZED_PATH, TARGETS_PATH, INFERENCE_PATH, MODELS_PATH
 
 if __name__ == '__main__':
     env_tests()
@@ -35,9 +35,9 @@ if __name__ == '__main__':
 
     # Model file name argument
     parser.add_argument('-mfn', '--model_file_name', action='store', type=str, default='2021-04-26_14-46-04',
-                        help='Model file name located in models/')
+                        help=f'Model file name located in {MODELS_PATH}')
 
-    # To compute mean & std deviation on training set
+    # To compute mean & std deviation
     parser.add_argument('-ms', '--mean_std', action='store_true',
                         help='Compute mean & standard deviation on training set if true, '
                              'otherwise use precalculated values')
@@ -46,15 +46,17 @@ if __name__ == '__main__':
     parser.add_argument('-b', '--batch', action='store', type=int, default=20,
                         help='Batch size')
 
-    # To load IOU Threshold
+    # IOU threshold argument
     parser.add_argument('-iou', '--iou_threshold', action='store', type=float, default=0.5,
-                        help='IOU threshold for true/false positive box predictions')
+                        help='IOU threshold')
 
+    # Parse arguments
     args = parser.parse_args()
 
     # Display arguments in console
     print_args(args)
 
+    # Declare dataset manager
     dataset_manager = DatasetManager(images_path=RESIZED_PATH,
                                      targets_path=TARGETS_PATH,
                                      max_image_size=0,
@@ -64,13 +66,18 @@ if __name__ == '__main__':
                                      test_size=1,
                                      mean_std=args.mean_std)
 
+    # Declare data loader manager
     data_loader_manager = DataLoaderManager(dataset_manager=dataset_manager,
                                             batch_size=args.batch,
                                             gradient_accumulation=1,
                                             num_workers=num_workers,
                                             deterministic=True)
 
+    # Perform an inference loop and save all images with the ground truth and predicted bounding boxes
     save_test_images(args.model_file_name, data_loader_manager.data_loader_test, args.iou_threshold, INFERENCE_PATH)
 
+    # Print file save path location
     print(f'Inference results saved to: {INFERENCE_PATH}')
+
+    # Print total time for inference testing
     print(f'\nTotal time for inference testing: {str(datetime.now() - start).split(".")[0]}')

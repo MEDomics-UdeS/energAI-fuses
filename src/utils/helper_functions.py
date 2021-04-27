@@ -25,7 +25,11 @@ from src.utils.constants import REQUIRED_PYTHON
 
 
 def env_tests() -> None:
+    """
+    Environment tests
+    """
     system_major = sys.version_info.major
+
     if REQUIRED_PYTHON == "python":
         required_major = 2
     elif REQUIRED_PYTHON == "python3":
@@ -44,6 +48,11 @@ def env_tests() -> None:
 
 def rename_photos(root_dir: str = 'C:/Users/simon.giard-leroux/Google Drive/'
                                   'Maîtrise SGL CIMA+/General/Fuses Survey Dataset 2') -> None:
+    """
+    Rename all photos in a folder's subfolders
+
+    :param root_dir: str, root directory
+    """
     for subdir, dirs, files in os.walk(root_dir):
         for i, file in enumerate(files, start=1):
             os.rename(subdir + os.sep + file, subdir + "-" + str(i) + ".JPG")
@@ -53,6 +62,13 @@ def google_image_scraper(chrome_driver_path: str = 'C:/Users/simon.giard-leroux/
                                                    'Maîtrise/Python/fuseFinder/chromedriver.exe',
                          prefix: str = 'English Electric C',
                          postfix: str = 'J') -> None:
+    """
+    Function to scrape images from Google images
+
+    :param chrome_driver_path: str, chromedriver.exe path
+    :param prefix: str, prefix for fuse search criterion
+    :param postfix: str, postfix for fuse search criterion
+    """
     response = google_images_download.googleimagesdownload()
 
     amps = [10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 75, 80, 90, 100,
@@ -71,6 +87,11 @@ def google_image_scraper(chrome_driver_path: str = 'C:/Users/simon.giard-leroux/
 
 
 def json_to_csv(dir_list: List[str] = ['final jsons/']) -> None:
+    """
+    Function to convert multiple json files into a single csv file
+
+    :param dir_list: list, containing the directories in which to fetch the jsons
+    """
     for directory in dir_list:
         files = [f for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))]
         print(directory)
@@ -100,6 +121,12 @@ def json_to_csv(dir_list: List[str] = ['final jsons/']) -> None:
 
 
 def filter_by_nms(preds_list: List[dict], iou_threshold: float) -> List[dict]:
+    """
+    Function to filter a bounding boxes predictions list by using non-maximum suppression
+
+    :param preds_list: list, predicted bounding boxes
+    :param iou_threshold: float, iou threshold for non-maximum suppression
+    """
     keep_nms = [nms(pred['boxes'], pred['scores'], iou_threshold) for pred in preds_list]
 
     preds_nms = []
@@ -111,6 +138,13 @@ def filter_by_nms(preds_list: List[dict], iou_threshold: float) -> List[dict]:
 
 
 def filter_by_score(preds_list: List[dict], score_threshold: float) -> List[dict]:
+    """
+    Function to filter a bounding boxes predictions list by using a confidence score threshold
+
+    :param preds_list: list, predicted bounding boxes
+    :param score_threshold: float, confidence score threshold above which predictions are to be saved
+    :return:
+    """
     preds_filt = []
 
     device = None
@@ -132,6 +166,11 @@ def filter_by_score(preds_list: List[dict], score_threshold: float) -> List[dict
 
 
 def print_args(args: Namespace) -> None:
+    """
+    Print all arguments and hyperparameters in the argparse Namespace
+
+    :param args: argparse Namespace
+    """
     print('\n=== Arguments & Hyperparameters ===\n')
 
     for key, value in vars(args).items():
@@ -141,6 +180,12 @@ def print_args(args: Namespace) -> None:
 def count_images(path: str = "C:/Users/gias2402/Google Drive/"
                              "Maîtrise SGL CIMA+/General/Fuses Survey Dataset 2",
                  minimum: int = 20) -> None:
+    """
+    Function to count images in some folders
+
+    :param path: str, directory in which to seek images
+    :param minimum: int, minimum number of images required for the number of images to be plotted
+    """
     fuse_dict = {}
 
     folders = ([name for name in os.listdir(path)

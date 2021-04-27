@@ -18,12 +18,22 @@ import random
 
 
 def seed_worker(worker_id: int) -> None:
-    worker_seed = torch.initial_seed() % 2**32
+    """
+    Dataloader worker seed function to ensure results reproducibility
+
+    :param worker_id: int, worker id
+    """
+    worker_seed = torch.initial_seed() % 2 ** 32
     np.random.seed(worker_seed)
     random.seed(worker_seed)
 
 
 def set_seed(seed: int) -> None:
+    """
+    Function to set a manual seed to ensure results reproducibility
+
+    :param seed: int, seed value
+    """
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
     torch.cuda.manual_seed(seed)
@@ -32,6 +42,12 @@ def set_seed(seed: int) -> None:
 
 
 def set_deterministic(deterministic: bool, seed: int) -> None:
+    """
+    Function to set deterministic behavior to ensure results reproducibility
+
+    :param deterministic: bool, True to activate deterministic behavior
+    :param seed: int, seed value
+    """
     torch.backends.cudnn.deterministic = deterministic
     torch.backends.cudnn.benchmark = not deterministic
     torch.use_deterministic_algorithms(deterministic)
