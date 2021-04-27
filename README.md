@@ -63,6 +63,10 @@ To run a batch of multiple experiments that are specified in `batch_experiment.p
 python batch_experiment.py
 ```
 
+To view log runs and hyperparameters in tensorboard:
+```
+tensorboard --logdir=logdir
+```
 ## Module Details: test_inference.py
 
 ### Description
