@@ -1,4 +1,14 @@
-from typing import Optional
+"""
+File:
+    src/models/TrainValidTestManager.py
+
+Authors:
+    - Simon Giard-Leroux
+    - Shreyas Sunil Kulkarni
+
+Description:
+    Training, validation and testing pipeline manager
+"""
 
 import numpy as np
 import torch
@@ -11,7 +21,7 @@ from src.models.SummaryWriter import SummaryWriter
 from torchvision.ops import box_iou
 from tqdm import tqdm
 from torch.utils.data import DataLoader
-from typing import List
+from typing import List, Optional
 
 
 from src.utils.constants import CLASS_DICT, LOG_PATH

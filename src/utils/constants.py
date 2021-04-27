@@ -1,22 +1,42 @@
+"""
+File:
+    src/utils/constants.py
+
+Authors:
+    - Simon Giard-Leroux
+    - Shreyas Sunil Kulkarni
+
+Description:
+    Constants used in the project
+"""
+
+# Environment constant
 REQUIRED_PYTHON = "python3"
 
-# Assign image and annotations file paths
+# Image file paths
 RAW_PATH = 'data/raw/'
 RESIZED_PATH = 'data/resized/'
 INFERENCE_PATH = 'data/inference/'
+
+# Annotations file paths
 TARGETS_PATH = 'data/annotations/targets_resized.json'
 ANNOTATIONS_PATH = 'data/annotations/annotations_raw.csv'
+
+# Logging file path for tensorboard
 LOG_PATH = 'logdir/'
 
+# Font file path for inference when drawing bounding boxes confidence scores
 FONT_PATH = '/usr/share/fonts/truetype/liberation/LiberationSansNarrow-Regular.ttf'
 
-# Google Drive File ID Hashes
+# Google Drive file ID Hashes
 IMAGES_ID = '12mZB0Or1FhzwZO_zUTYCbbuxwQ56-5PP'
 ANNOTATIONS_ID = '1y3BbSGF98Cs9eOTJF-V32JJ8s9dodSC-'
 
+# Dataset mean and standard deviation per channel (R, G, B)
 MEAN = (0.6221349083958952, 0.6097851650674193, 0.592938912173587)
 STD = (0.33986575693672466, 0.3446239730624245, 0.3541046569741213)
 
+# Class dictionary
 CLASS_DICT = {
     "Background":               0,
     "Gould-Ferraz Shawmut A4J": 1,
@@ -31,6 +51,7 @@ CLASS_DICT = {
     "Gould Shawmut CJ":         10
 }
 
+# OCR dictionary with keywords related to each class
 OCR_DICT = {
     "Gould-Ferraz Shawmut A4J": ['Gould', 'Shawmut', 'Amp-trap', 'Class J', 'Current', 'Limiting', 'A4J###',
                                  '### Amps.', '### Amp.', '### Amp', '600 VAC or Less', 'HRC I-J', 'UND. LAB. INC.',

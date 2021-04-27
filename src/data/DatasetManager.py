@@ -1,3 +1,15 @@
+"""
+File:
+    src/data/DatasetManager.py
+
+Authors:
+    - Simon Giard-Leroux
+    - Shreyas Sunil Kulkarni
+
+Description:
+    Generate datasets for training, validation and testing.
+"""
+
 import json
 import os
 import sys

@@ -1,3 +1,15 @@
+"""
+File:
+    src/visualization/inference.py
+
+Authors:
+    - Simon Giard-Leroux
+    - Shreyas Sunil Kulkarni
+
+Description:
+    Inference functions to test a saved model and show model predictions and ground truths boxes on the images
+"""
+
 import torch
 from PIL import ImageDraw, ImageFont
 from tqdm import tqdm

@@ -1,3 +1,15 @@
+"""
+File:
+    src/models/experiment.py
+
+Authors:
+    - Simon Giard-Leroux
+    - Shreyas Sunil Kulkarni
+
+Description:
+    Main experiment file to perform a training, validation and testing pipeline on a new model.
+"""
+
 import argparse
 from datetime import datetime
 from multiprocessing import cpu_count

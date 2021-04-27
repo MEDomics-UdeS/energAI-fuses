@@ -1,3 +1,15 @@
+"""
+File:
+    src/data/FuseDataset.py
+
+Authors:
+    - Simon Giard-Leroux
+    - Shreyas Sunil Kulkarni
+
+Description:
+    Custom fuse dataset class.
+"""
+
 import torch
 import torch.utils.data
 import os

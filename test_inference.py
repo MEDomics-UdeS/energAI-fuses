@@ -1,3 +1,16 @@
+"""
+File:
+    test_inference.py
+
+Authors:
+    - Simon Giard-Leroux
+    - Shreyas Sunil Kulkarni
+
+Description:
+    Main file to run an inference test on a saved model and show
+    model predictions and ground truths boxes on the images
+"""
+
 import argparse
 from datetime import datetime
 from multiprocessing import cpu_count

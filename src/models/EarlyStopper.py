@@ -1,4 +1,17 @@
-# https://gist.github.com/stefanonardo/693d96ceb2f531fa05db530f3e21517d
+"""
+File:
+    src/models/EarlyStopper.py
+
+Authors:
+    - Simon Giard-Leroux
+    - Shreyas Sunil Kulkarni
+
+Description:
+    Early stopping object to stop the training once a certain validation metric (with a delta variation)
+    has been reached for a fixed number of epochs (patience).
+
+    Inspired by: https://gist.github.com/stefanonardo/693d96ceb2f531fa05db530f3e21517d
+"""
 
 import torch
 

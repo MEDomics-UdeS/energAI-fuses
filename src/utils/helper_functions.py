@@ -1,8 +1,19 @@
+"""
+File:
+    src/utils/helper_functions.py
+
+Authors:
+    - Simon Giard-Leroux
+    - Shreyas Sunil Kulkarni
+
+Description:
+    Helper functions used in the project
+"""
+
 import csv
 import json
 import os
 import sys
-
 import torch
 import matplotlib.pyplot as plt
 from google_images_download import google_images_download

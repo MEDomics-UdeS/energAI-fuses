@@ -1,4 +1,16 @@
-# https://pytorch.org/docs/stable/notes/randomness.html
+"""
+File:
+    src/utils/reproducibility.py
+
+Authors:
+    - Simon Giard-Leroux
+    - Shreyas Sunil Kulkarni
+
+Description:
+    Reproducibility functions to set seed and deterministic behavior
+
+    Inspired by: https://pytorch.org/docs/stable/notes/randomness.html
+"""
 
 import torch
 import numpy as np

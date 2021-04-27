@@ -1,3 +1,17 @@
+"""
+File:
+    src/utils/OCR.py
+
+Authors:
+    - Simon Giard-Leroux
+    - Shreyas Sunil Kulkarni
+
+Description:
+    Optical character recognition (OCR) function to detect text on fuse labels.
+
+NOTE : Has not been tested/refactored yet.
+"""
+
 import operator
 import os
 import re
@@ -7,12 +21,12 @@ import cv2
 import pytesseract
 from fuzzywuzzy import fuzz
 from typing import Tuple
-from constants import *
+from constants import RAW_PATH, OCR_DICT
 
 
 def label_ocr(img: str, box: Tuple[float]) -> str:
     name = ''.join(chr(i) for i in img)
-    path = os.path.join("data/raw", name)
+    path = os.path.join(RAW_PATH, name)
     image = cv2.imread(path)
     x1, y1, x2, y2 = box
 

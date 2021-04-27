@@ -1,3 +1,15 @@
+"""
+File:
+    batch_experiment.py
+
+Authors:
+    - Simon Giard-Leroux
+    - Shreyas Sunil Kulkarni
+
+Description:
+    Allows to perform multiple src/models/experiment.py runs with different parameters
+"""
+
 import subprocess as sp
 from datetime import datetime
 

@@ -1,7 +1,15 @@
 """
-Custom SummaryWriter wrapper to fix hparams subfolder creation issue in Tensorboard
+File:
+    src/models/SummaryWriter.py
 
-From: https://github.com/pytorch/pytorch/issues/32651
+Authors:
+    - Simon Giard-Leroux
+    - Shreyas Sunil Kulkarni
+
+Description:
+    Custom SummaryWriter wrapper to fix hparams subfolder creation issue in Tensorboard
+
+    From: https://github.com/pytorch/pytorch/issues/32651
 """
 
 import torch
