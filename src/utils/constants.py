@@ -22,6 +22,9 @@ INFERENCE_PATH = 'data/inference/'
 TARGETS_PATH = 'data/annotations/targets_resized.json'
 ANNOTATIONS_PATH = 'data/annotations/annotations_raw.csv'
 
+# Models file path
+MODELS_PATH = 'models/'
+
 # Logging file path for tensorboard
 LOG_PATH = 'logdir/'
 

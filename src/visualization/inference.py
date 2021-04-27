@@ -16,7 +16,7 @@ from tqdm import tqdm
 from torch.utils.data import DataLoader
 from typing import Tuple
 
-from src.utils.constants import CLASS_DICT, FONT_PATH
+from src.utils.constants import CLASS_DICT, FONT_PATH, MODELS_PATH
 from src.utils.helper_functions import filter_by_nms, filter_by_score
 
 
@@ -25,7 +25,7 @@ def save_test_images(model_file_name: str, data_loader: DataLoader, iou_threshol
 
     pbar = tqdm(total=len(data_loader), leave=False, desc='Inference Test')
 
-    model = torch.load(f'models/{model_file_name}')
+    model = torch.load(f'{MODELS_PATH}{model_file_name}')
     model.eval()
 
     font = ImageFont.truetype(FONT_PATH, 12)

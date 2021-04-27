@@ -56,7 +56,7 @@ if __name__ == '__main__':
     print_args(args)
 
     dataset_manager = DatasetManager(images_path=RESIZED_PATH,
-                                     annotations_path=TARGETS_PATH,
+                                     targets_path=TARGETS_PATH,
                                      max_image_size=0,
                                      num_workers=num_workers,
                                      data_aug=0,

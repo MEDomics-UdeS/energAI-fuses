@@ -17,7 +17,19 @@ import torch
 
 
 class EarlyStopper:
+    """
+    Early stopping class
+    """
     def __init__(self, patience: int, min_delta: float, mode: str = 'max', percentage: bool = False) -> None:
+        """
+        Class constructor
+
+        :param patience: int, number of epochs with no improvement before early stopping occurs
+        :param min_delta: float, delta of tolerance for improvement evaluation
+        :param mode: str, improvement evaluation mode 'min' or 'max'
+        :param percentage: bool, if True, percentage mode
+                                 if False, absolute value mode
+        """
         self.mode = mode
         self.min_delta = min_delta
         self.patience = patience
@@ -31,6 +43,13 @@ class EarlyStopper:
             self.step = lambda a: False
 
     def step(self, metrics: float) -> bool:
+        """
+        Step function
+
+        :param metrics: float, metric to evaluate
+        :return: bool, if True, early stop
+                       if False, continue
+        """
         if self.best is None:
             self.best = metrics
             return False
@@ -50,6 +69,14 @@ class EarlyStopper:
         return False
 
     def _init_is_better(self, mode: str, min_delta: float, percentage: bool) -> None:
+        """
+        Method to initialize the self.is_better method depending on the mode, min_delta and percentage parameters
+
+        :param mode: str, improvement evaluation mode 'min' or 'max'
+        :param min_delta: float, delta of tolerance for improvement evaluation
+        :param percentage: bool, if True, percentage mode
+                                 if False, absolute value mode
+        """
         if mode not in {'min', 'max'}:
             raise ValueError('mode ' + mode + ' is unknown!')
         if not percentage:

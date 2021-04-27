@@ -25,7 +25,7 @@ if __name__ == '__main__':
     # Record start time
     start = datetime.now()
 
-    # Get number of cpu threads for PyTorch DataLoader and Ray paralleling
+    # Get number of cpu threads for PyTorch DataLoader and ray paralleling
     num_workers = cpu_count()
 
     # Declare argument parser
@@ -39,11 +39,11 @@ if __name__ == '__main__':
     parser.add_argument('-da', '--data_aug', action='store', type=float, default=0.25,
                         help='Value of data augmentation for training dataset (0: no aug)')
 
-    # Validation argument
+    # Validation size argument
     parser.add_argument('-vs', '--validation_size', action='store', type=float, default=0.1,
                         help='Size of validation set (float as proportion of dataset)')
 
-    # Testing argument
+    # Testing size argument
     parser.add_argument('-ts', '--test_size', action='store', type=float, default=0.1,
                         help='Size of test set (float as proportion of dataset)')
 
@@ -55,11 +55,11 @@ if __name__ == '__main__':
     parser.add_argument('-b', '--batch', action='store', type=int, default=20,
                         help='Batch size')
 
-    # Early stopping argument
+    # Early stopping patience argument
     parser.add_argument('-esp', '--es_patience', action='store', type=int,
                         help='Early stopping patience')
 
-    # Early stopping argument
+    # Early stopping delta argument
     parser.add_argument('-esd', '--es_delta', action='store', type=float, default=0,
                         help='Early stopping delta')
 
@@ -67,9 +67,9 @@ if __name__ == '__main__':
     parser.add_argument('-mp', '--mixed_precision', action='store_true',
                         help='To use mixed precision')
 
-    # Gradient accumulation argument
+    # Gradient accumulation size argument
     parser.add_argument('-g', '--gradient_accumulation', action='store', type=int, default=1,
-                        help='To use gradient accumulation (takes an argument: accumulation_size (int))')
+                        help='Gradient accumulation size')
 
     # Gradient clipping argument
     parser.add_argument('-gc', '--gradient_clip', action='store', type=float, default=5,
@@ -83,24 +83,24 @@ if __name__ == '__main__':
     parser.add_argument('-dt', '--deterministic', action='store_true',
                         help='Set deterministic behaviour')
 
-    # To compute mean & std deviation on training set
+    # Compute mean & std deviation on training set argument
     parser.add_argument('-ms', '--mean_std', action='store_true',
                         help='Compute mean & standard deviation on training set if true, '
                              'otherwise use precalculated values')
 
-    # To load IOU Threshold
+    # IOU threshold argument
     parser.add_argument('-iou', '--iou_threshold', action='store', type=float, default=0.5,
                         help='IOU threshold for true/false positive box predictions')
 
-    # To load learning rate
+    # Learning rate argument
     parser.add_argument('-lr', '--learning_rate', action='store', type=float, default=0.0003,
                         help='Learning rate for optimizer')
 
-    # To load weight decay
+    # Weight decay argument
     parser.add_argument('-wd', '--weight_decay', action='store', type=float, default=0,
                         help='Weight decay for optimizer')
 
-    # To load model
+    # Model argument
     parser.add_argument('-mo', '--model', action='store', type=str,
                         choices=['fasterrcnn_resnet50_fpn',
                                  'fasterrcnn_mobilenet_v3_large_fpn',
@@ -110,28 +110,29 @@ if __name__ == '__main__':
                         default='fasterrcnn_resnet50_fpn',
                         help='Specify which object detection model to use')
 
-    # To load pretrained model
+    # Pretrained argument
     parser.add_argument('-pt', '--pretrained', action='store_false',
                         help='Load pretrained model')
 
-    # To save trained model
+    # Save model argument
     parser.add_argument('-sv', '--save_model', action='store_false',
                         help='Save trained model')
 
     # Parsing arguments
     args = parser.parse_args()
 
+    # Set deterministic behavior
     set_deterministic(args.deterministic, args.random_seed)
 
     # Declare file name as yyyy-mm-dd_hh-mm-ss
     file_name = start.strftime('%Y-%m-%d_%H-%M-%S')
 
     # Display arguments in console
-
     print_args(args)
 
+    # Declare dataset manager
     dataset_manager = DatasetManager(images_path=RESIZED_PATH,
-                                     annotations_path=TARGETS_PATH,
+                                     targets_path=TARGETS_PATH,
                                      max_image_size=args.size,
                                      num_workers=num_workers,
                                      data_aug=args.data_aug,
@@ -139,12 +140,14 @@ if __name__ == '__main__':
                                      test_size=args.test_size,
                                      mean_std=args.mean_std)
 
+    # Declare data loader manager
     data_loader_manager = DataLoaderManager(dataset_manager=dataset_manager,
                                             batch_size=args.batch,
                                             gradient_accumulation=args.gradient_accumulation,
                                             num_workers=num_workers,
                                             deterministic=args.deterministic)
 
+    # Declare training, validation and testing manager
     train_valid_test_manager = TrainValidTestManager(data_loader_manager=data_loader_manager,
                                                      file_name=file_name,
                                                      model_name=args.model,
@@ -159,6 +162,9 @@ if __name__ == '__main__':
                                                      gradient_clip=args.gradient_clip,
                                                      args_dict=vars(args),
                                                      save_model=args.save_model)
+
+    # Call the training, validation and testing manager to run the pipeline
     train_valid_test_manager(args.epochs)
 
+    # Print the run time of the current experiment
     print(f'\nTotal time for current experiment:\t{str(datetime.now() - start).split(".")[0]}')
