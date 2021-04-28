@@ -1,0 +1,13 @@
+matplotlib==3.3.4
+pandas==1.2.4
+tqdm==4.59.0
+google_images_download==2.8.0
+requests==2.25.1
+ray==1.2.0
+fuzzywuzzy==0.18.0
+torch==1.8.1
+opencv_python==4.5.1.48
+numpy==1.19.2
+pytesseract==0.3.7
+torchvision==0.9.1
+Pillow==8.2.0
