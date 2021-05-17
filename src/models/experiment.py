@@ -161,7 +161,8 @@ if __name__ == '__main__':
                                                      iou_threshold=args.iou_threshold,
                                                      gradient_clip=args.gradient_clip,
                                                      args_dict=vars(args),
-                                                     save_model=args.save_model)
+                                                     save_model=args.save_model,
+                                                     max_image_size=args.size)
 
     # Call the training, validation and testing manager to run the pipeline
     train_valid_test_manager(args.epochs)

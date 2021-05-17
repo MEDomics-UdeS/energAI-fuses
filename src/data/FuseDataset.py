@@ -170,4 +170,4 @@ def ray_load_images(image_paths: List[str], index: int) -> Tuple[Image.Image, in
     :param index: int, current index
     :return: tuple, PIL Image and current index
     """
-    return Image.open(image_paths[index]).convert("RGB"), index
+    return Image.open(image_paths[index]), index#.convert("RGB"), index

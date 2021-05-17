@@ -15,6 +15,7 @@ import json
 import os
 import sys
 import torch
+from tqdm import tqdm
 import matplotlib.pyplot as plt
 from google_images_download import google_images_download
 from torchvision.ops import nms
@@ -86,7 +87,7 @@ def google_image_scraper(chrome_driver_path: str = 'C:/Users/simon.giard-leroux/
         paths = response.download(arguments)
 
 
-def json_to_csv(dir_list: List[str] = ['final jsons/']) -> None:
+def json_to_csv(dir_list: List[str] =[]) -> None:
     """
     Function to convert multiple json files into a single csv file
 
@@ -95,7 +96,7 @@ def json_to_csv(dir_list: List[str] = ['final jsons/']) -> None:
     for directory in dir_list:
         files = [f for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))]
         print(directory)
-        for i in files:
+        for i in tqdm(files):
             json_file = open(directory + i)
             json_data = json.load(json_file)
             csv_file = open('ground_truth.csv', 'a', newline='')

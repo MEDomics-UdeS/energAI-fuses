@@ -33,7 +33,7 @@ FONT_PATH = '/usr/share/fonts/truetype/liberation/LiberationSansNarrow-Regular.t
 
 # Google Drive file ID Hashes
 IMAGES_ID = '12mZB0Or1FhzwZO_zUTYCbbuxwQ56-5PP'
-ANNOTATIONS_ID = '1y3BbSGF98Cs9eOTJF-V32JJ8s9dodSC-'
+ANNOTATIONS_ID = '1FdFLlb-RJY9IZ2zHLScTrwWlT4EPB2Oj'
 
 # Dataset mean and standard deviation per channel (R, G, B)
 MEAN = (0.6221349083958952, 0.6097851650674193, 0.592938912173587)

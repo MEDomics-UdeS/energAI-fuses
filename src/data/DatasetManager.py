@@ -57,7 +57,7 @@ class DatasetManager:
         """
         if max_image_size > 0:
             # Declare image file extension format
-            image_ext = '.JPG'
+            image_ext = '.jpg'
 
             # Check if any image exists in the data/resized folder
             if any(file.endswith(image_ext) for file in os.listdir(RESIZED_PATH)):
@@ -82,7 +82,7 @@ class DatasetManager:
                     self.resize_images(max_image_size, num_workers)
                 else:
                     # Ask the user if the data should be downloaded
-                    if input('Raw data folder contains no images. Do you want to download them? (~ 12 GB) (y/n): ') == 'y':
+                    if input('Raw data folder contains no images. Do you want to download them? (~ 3 GB) (y/n): ') == 'y':
                         # Download the data
                         self.fetch_data(IMAGES_ID, ANNOTATIONS_ID)
 
@@ -424,13 +424,15 @@ def ray_resize_images(image_paths: List[str], max_image_size: int, annotations: 
     f = image_paths[idx].rsplit('/', 1)[-1].split(".")[0]
 
     # Declare a lambda function to get a file name without the file extension
-    func = lambda x: x.split(".")[0]
+    # func = lambda x: x.split(".")[0]
 
     # Get bounding boxes coordinates for the current image
-    box_array = annotations.loc[annotations["filename"].apply(func) == f][["xmin", "ymin", "xmax", "ymax"]].values
+    # box_array = annotations.loc[annotations["filename"].apply(func) == f][["xmin", "ymin", "xmax", "ymax"]].values
+    box_array = annotations.loc[annotations["filename"] == f][["xmin", "ymin", "xmax", "ymax"]].values
 
     # Get class labels (str) for the current image
-    label_array = annotations.loc[annotations["filename"].apply(func) == f][["label"]].values
+    # label_array = annotations.loc[annotations["filename"].apply(func) == f][["label"]].values
+    label_array = annotations.loc[annotations["filename"] == f][["label"]].values
 
     # Declare empty label list
     label_list = []
@@ -443,7 +445,7 @@ def ray_resize_images(image_paths: List[str], max_image_size: int, annotations: 
     num_boxes = len(box_array)
 
     # Open the current image
-    img = Image.open(image_paths[idx]).convert("RGB")
+    img = Image.open(image_paths[idx])#.convert("RGB")
 
     # Get the current image size
     original_size = img.size
@@ -522,7 +524,7 @@ def ray_get_rgb(image_paths: List[str], idx: int) -> Tuple[np.array, np.array, n
     :return: tuple, r, g, b values numpy arrays for the current image and the current index
     """
     # Open the current image
-    image = Image.open(image_paths[idx]).convert("RGB")
+    image = Image.open(image_paths[idx])#.convert("RGB")
 
     # Get the values of each pixel in the R, G, B channels
     r = np.dstack(np.array(image)[:, :, 0])

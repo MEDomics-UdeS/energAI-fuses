@@ -47,7 +47,8 @@ class TrainValidTestManager:
                  iou_threshold: float,
                  gradient_clip: float,
                  args_dict: dict,
-                 save_model: bool) -> None:
+                 save_model: bool,
+                 max_image_size: int) -> None:
         """
         Class constructor
 
@@ -78,6 +79,7 @@ class TrainValidTestManager:
         self.accumulation_size = gradient_accumulation
         self.gradient_accumulation = False if gradient_accumulation == 1 else True
         self.es_patience = es_patience
+        self.max_image_size = max_image_size
 
         # Declare steps for tensorboard logging
         self.train_step = 0
@@ -138,7 +140,7 @@ class TrainValidTestManager:
         # Check if we need to save the model
         if self.save_model:
             # Save the model in the models/ folder
-            torch.save(self.model, f'{MODELS_PATH}{self.file_name}')
+            torch.save(self.model, f'{MODELS_PATH}{self.file_name}_s{self.max_image_size}')
 
         # Flush and close the tensorboard writer
         self.writer.flush()

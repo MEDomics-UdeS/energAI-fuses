@@ -34,7 +34,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Processing inputs')
 
     # Model file name argument
-    parser.add_argument('-mfn', '--model_file_name', action='store', type=str,
+    parser.add_argument('-mfn', '--model_file_name', action='store', type=str, default='2021-05-17_16-35-16_s1024',
                         help=f'Model file name located in {MODELS_PATH}')
 
     # To compute mean & std deviation
