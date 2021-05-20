@@ -41,7 +41,8 @@ class DatasetManager:
                  data_aug: float,
                  validation_size: float,
                  test_size: float,
-                 mean_std: bool) -> None:
+                 mean_std: bool,
+                 no_gi: bool) -> None:
         """
         Class constructor
 
@@ -55,6 +56,8 @@ class DatasetManager:
         :param mean_std: bool, if True, mean and std values for RGB channel normalization will be calculated
                                if False, mean and std precalculated values will be used
         """
+        self.no_gi = no_gi
+
         if max_image_size > 0:
             # Declare image file extension format
             image_ext = '.jpg'
@@ -82,7 +85,8 @@ class DatasetManager:
                     self.resize_images(max_image_size, num_workers)
                 else:
                     # Ask the user if the data should be downloaded
-                    if input('Raw data folder contains no images. Do you want to download them? (~ 3 GB) (y/n): ') == 'y':
+                    if input('Raw data folder contains no images. '
+                             'Do you want to download them? (~ 3 GB) (y/n): ') == 'y':
                         # Download the data
                         self.fetch_data(IMAGES_ID, ANNOTATIONS_ID)
 
@@ -93,12 +97,12 @@ class DatasetManager:
                         sys.exit(1)
 
         # Declare training, validation and testing datasets
-        self.dataset_train = FuseDataset(images_path, targets_path, num_workers)
+        self.dataset_train = FuseDataset(images_path, targets_path, num_workers, no_gi)
         self.dataset_valid = FuseDataset()
         self.dataset_test = FuseDataset()
 
         # Get total dataset size
-        total_size = len(self.dataset_train)
+        total_size = sum(image_path.rsplit('/')[-1].startswith('S') for image_path in self.dataset_train.image_paths)
 
         # Split the training set into training + validation
         self.dataset_train, self.dataset_valid = self.split_dataset(self.dataset_train, self.dataset_valid,
@@ -236,8 +240,7 @@ class DatasetManager:
         # Return a composed transforms list
         return transforms.Compose(transforms_list)
 
-    @staticmethod
-    def split_dataset(dataset_in: FuseDataset, dataset_out: FuseDataset, split: float, total_size: int) \
+    def split_dataset(self, dataset_in: FuseDataset, dataset_out: FuseDataset, split: float, total_size: int) \
             -> Tuple[FuseDataset, FuseDataset]:
         """
         Split a dataset into two sub-datasets, used to create the validation and testing dataset splits
@@ -248,6 +251,16 @@ class DatasetManager:
         :param total_size: int, total size of the original dataset
         :return: tuple of two FuseDataset objects, which are the dataset_in and dataset_out after splitting
         """
+
+        if not self.no_gi:
+            google_image_paths = [image_path for image_path in dataset_in.image_paths
+                                  if image_path.rsplit('/')[-1].startswith('G')]
+
+            google_indices = [dataset_in.image_paths.index(google_image_path)
+                              for google_image_path in google_image_paths]
+
+            google_image_paths, google_images, google_targets = dataset_in.extract_data(index_list=google_indices)
+
         # Get input dataset size
         dataset_size = len(dataset_in)
 
@@ -268,6 +281,9 @@ class DatasetManager:
 
         # Insert the extracted image paths, images and targets into dataset_out
         dataset_out.add_data(image_paths, images, targets)
+
+        if not self.no_gi:
+            dataset_in.add_data(google_image_paths, google_images, google_targets)
 
         # Return the split input and output datasets
         return dataset_in, dataset_out

@@ -148,8 +148,6 @@ def filter_by_score(preds_list: List[dict], score_threshold: float) -> List[dict
     """
     preds_filt = []
 
-    device = None
-
     for pred in preds_list:
         keep = []
 
@@ -157,10 +155,7 @@ def filter_by_score(preds_list: List[dict], score_threshold: float) -> List[dict
             if score.greater(score_threshold):
                 keep.append(index)
 
-            if device is None:
-                device = score.device
-
-        preds_filt.append({key: torch.index_select(val, dim=0, index=torch.tensor(keep, device=device))
+        preds_filt.append({key: torch.index_select(val, dim=0, index=torch.tensor(keep, device=pred['scores'].device))
                            for key, val in pred.items()})
 
     return preds_filt

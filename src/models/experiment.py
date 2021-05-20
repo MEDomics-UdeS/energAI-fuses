@@ -118,6 +118,10 @@ if __name__ == '__main__':
     parser.add_argument('-sv', '--save_model', action='store_false',
                         help='Save trained model')
 
+    # Google Images argument
+    parser.add_argument('-no_gi', '--no_google_images', action='store_true',
+                        help='Exclude the Google Images photos from the training subset')
+
     # Parsing arguments
     args = parser.parse_args()
 
@@ -138,7 +142,8 @@ if __name__ == '__main__':
                                      data_aug=args.data_aug,
                                      validation_size=args.validation_size,
                                      test_size=args.test_size,
-                                     mean_std=args.mean_std)
+                                     mean_std=args.mean_std,
+                                     no_gi=args.no_google_images)
 
     # Declare data loader manager
     data_loader_manager = DataLoaderManager(dataset_manager=dataset_manager,

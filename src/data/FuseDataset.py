@@ -24,7 +24,11 @@ class FuseDataset(Dataset):
     """
     Custom fuse dataset class
     """
-    def __init__(self, images_path: str = None, targets_path: str = None, num_workers: int = None) -> None:
+    def __init__(self,
+                 images_path: str = None,
+                 targets_path: str = None,
+                 num_workers: int = None,
+                 no_gi: bool = False) -> None:
         """
         Class constructor
 
@@ -37,8 +41,11 @@ class FuseDataset(Dataset):
             # Initialize ray
             ray.init(include_dashboard=False)
 
-            # Get all images paths and ignore the .gitkeep file
-            images = [img for img in sorted(os.listdir(images_path)) if img.startswith('.') is False]
+            # Get all survey images paths and ignore the .gitkeep file
+            if no_gi:
+                images = [img for img in sorted(os.listdir(images_path)) if img.startswith('S')]
+            else:
+                images = [img for img in sorted(os.listdir(images_path)) if img.startswith('S') or img.startswith('G')]
 
             # Save the image paths as an object attribute
             self.image_paths = [os.path.join(images_path, img) for img in images]

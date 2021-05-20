@@ -308,7 +308,7 @@ class TrainValidTestManager:
         :param desc: str, description for the progress bar
         :return: dict, object detection metrics results
         """
-        # Declare progrress bar
+        # Declare progress bar
         pbar = tqdm(total=len(data_loader), leave=False, desc=desc)
 
         # Specify that the model will be evaluated
