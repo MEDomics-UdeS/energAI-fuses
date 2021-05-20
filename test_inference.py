@@ -50,6 +50,10 @@ if __name__ == '__main__':
     parser.add_argument('-iou', '--iou_threshold', action='store', type=float, default=0.5,
                         help='IOU threshold')
 
+    # Score threshold argument
+    parser.add_argument('-sc', '--score_threshold', action='store', type=float, default=0.5,
+                        help='Score threshold to filter box predictions')
+
     # Parse arguments
     args = parser.parse_args()
 
@@ -74,7 +78,11 @@ if __name__ == '__main__':
                                             deterministic=True)
 
     # Perform an inference loop and save all images with the ground truth and predicted bounding boxes
-    save_test_images(args.model_file_name, data_loader_manager.data_loader_test, args.iou_threshold, INFERENCE_PATH)
+    save_test_images(model_file_name=args.model_file_name,
+                     data_loader=data_loader_manager.data_loader_test,
+                     iou_threshold=args.iou_threshold,
+                     score_threshold=args.score_threshold,
+                     save_path=INFERENCE_PATH)
 
     # Print file save path location
     print(f'\nInference results saved to: {INFERENCE_PATH}')

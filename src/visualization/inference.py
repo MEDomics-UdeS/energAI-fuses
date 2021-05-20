@@ -20,7 +20,11 @@ from src.utils.constants import CLASS_DICT, FONT_PATH, MODELS_PATH
 from src.utils.helper_functions import filter_by_nms, filter_by_score
 
 
-def save_test_images(model_file_name: str, data_loader: DataLoader, iou_threshold: float, save_path: str) -> None:
+def save_test_images(model_file_name: str,
+                     data_loader: DataLoader,
+                     iou_threshold: float,
+                     score_threshold: float,
+                     save_path: str) -> None:
     """
     Main inference testing function to save images with predicted and ground truth bounding boxes
 
@@ -62,7 +66,7 @@ def save_test_images(model_file_name: str, data_loader: DataLoader, iou_threshol
             preds = filter_by_nms(preds, iou_threshold)
 
             # Filter predicted bounding boxes by using a confidence score threshold
-            preds = filter_by_score(preds, iou_threshold)
+            preds = filter_by_score(preds, score_threshold)
 
             # Load images in the current batch
             images = [data_loader.dataset.load_image(index) for index in indices]

@@ -90,7 +90,11 @@ if __name__ == '__main__':
 
     # IOU threshold argument
     parser.add_argument('-iou', '--iou_threshold', action='store', type=float, default=0.5,
-                        help='IOU threshold for true/false positive box predictions')
+                        help='IOU threshold for non-max suppression')
+
+    # Score threshold argument
+    parser.add_argument('-sc', '--score_threshold', action='store', type=float, default=0.5,
+                        help='Score threshold to filter box predictions')
 
     # Learning rate argument
     parser.add_argument('-lr', '--learning_rate', action='store', type=float, default=0.0003,
@@ -164,6 +168,7 @@ if __name__ == '__main__':
                                                      gradient_accumulation=args.gradient_accumulation,
                                                      pretrained=args.pretrained,
                                                      iou_threshold=args.iou_threshold,
+                                                     score_threshold=args.score_threshold,
                                                      gradient_clip=args.gradient_clip,
                                                      args_dict=vars(args),
                                                      save_model=args.save_model,

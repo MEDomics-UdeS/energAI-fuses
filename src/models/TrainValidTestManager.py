@@ -45,6 +45,7 @@ class TrainValidTestManager:
                  gradient_accumulation: int,
                  pretrained: bool,
                  iou_threshold: float,
+                 score_threshold: float,
                  gradient_clip: float,
                  args_dict: dict,
                  save_model: bool,
@@ -73,6 +74,7 @@ class TrainValidTestManager:
         self.args_dict = args_dict
         self.gradient_clip = gradient_clip
         self.iou_threshold = iou_threshold
+        self.score_threshold = score_threshold
         self.pretrained = pretrained
         self.model_name = model_name
         self.mixed_precision = mixed_precision
@@ -346,7 +348,7 @@ class TrainValidTestManager:
         preds_list = filter_by_nms(preds_list, self.iou_threshold)
 
         # Filter the predictions by bounding box confidence score
-        preds_list = filter_by_score(preds_list, self.iou_threshold)
+        preds_list = filter_by_score(preds_list, self.score_threshold)
 
         # Return the calculated object detection evaluation metrics
         return self.calculate_metrics(preds_list, targets_list)
