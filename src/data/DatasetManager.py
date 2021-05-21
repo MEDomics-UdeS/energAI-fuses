@@ -207,7 +207,7 @@ class DatasetManager:
             transforms.ColorJitter(brightness=data_aug,
                                    contrast=data_aug,
                                    saturation=data_aug,
-                                   hue=data_aug),
+                                   hue=0),
 
             # Convert to tensor
             transforms.ToTensor(),
