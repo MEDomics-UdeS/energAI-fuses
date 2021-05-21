@@ -23,7 +23,6 @@ from tqdm import tqdm
 from torch.utils.data import DataLoader
 from typing import List, Optional
 
-
 from src.utils.constants import CLASS_DICT, LOG_PATH, MODELS_PATH
 from src.data.DataLoaderManager import DataLoaderManager
 from src.models.EarlyStopper import EarlyStopper
@@ -34,6 +33,7 @@ class TrainValidTestManager:
     """
     Training, validation and testing manager.
     """
+
     def __init__(self, data_loader_manager: DataLoaderManager,
                  file_name: str,
                  model_name: str,
@@ -69,63 +69,66 @@ class TrainValidTestManager:
         :param save_model: bool, to save the trained model in the models/ directory
         """
         # Save arguments as object attributes
-        self.file_name = file_name
-        self.save_model = save_model
-        self.args_dict = args_dict
-        self.gradient_clip = gradient_clip
-        self.iou_threshold = iou_threshold
-        self.score_threshold = score_threshold
-        self.pretrained = pretrained
-        self.model_name = model_name
-        self.mixed_precision = mixed_precision
-        self.accumulation_size = gradient_accumulation
-        self.gradient_accumulation = False if gradient_accumulation == 1 else True
-        self.es_patience = es_patience
-        self.max_image_size = max_image_size
+        self.__file_name = file_name
+        self.__save_model = save_model
+        self.__args_dict = args_dict
+        self.__gradient_clip = gradient_clip
+        self.__iou_threshold = iou_threshold
+        self.__score_threshold = score_threshold
+        self.__pretrained = pretrained
+        self.__model_name = model_name
+        self.__mixed_precision = mixed_precision
+        self.__accumulation_size = gradient_accumulation
+        self.__gradient_accumulation = False if gradient_accumulation == 1 else True
+        self.__es_patience = es_patience
+        self.__max_image_size = max_image_size
 
         # Declare steps for tensorboard logging
-        self.train_step = 0
-        self.valid_step = 0
-        self.total_step = 0
+        self.__train_step = 0
+        self.__valid_step = 0
+        self.__total_step = 0
 
         # Declare tensorboard writer
-        self.writer = SummaryWriter(LOG_PATH + file_name)
+        self.__writer = SummaryWriter(LOG_PATH + file_name)
 
         # Get number of classes
-        self.num_classes = len(CLASS_DICT)
+        self.__num_classes = len(CLASS_DICT)
 
         # If early stopping patience is specified, declare an early stopper
-        if self.es_patience is not None:
-            self.early_stopper = EarlyStopper(patience=es_patience, min_delta=es_delta)
+        if self.__es_patience is not None:
+            self.__early_stopper = EarlyStopper(patience=es_patience, min_delta=es_delta)
 
         # Declare gradient scaler for mixed precision
-        self.scaler = GradScaler(enabled=self.mixed_precision)
+        self.__scaler = GradScaler(enabled=self.__mixed_precision)
 
         # Extract the training, validation and testing data loaders
-        self.data_loader_train = data_loader_manager.data_loader_train
-        self.data_loader_valid = data_loader_manager.data_loader_valid
-        self.data_loader_test = data_loader_manager.data_loader_test
+        self.__data_loader_train = data_loader_manager.data_loader_train
+        self.__data_loader_valid = data_loader_manager.data_loader_valid
+        self.__data_loader_test = data_loader_manager.data_loader_test
 
         # Display the datasets and data loaders sizes
         print(f'\n=== Dataset & Data Loader Sizes ===\n\n'
-              f'Training:\t\t{len(self.data_loader_train.dataset)} images\t\t{len(self.data_loader_train)} batches\n'
-              f'Validation:\t\t{len(self.data_loader_valid.dataset)} images\t\t{len(self.data_loader_valid)} batches\n'
-              f'Testing:\t\t{len(self.data_loader_test.dataset)} images\t\t{len(self.data_loader_test)} batches\n')
+              f'Training:\t\t{len(self.__data_loader_train.dataset)} images\t\t'
+              f'{len(self.__data_loader_train)} batches\n'
+              f'Validation:\t\t{len(self.__data_loader_valid.dataset)} images\t\t'
+              f'{len(self.__data_loader_valid)} batches\n'
+              f'Testing:\t\t{len(self.__data_loader_test.dataset)} images\t\t'
+              f'{len(self.__data_loader_test)} batches\n')
 
         # Get model and set last fully-connected layer with the right number of classes
-        self.load_model()
+        self.__load_model()
 
         # Find which parameters to train (those with .requires_grad = True)
-        params = [p for p in self.model.parameters() if p.requires_grad]
+        params = [p for p in self.__model.parameters() if p.requires_grad]
 
         # Define Adam optimizer
-        self.optimizer = torch.optim.Adam(params, lr=learning_rate, weight_decay=weight_decay)
+        self.__optimizer = torch.optim.Adam(params, lr=learning_rate, weight_decay=weight_decay)
 
         # Define device as the GPU if available, else use the CPU
-        self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+        self.__device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
         # Send the model to the device
-        self.model.to(self.device)
+        self.__model.to(self.__device)
 
     def __call__(self, epochs: int) -> None:
         """
@@ -134,21 +137,21 @@ class TrainValidTestManager:
         :param epochs: int, number of epochs
         """
         # Train the model for a specified number of epochs
-        self.train_model(epochs)
+        self.__train_model(epochs)
 
         # Test the trained model
-        self.test_model()
+        self.__test_model()
 
         # Check if we need to save the model
-        if self.save_model:
+        if self.__save_model:
             # Save the model in the models/ folder
-            torch.save(self.model, f'{MODELS_PATH}{self.file_name}_s{self.max_image_size}')
+            torch.save(self.__model, f'{MODELS_PATH}{self.__file_name}_s{self.__max_image_size}')
 
         # Flush and close the tensorboard writer
-        self.writer.flush()
-        self.writer.close()
+        self.__writer.flush()
+        self.__writer.close()
 
-    def train_model(self, epochs: int) -> None:
+    def __train_model(self, epochs: int) -> None:
         """
         Train the model
 
@@ -157,23 +160,23 @@ class TrainValidTestManager:
         # Loop through each epoch
         for epoch in range(1, epochs + 1):
             # Train the model and get the loss
-            loss = self.evaluate(self.data_loader_train, 'Training', epoch)
+            loss = self.__evaluate(self.__data_loader_train, 'Training', epoch)
 
             # Save the current epoch loss for tensorboard
-            self.save_epoch('Training', loss, None, epoch)
+            self.__save_epoch('Training', loss, None, epoch)
 
             # Validate the model and get a performance metric for early stopping
-            metric = self.validate_model(epoch)
+            metric = self.__validate_model(epoch)
 
             # Check if early stopping is enabled
-            if self.es_patience:
+            if self.__es_patience:
                 # Check if the early stopping criterion has been reached
-                if self.early_stopper.step(torch.as_tensor(metric, dtype=torch.float16)):
+                if self.__early_stopper.step(torch.as_tensor(metric, dtype=torch.float16)):
                     # Early stop
-                    print(f'Early stopping criterion has been reached for {self.es_patience} epochs\n')
+                    print(f'Early stopping criterion has been reached for {self.__es_patience} epochs\n')
                     break
 
-    def validate_model(self, epoch: int) -> float:
+    def __validate_model(self, epoch: int) -> float:
         """
         Validate the model for the current epoch
 
@@ -184,23 +187,23 @@ class TrainValidTestManager:
         # Deactivate the autograd engine
         with torch.no_grad():
             # Evaluate the loss on the validation set
-            loss = self.evaluate(self.data_loader_valid, 'Validation Loss', epoch)
+            loss = self.__evaluate(self.__data_loader_valid, 'Validation Loss', epoch)
 
         # Evaluate the object detection metrics on the validation set
-        metrics_dict = self.predict(self.data_loader_valid, f'Validation Metrics Epoch {epoch}')
+        metrics_dict = self.__predict(self.__data_loader_valid, f'Validation Metrics Epoch {epoch}')
 
         # Save the validation results for the current epoch in tensorboard
-        self.save_epoch('Validation', loss, metrics_dict, epoch)
+        self.__save_epoch('Validation', loss, metrics_dict, epoch)
 
         # Return the mean recall per image as an object detection evaluation metric
         return metrics_dict['Recall (mean per image)']
 
-    def test_model(self) -> None:
+    def __test_model(self) -> None:
         """
         Test the trained model
         """
         # Evaluate the object detection metrics on the testing set
-        metrics_dict = self.predict(self.data_loader_test, 'Testing Metrics')
+        metrics_dict = self.__predict(self.__data_loader_test, 'Testing Metrics')
 
         # Print the testing object detection metrics results
         print('=== Testing Results ===\n')
@@ -213,9 +216,9 @@ class TrainValidTestManager:
             metrics_dict[f'hparams/{key}'] = metrics_dict.pop(key)
 
         # Save the hyperparameters with tensorboard
-        self.writer.add_hparams(self.args_dict, metric_dict=metrics_dict)
+        self.__writer.add_hparams(self.__args_dict, metric_dict=metrics_dict)
 
-    def evaluate(self, data_loader: DataLoader, phase: str, epoch: int) -> float:
+    def __evaluate(self, data_loader: DataLoader, phase: str, epoch: int) -> float:
         """
         To perform forward passes, compute the losses and perform backward passes on the model
 
@@ -228,69 +231,69 @@ class TrainValidTestManager:
         pbar = tqdm(total=len(data_loader), leave=False, desc=f'{phase} Epoch {epoch}')
 
         # Specify that the model will be trained
-        self.model.train()
+        self.__model.train()
 
         # Declare empty list to save losses
         loss_list_epoch = []
 
         # Reset the gradient if gradient accumulation is used
-        if self.gradient_accumulation:
-            self.optimizer.zero_grad()
+        if self.__gradient_accumulation:
+            self.__optimizer.zero_grad()
 
         # Loop through each batch in the data loader
         for i, (images, targets) in enumerate(data_loader):
             # Send images and targets to the device
-            images = torch.stack(images).to(self.device)
-            targets = [{k: v.to(self.device) for k, v in t.items()} for t in targets]
+            images = torch.stack(images).to(self.__device)
+            targets = [{k: v.to(self.__device) for k, v in t.items()} for t in targets]
 
             # Get losses for the current batch
-            with autocast(enabled=self.mixed_precision):
-                loss_dict = self.model(images, targets)
+            with autocast(enabled=self.__mixed_precision):
+                loss_dict = self.__model(images, targets)
                 losses = sum(loss for loss in loss_dict.values())
 
             # Check if we are in the 'Training' phase to perform a backward pass
             if 'Training' in phase:
                 # Backward pass for no gradient accumulation + no mixed precision
-                if not self.gradient_accumulation and not self.mixed_precision:
-                    self.optimizer.zero_grad()
+                if not self.__gradient_accumulation and not self.__mixed_precision:
+                    self.__optimizer.zero_grad()
                     losses.backward()
-                    self.optimizer.step()
+                    self.__optimizer.step()
 
                 # Backward pass for no gradient accumulation + mixed precision
-                elif not self.gradient_accumulation and self.mixed_precision:
-                    self.scaler.scale(losses).backward()
-                    self.scaler.step(self.optimizer)
-                    self.scaler.update()
-                    self.optimizer.zero_grad(set_to_none=True)
+                elif not self.__gradient_accumulation and self.__mixed_precision:
+                    self.__scaler.scale(losses).backward()
+                    self.__scaler.step(self.__optimizer)
+                    self.__scaler.update()
+                    self.__optimizer.zero_grad(set_to_none=True)
 
                 # Backward pass for gradient accumulation + no mixed precision
-                elif self.gradient_accumulation and not self.mixed_precision:
+                elif self.__gradient_accumulation and not self.__mixed_precision:
                     losses.backward()
 
-                    if (i + 1) % self.accumulation_size == 0:
-                        clip_grad_norm_(self.model.parameters(), max_norm=self.gradient_clip)
-                        self.optimizer.step()
-                        self.optimizer.zero_grad()
-                        
-                # Backward pass for gradient accumulation + mixed precision
-                elif self.gradient_accumulation and self.mixed_precision:
-                    self.scaler.scale(losses).backward()
+                    if (i + 1) % self.__accumulation_size == 0:
+                        clip_grad_norm_(self.__model.parameters(), max_norm=self.__gradient_clip)
+                        self.__optimizer.step()
+                        self.__optimizer.zero_grad()
 
-                    if (i + 1) % self.accumulation_size == 0:
-                        self.scaler.unscale_(self.optimizer)
-                        clip_grad_norm_(self.model.parameters(), max_norm=self.gradient_clip)
-                        self.scaler.step(self.optimizer)
-                        self.scaler.update()
-                        self.optimizer.zero_grad(set_to_none=True)
-            
+                # Backward pass for gradient accumulation + mixed precision
+                elif self.__gradient_accumulation and self.__mixed_precision:
+                    self.__scaler.scale(losses).backward()
+
+                    if (i + 1) % self.__accumulation_size == 0:
+                        self.__scaler.unscale_(self.__optimizer)
+                        clip_grad_norm_(self.__model.parameters(), max_norm=self.__gradient_clip)
+                        self.__scaler.step(self.__optimizer)
+                        self.__scaler.update()
+                        self.__optimizer.zero_grad(set_to_none=True)
+
             # Append current batch loss to the loss list
             loss_list_epoch.append(losses.item())
-            
+
             # Save batch losses to tensorboard
-            self.save_batch(phase, losses)
-            
+            self.__save_batch(phase, losses)
+
             # Save memory usage to tensorboard
-            self.save_memory()
+            self.__save_memory()
 
             # Update progress bar
             pbar.set_postfix_str(f'Loss: {losses:.5f}')
@@ -300,9 +303,9 @@ class TrainValidTestManager:
         pbar.close()
 
         # Return the mean loss for the current epoch
-        return np.mean(loss_list_epoch)
+        return float(np.mean(loss_list_epoch))
 
-    def predict(self, data_loader: DataLoader, desc: str) -> dict:
+    def __predict(self, data_loader: DataLoader, desc: str) -> dict:
         """
         Perform forward passes to obtain the predicted bounding boxes with the model
 
@@ -314,7 +317,7 @@ class TrainValidTestManager:
         pbar = tqdm(total=len(data_loader), leave=False, desc=desc)
 
         # Specify that the model will be evaluated
-        self.model.eval()
+        self.__model.eval()
 
         # Declare empty lists to store the predicted bounding boxes and the ground truth targets
         preds_list = []
@@ -325,18 +328,18 @@ class TrainValidTestManager:
             # Loop through each batch in the data loader
             for images, targets in data_loader:
                 # Send the images and targets to the device
-                images = torch.stack(images).to(self.device)
-                targets = [{k: v.to(self.device) for k, v in t.items()} for t in targets]
+                images = torch.stack(images).to(self.__device)
+                targets = [{k: v.to(self.__device) for k, v in t.items()} for t in targets]
 
                 # Get predicted bounding boxes
-                preds = self.model(images)
+                preds = self.__model(images)
 
                 # Append the current batch predictions and targets to the lists
                 preds_list += preds
                 targets_list += targets
 
                 # Save the current memory usage
-                self.save_memory()
+                self.__save_memory()
 
                 # Update the progress bar
                 pbar.update()
@@ -345,15 +348,15 @@ class TrainValidTestManager:
         pbar.close()
 
         # Filter the predictions by non-maximum suppression
-        preds_list = filter_by_nms(preds_list, self.iou_threshold)
+        preds_list = filter_by_nms(preds_list, self.__iou_threshold)
 
         # Filter the predictions by bounding box confidence score
-        preds_list = filter_by_score(preds_list, self.score_threshold)
+        preds_list = filter_by_score(preds_list, self.__score_threshold)
 
         # Return the calculated object detection evaluation metrics
-        return self.calculate_metrics(preds_list, targets_list)
+        return self.__calculate_metrics(preds_list, targets_list)
 
-    def calculate_metrics(self, preds_list: List[dict], targets_list: List[dict]) -> dict:
+    def __calculate_metrics(self, preds_list: List[dict], targets_list: List[dict]) -> dict:
         """
         Calculate the object detection evaluation metrics
 
@@ -390,8 +393,8 @@ class TrainValidTestManager:
 
                 # Evaluate if the predictions are True or False positives
                 for i, (value, index) in enumerate(zip(max_iou_list[-1].values, max_iou_list[-1].indices)):
-                    if value.greater(self.iou_threshold) and \
-                       target_labels.data[index].equal(pred_labels.data[i]):
+                    if value.greater(self.__iou_threshold) and \
+                            target_labels.data[index].equal(pred_labels.data[i]):
                         type_list_iter.append(True)
                     else:
                         type_list_iter.append(False)
@@ -408,14 +411,14 @@ class TrainValidTestManager:
 
         # Calculate mean recall and mean precision over all images and store them into a results dictionary
         metrics_dict = {
-            'Recall (mean per image)':      np.mean(recall_list),
-            'Precision (mean per image)':   np.mean(precision_list)
+            'Recall (mean per image)': np.mean(recall_list),
+            'Precision (mean per image)': np.mean(precision_list)
         }
 
         # Return the results dictionary
         return metrics_dict
 
-    def load_model(self, progress: bool = True, trainable_backbone_layers: Optional[int] = None) -> None:
+    def __load_model(self, progress: bool = True, trainable_backbone_layers: Optional[int] = None) -> None:
         """
         Method to load a model from PyTorch
 
@@ -425,39 +428,39 @@ class TrainValidTestManager:
                                           trainable.
         """
         # Check for specified model name, load corresponding model and replace model head with right number of classes
-        if self.model_name == 'fasterrcnn_resnet50_fpn':
-            self.model = detection.fasterrcnn_resnet50_fpn(pretrained=self.pretrained,
-                                                           progress=progress,
-                                                           pretrained_backbone=self.pretrained,
-                                                           trainable_backbone_layers=
-                                                           trainable_backbone_layers)
-            self.replace_model_head()
+        if self.__model_name == 'fasterrcnn_resnet50_fpn':
+            self.__model = detection.fasterrcnn_resnet50_fpn(pretrained=self.__pretrained,
+                                                             progress=progress,
+                                                             pretrained_backbone=self.__pretrained,
+                                                             trainable_backbone_layers=
+                                                             trainable_backbone_layers)
+            self.__replace_model_head()
 
-        elif self.model_name == 'fasterrcnn_mobilenet_v3_large_fpn':
-            self.model = detection.fasterrcnn_mobilenet_v3_large_fpn(pretrained=self.pretrained,
-                                                                     progress=progress,
-                                                                     pretrained_backbone=self.pretrained,
-                                                                     trainable_backbone_layers=
-                                                                     trainable_backbone_layers)
-            self.replace_model_head()
+        elif self.__model_name == 'fasterrcnn_mobilenet_v3_large_fpn':
+            self.__model = detection.fasterrcnn_mobilenet_v3_large_fpn(pretrained=self.__pretrained,
+                                                                       progress=progress,
+                                                                       pretrained_backbone=self.__pretrained,
+                                                                       trainable_backbone_layers=
+                                                                       trainable_backbone_layers)
+            self.__replace_model_head()
 
-        elif self.model_name == 'fasterrcnn_mobilenet_v3_large_320_fpn':
-            self.model = detection.fasterrcnn_mobilenet_v3_large_320_fpn(pretrained=self.pretrained,
-                                                                         progress=progress,
-                                                                         pretrained_backbone=self.pretrained,
-                                                                         trainable_backbone_layers=
-                                                                         trainable_backbone_layers)
-            self.replace_model_head()
+        elif self.__model_name == 'fasterrcnn_mobilenet_v3_large_320_fpn':
+            self.__model = detection.fasterrcnn_mobilenet_v3_large_320_fpn(pretrained=self.__pretrained,
+                                                                           progress=progress,
+                                                                           pretrained_backbone=self.__pretrained,
+                                                                           trainable_backbone_layers=
+                                                                           trainable_backbone_layers)
+            self.__replace_model_head()
 
-        elif self.model_name == 'retinanet_resnet50_fpn':
-            self.model = detection.retinanet_resnet50_fpn(pretrained=self.pretrained,
-                                                          progress=progress,
-                                                          pretrained_backbone=self.pretrained,
-                                                          trainable_backbone_layers=
-                                                          trainable_backbone_layers)
-            self.replace_model_head()
+        elif self.__model_name == 'retinanet_resnet50_fpn':
+            self.__model = detection.retinanet_resnet50_fpn(pretrained=self.__pretrained,
+                                                            progress=progress,
+                                                            pretrained_backbone=self.__pretrained,
+                                                            trainable_backbone_layers=
+                                                            trainable_backbone_layers)
+            self.__replace_model_head()
 
-        elif self.model_name == 'detr':
+        elif self.__model_name == 'detr':
             """
             To Do: Implement DETR
 
@@ -467,7 +470,7 @@ class TrainValidTestManager:
             """
             raise NotImplementedError
 
-        elif self.model_name == 'perceiver':
+        elif self.__model_name == 'perceiver':
             """
             To Do : Implement Perceiver
 
@@ -477,30 +480,30 @@ class TrainValidTestManager:
             """
             raise NotImplementedError
 
-    def replace_model_head(self) -> None:
+    def __replace_model_head(self) -> None:
         """
         Replace model head with the right number of classes (for transfer learning)
         """
-        if 'fasterrcnn' in self.model_name:
-            in_channels = self.model.roi_heads.box_predictor.cls_score.in_features
+        if 'fasterrcnn' in self.__model_name:
+            in_channels = self.__model.roi_heads.box_predictor.cls_score.in_features
 
-            self.model.roi_heads.box_predictor = \
+            self.__model.roi_heads.box_predictor = \
                 detection.faster_rcnn.FastRCNNPredictor(in_channels=in_channels,
-                                                        num_classes=self.num_classes)
+                                                        num_classes=self.__num_classes)
 
-        elif 'retinanet' in self.model_name:
-            in_channels = self.model.backbone.out_channels
-            num_anchors = self.model.head.classification_head.num_anchors
+        elif 'retinanet' in self.__model_name:
+            in_channels = self.__model.backbone.out_channels
+            num_anchors = self.__model.head.classification_head.num_anchors
 
-            self.model.head = \
+            self.__model.head = \
                 detection.retinanet.RetinaNetHead(in_channels=in_channels,
                                                   num_anchors=num_anchors,
-                                                  num_classes=self.num_classes)
+                                                  num_classes=self.__num_classes)
 
         else:
             raise NotImplementedError
 
-    def save_batch(self, phase: str, loss: float) -> None:
+    def __save_batch(self, phase: str, loss: float) -> None:
         """
         Save batch losses to tensorboard
 
@@ -508,13 +511,13 @@ class TrainValidTestManager:
         :param loss: float, total loss per batch
         """
         if phase == 'Training':
-            self.writer.add_scalar(f'Loss (total per batch)/{phase}', loss, self.train_step)
-            self.train_step += 1
+            self.__writer.add_scalar(f'Loss (total per batch)/{phase}', loss, self.__train_step)
+            self.__train_step += 1
         elif phase == 'Validation':
-            self.writer.add_scalar(f'Loss (total per batch)/{phase}', loss, self.valid_step)
-            self.valid_step += 1
+            self.__writer.add_scalar(f'Loss (total per batch)/{phase}', loss, self.__valid_step)
+            self.__valid_step += 1
 
-    def save_epoch(self, phase: str, loss: float, metrics_dict: dict, epoch: int) -> None:
+    def __save_epoch(self, phase: str, loss: float, metrics_dict: Optional[dict], epoch: int) -> None:
         """
         Save epoch results to tensorboard
 
@@ -523,13 +526,13 @@ class TrainValidTestManager:
         :param metrics_dict: dict, contains the object detection evaluation metrics
         :param epoch: int, current epoch
         """
-        self.writer.add_scalar(f'Loss (mean per epoch)/{phase}', loss, epoch)
+        self.__writer.add_scalar(f'Loss (mean per epoch)/{phase}', loss, epoch)
 
         if metrics_dict is not None:
             for key, value in metrics_dict.items():
-                self.writer.add_scalar(f'{key}/{phase}', value, epoch)
+                self.__writer.add_scalar(f'{key}/{phase}', value, epoch)
 
-    def save_memory(self, scale: float = 1e-9) -> None:
+    def __save_memory(self, scale: float = 1e-9) -> None:
         """
         Save current memory usage to tensorboard
 
@@ -539,8 +542,8 @@ class TrainValidTestManager:
         mem_allocated = memory_allocated(0) * scale
         mem_free = mem_reserved - mem_allocated
 
-        self.writer.add_scalar('Memory/Reserved', mem_reserved, self.total_step)
-        self.writer.add_scalar('Memory/Allocated', mem_allocated, self.total_step)
-        self.writer.add_scalar('Memory/Free', mem_free, self.total_step)
+        self.__writer.add_scalar('Memory/Reserved', mem_reserved, self.__total_step)
+        self.__writer.add_scalar('Memory/Allocated', mem_allocated, self.__total_step)
+        self.__writer.add_scalar('Memory/Free', mem_free, self.__total_step)
 
-        self.total_step += 1
+        self.__total_step += 1

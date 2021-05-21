@@ -126,7 +126,6 @@ class FuseDataset(Dataset):
     def load_image(self, index: int) -> Image:
         """
         Load an image as a PIL Image object
-
         :param index: int, image index
         :return: PIL Image
         """
@@ -182,4 +181,4 @@ def ray_load_images(image_paths: List[str], index: int) -> Tuple[Image.Image, in
     :param index: int, current index
     :return: tuple, PIL Image and current index
     """
-    return Image.open(image_paths[index]), index#.convert("RGB"), index
+    return Image.open(image_paths[index]), index

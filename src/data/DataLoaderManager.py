@@ -48,7 +48,7 @@ class DataLoaderManager:
                                                 batch_size=batch_size_ga,
                                                 shuffle=not deterministic,
                                                 num_workers=num_workers,
-                                                collate_fn=self.collate_fn,
+                                                collate_fn=self.__collate_fn,
                                                 worker_init_fn=seed_worker if deterministic else None)
 
         # If the validation dataset is not empty, declare the validation data loader
@@ -57,7 +57,7 @@ class DataLoaderManager:
                                                 batch_size=batch_size_ga,
                                                 shuffle=not deterministic,
                                                 num_workers=num_workers,
-                                                collate_fn=self.collate_fn,
+                                                collate_fn=self.__collate_fn,
                                                 worker_init_fn=seed_worker if deterministic else None)
 
         # If the testing dataset is not empty, declare the testing data loader
@@ -66,11 +66,11 @@ class DataLoaderManager:
                                                batch_size=batch_size_ga,
                                                shuffle=not deterministic,
                                                num_workers=num_workers,
-                                               collate_fn=self.collate_fn,
+                                               collate_fn=self.__collate_fn,
                                                worker_init_fn=seed_worker if deterministic else None)
 
     @staticmethod
-    def collate_fn(batch: list) -> tuple:
+    def __collate_fn(batch: list) -> tuple:
         """
         Custom batching collation function.
 

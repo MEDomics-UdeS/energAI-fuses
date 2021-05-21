@@ -34,7 +34,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Processing inputs')
 
     # Model file name argument
-    parser.add_argument('-mfn', '--model_file_name', action='store', type=str, default='2021-05-17_16-35-16_s1024',
+    parser.add_argument('-mfn', '--model_file_name', action='store', type=str, default='2021-05-20_12-03-28_s1024',
                         help=f'Model file name located in {MODELS_PATH}')
 
     # To compute mean & std deviation
@@ -54,6 +54,10 @@ if __name__ == '__main__':
     parser.add_argument('-sc', '--score_threshold', action='store', type=float, default=0.5,
                         help='Score threshold to filter box predictions')
 
+    # Google Images argument
+    parser.add_argument('-no_gi', '--no_google_images', action='store_true',
+                        help='Exclude the Google Images photos from the training subset')
+
     # Parse arguments
     args = parser.parse_args()
 
@@ -68,7 +72,8 @@ if __name__ == '__main__':
                                      data_aug=0,
                                      validation_size=0,
                                      test_size=1,
-                                     mean_std=args.mean_std)
+                                     mean_std=args.mean_std,
+                                     no_gi=args.no_google_images)
 
     # Declare data loader manager
     data_loader_manager = DataLoaderManager(dataset_manager=dataset_manager,

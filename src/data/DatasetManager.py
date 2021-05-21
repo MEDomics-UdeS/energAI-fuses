@@ -56,7 +56,7 @@ class DatasetManager:
         :param mean_std: bool, if True, mean and std values for RGB channel normalization will be calculated
                                if False, mean and std precalculated values will be used
         """
-        self.no_gi = no_gi
+        self.__no_gi = no_gi
 
         if max_image_size > 0:
             # Declare image file extension format
@@ -77,21 +77,21 @@ class DatasetManager:
                     print(f'All images will be resized to {(max_image_size, max_image_size)}')
 
                     # Resize all images
-                    self.resize_images(max_image_size, num_workers)
+                    self.__resize_images(max_image_size, num_workers)
             else:
                 # Check if any image exists in the data/raw folder
                 if any(file.endswith(image_ext) for file in os.listdir(RAW_PATH)):
                     # Resize all images
-                    self.resize_images(max_image_size, num_workers)
+                    self.__resize_images(max_image_size, num_workers)
                 else:
                     # Ask the user if the data should be downloaded
                     if input('Raw data folder contains no images. '
                              'Do you want to download them? (~ 3 GB) (y/n): ') == 'y':
                         # Download the data
-                        self.fetch_data(IMAGES_ID, ANNOTATIONS_ID)
+                        self.__fetch_data(IMAGES_ID, ANNOTATIONS_ID)
 
                         # Resize all images
-                        self.resize_images(max_image_size, num_workers)
+                        self.__resize_images(max_image_size, num_workers)
                     else:
                         # Exit the program
                         sys.exit(1)
@@ -105,27 +105,27 @@ class DatasetManager:
         total_size = sum(image_path.rsplit('/')[-1].startswith('S') for image_path in self.dataset_train.image_paths)
 
         # Split the training set into training + validation
-        self.dataset_train, self.dataset_valid = self.split_dataset(self.dataset_train, self.dataset_valid,
-                                                                    validation_size, total_size)
+        self.dataset_train, self.dataset_valid = self.__split_dataset(self.dataset_train, self.dataset_valid,
+                                                                      validation_size, total_size)
 
         # Split the training set into training + testing
-        self.dataset_train, self.dataset_test = self.split_dataset(self.dataset_train, self.dataset_test,
-                                                                   test_size, total_size)
+        self.dataset_train, self.dataset_test = self.__split_dataset(self.dataset_train, self.dataset_test,
+                                                                     test_size, total_size)
 
         if mean_std:
             # Recalculate mean and standard deviation
-            mean, std = self.calculate_mean_std(num_workers)
+            mean, std = self.__calculate_mean_std(num_workers)
         else:
             # Use precalculated mean and standard deviation
             mean, std = MEAN, STD
 
         # Apply transforms to the training, validation and testing datasets
-        self.dataset_train.transforms = self.transforms_train(mean, std, data_aug)
-        self.dataset_valid.transforms = self.transforms_base(mean, std)
-        self.dataset_test.transforms = self.transforms_base(mean, std)
+        self.dataset_train.transforms = self.__transforms_train(mean, std, data_aug)
+        self.dataset_valid.transforms = self.__transforms_base(mean, std)
+        self.dataset_test.transforms = self.__transforms_base(mean, std)
 
     @staticmethod
-    def download_file_from_google_drive(file_id: str, dest: str, chunk_size: int = 32768) -> None:
+    def __download_file_from_google_drive(file_id: str, dest: str, chunk_size: int = 32768) -> None:
         """
         Method to download a file from Google Drive
 
@@ -162,7 +162,7 @@ class DatasetManager:
         else:
             raise Exception(f'Error {response.status_code}: {response.reason}')
 
-    def fetch_data(self, images_id: str, annotations_id: str) -> None:
+    def __fetch_data(self, images_id: str, annotations_id: str) -> None:
         """
         Method to fetch the images and annotations from Google Drive
 
@@ -174,7 +174,7 @@ class DatasetManager:
 
         # Download images zip file
         print('\nDownloading images to:\t\t', RAW_PATH)
-        self.download_file_from_google_drive(images_id, images_zip)
+        self.__download_file_from_google_drive(images_id, images_zip)
 
         # Unzip the images zip file
         print('Done!\nUnzipping images...')
@@ -187,13 +187,13 @@ class DatasetManager:
 
         # Download the annotations file
         print('Done!\n\nDownloading annotations to:\t', ANNOTATIONS_PATH)
-        self.download_file_from_google_drive(annotations_id, ANNOTATIONS_PATH)
+        self.__download_file_from_google_drive(annotations_id, ANNOTATIONS_PATH)
         print('Done!')
 
     @staticmethod
-    def transforms_train(mean: Tuple[float, float, float],
-                         std: Tuple[float, float, float],
-                         data_aug: float) -> transforms.Compose:
+    def __transforms_train(mean: Tuple[float, float, float],
+                           std: Tuple[float, float, float],
+                           data_aug: float) -> transforms.Compose:
         """
         Method to construct the training dataset transforms
 
@@ -220,8 +220,8 @@ class DatasetManager:
         return transforms.Compose(transforms_list)
 
     @staticmethod
-    def transforms_base(mean: Tuple[float, float, float],
-                        std: Tuple[float, float, float]) -> transforms.Compose:
+    def __transforms_base(mean: Tuple[float, float, float],
+                          std: Tuple[float, float, float]) -> transforms.Compose:
         """
         Method to construct the validation and testing datasets transforms
 
@@ -240,7 +240,7 @@ class DatasetManager:
         # Return a composed transforms list
         return transforms.Compose(transforms_list)
 
-    def split_dataset(self, dataset_in: FuseDataset, dataset_out: FuseDataset, split: float, total_size: int) \
+    def __split_dataset(self, dataset_in: FuseDataset, dataset_out: FuseDataset, split: float, total_size: int) \
             -> Tuple[FuseDataset, FuseDataset]:
         """
         Split a dataset into two sub-datasets, used to create the validation and testing dataset splits
@@ -252,7 +252,7 @@ class DatasetManager:
         :return: tuple of two FuseDataset objects, which are the dataset_in and dataset_out after splitting
         """
 
-        if not self.no_gi:
+        if not self.__no_gi:
             google_image_paths = [image_path for image_path in dataset_in.image_paths
                                   if image_path.rsplit('/')[-1].startswith('G')]
 
@@ -282,13 +282,13 @@ class DatasetManager:
         # Insert the extracted image paths, images and targets into dataset_out
         dataset_out.add_data(image_paths, images, targets)
 
-        if not self.no_gi:
+        if not self.__no_gi:
             dataset_in.add_data(google_image_paths, google_images, google_targets)
 
         # Return the split input and output datasets
         return dataset_in, dataset_out
 
-    def calculate_mean_std(self, num_workers: int) -> Tuple[Tuple[float, float, float], Tuple[float, float, float]]:
+    def __calculate_mean_std(self, num_workers: int) -> Tuple[Tuple[float, float, float], Tuple[float, float, float]]:
         """
         Method to calculate the mean and standard deviation for each channel (R, G, B) for each image
 
@@ -353,7 +353,7 @@ class DatasetManager:
         return mean, std
 
     @staticmethod
-    def resize_images(max_image_size: int, num_workers: int) -> None:
+    def __resize_images(max_image_size: int, num_workers: int) -> None:
         """
         Method to resize all images in the data/raw folder and save them to the data/resized folder
 
@@ -461,7 +461,7 @@ def ray_resize_images(image_paths: List[str], max_image_size: int, annotations: 
     num_boxes = len(box_array)
 
     # Open the current image
-    img = Image.open(image_paths[idx])#.convert("RGB")
+    img = Image.open(image_paths[idx])
 
     # Get the current image size
     original_size = img.size
@@ -540,7 +540,7 @@ def ray_get_rgb(image_paths: List[str], idx: int) -> Tuple[np.array, np.array, n
     :return: tuple, r, g, b values numpy arrays for the current image and the current index
     """
     # Open the current image
-    image = Image.open(image_paths[idx])#.convert("RGB")
+    image = Image.open(image_paths[idx])
 
     # Get the values of each pixel in the R, G, B channels
     r = np.dstack(np.array(image)[:, :, 0])
