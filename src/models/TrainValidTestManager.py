@@ -15,7 +15,6 @@ import torch
 from torch.nn.utils import clip_grad_norm_
 from torch.cuda.amp import autocast
 from torch.cuda.amp.grad_scaler import GradScaler
-import torchvision.models.detection as detection
 from torch.cuda import memory_reserved, memory_allocated
 from src.models.SummaryWriter import SummaryWriter
 from torchvision.ops import box_iou
@@ -26,6 +25,7 @@ from typing import List, Optional
 from src.utils.constants import CLASS_DICT, LOG_PATH, MODELS_PATH
 from src.data.DataLoaderManager import DataLoaderManager
 from src.models.EarlyStopper import EarlyStopper
+from src.models.models import load_model
 from src.utils.helper_functions import filter_by_nms, filter_by_score
 
 
@@ -66,7 +66,7 @@ class TrainValidTestManager:
         :param iou_threshold: float, iou threshold for non-maximum suppression and score filtering the predicted boxes
         :param gradient_clip: float, value at which to clip the gradient when using gradient accumulation
         :param args_dict: dict, dictionary of all parameters to log the hyperparameters in tensorboard
-        :param save_model: bool, to save the trained model in the models/ directory
+        :param save_model: bool, to save the trained model in the saved_models/ directory
         """
         # Save arguments as object attributes
         self.__file_name = file_name
@@ -116,7 +116,7 @@ class TrainValidTestManager:
               f'{len(self.__data_loader_test)} batches\n')
 
         # Get model and set last fully-connected layer with the right number of classes
-        self.__load_model()
+        self.__model = load_model(self.__model_name, self.__pretrained, self.__num_classes)
 
         # Find which parameters to train (those with .requires_grad = True)
         params = [p for p in self.__model.parameters() if p.requires_grad]
@@ -144,7 +144,7 @@ class TrainValidTestManager:
 
         # Check if we need to save the model
         if self.__save_model:
-            # Save the model in the models/ folder
+            # Save the model in the saved_models/ folder
             torch.save(self.__model, f'{MODELS_PATH}{self.__file_name}_s{self.__max_image_size}')
 
         # Flush and close the tensorboard writer
@@ -218,6 +218,46 @@ class TrainValidTestManager:
         # Save the hyperparameters with tensorboard
         self.__writer.add_hparams(self.__args_dict, metric_dict=metrics_dict)
 
+    def __update_model(self, losses: torch.Tensor, i: int) -> None:
+        """
+
+        :param losses:
+        :param i:
+        :return:
+        """
+        # Backward pass for no gradient accumulation + no mixed precision
+        if not self.__gradient_accumulation and not self.__mixed_precision:
+            self.__optimizer.zero_grad()
+            losses.backward()
+            self.__optimizer.step()
+
+        # Backward pass for no gradient accumulation + mixed precision
+        elif not self.__gradient_accumulation and self.__mixed_precision:
+            self.__scaler.scale(losses).backward()
+            self.__scaler.step(self.__optimizer)
+            self.__scaler.update()
+            self.__optimizer.zero_grad(set_to_none=True)
+
+        # Backward pass for gradient accumulation + no mixed precision
+        elif self.__gradient_accumulation and not self.__mixed_precision:
+            losses.backward()
+
+            if (i + 1) % self.__accumulation_size == 0:
+                clip_grad_norm_(self.__model.parameters(), max_norm=self.__gradient_clip)
+                self.__optimizer.step()
+                self.__optimizer.zero_grad()
+
+        # Backward pass for gradient accumulation + mixed precision
+        elif self.__gradient_accumulation and self.__mixed_precision:
+            self.__scaler.scale(losses).backward()
+
+            if (i + 1) % self.__accumulation_size == 0:
+                self.__scaler.unscale_(self.__optimizer)
+                clip_grad_norm_(self.__model.parameters(), max_norm=self.__gradient_clip)
+                self.__scaler.step(self.__optimizer)
+                self.__scaler.update()
+                self.__optimizer.zero_grad(set_to_none=True)
+
     def __evaluate(self, data_loader: DataLoader, phase: str, epoch: int) -> float:
         """
         To perform forward passes, compute the losses and perform backward passes on the model
@@ -253,38 +293,7 @@ class TrainValidTestManager:
 
             # Check if we are in the 'Training' phase to perform a backward pass
             if 'Training' in phase:
-                # Backward pass for no gradient accumulation + no mixed precision
-                if not self.__gradient_accumulation and not self.__mixed_precision:
-                    self.__optimizer.zero_grad()
-                    losses.backward()
-                    self.__optimizer.step()
-
-                # Backward pass for no gradient accumulation + mixed precision
-                elif not self.__gradient_accumulation and self.__mixed_precision:
-                    self.__scaler.scale(losses).backward()
-                    self.__scaler.step(self.__optimizer)
-                    self.__scaler.update()
-                    self.__optimizer.zero_grad(set_to_none=True)
-
-                # Backward pass for gradient accumulation + no mixed precision
-                elif self.__gradient_accumulation and not self.__mixed_precision:
-                    losses.backward()
-
-                    if (i + 1) % self.__accumulation_size == 0:
-                        clip_grad_norm_(self.__model.parameters(), max_norm=self.__gradient_clip)
-                        self.__optimizer.step()
-                        self.__optimizer.zero_grad()
-
-                # Backward pass for gradient accumulation + mixed precision
-                elif self.__gradient_accumulation and self.__mixed_precision:
-                    self.__scaler.scale(losses).backward()
-
-                    if (i + 1) % self.__accumulation_size == 0:
-                        self.__scaler.unscale_(self.__optimizer)
-                        clip_grad_norm_(self.__model.parameters(), max_norm=self.__gradient_clip)
-                        self.__scaler.step(self.__optimizer)
-                        self.__scaler.update()
-                        self.__optimizer.zero_grad(set_to_none=True)
+                self.__update_model(losses, i)
 
             # Append current batch loss to the loss list
             loss_list_epoch.append(losses.item())
@@ -417,91 +426,6 @@ class TrainValidTestManager:
 
         # Return the results dictionary
         return metrics_dict
-
-    def __load_model(self, progress: bool = True, trainable_backbone_layers: Optional[int] = None) -> None:
-        """
-        Method to load a model from PyTorch
-
-        :param progress: bool, if True, displays a progress bar of the download to stderr
-        :param trainable_backbone_layers: int, number of trainable (not frozen) resnet layers starting from final block.
-                                          Valid values are between 0 and 5, with 5 meaning all backbone layers are
-                                          trainable.
-        """
-        # Check for specified model name, load corresponding model and replace model head with right number of classes
-        if self.__model_name == 'fasterrcnn_resnet50_fpn':
-            self.__model = detection.fasterrcnn_resnet50_fpn(pretrained=self.__pretrained,
-                                                             progress=progress,
-                                                             pretrained_backbone=self.__pretrained,
-                                                             trainable_backbone_layers=
-                                                             trainable_backbone_layers)
-            self.__replace_model_head()
-
-        elif self.__model_name == 'fasterrcnn_mobilenet_v3_large_fpn':
-            self.__model = detection.fasterrcnn_mobilenet_v3_large_fpn(pretrained=self.__pretrained,
-                                                                       progress=progress,
-                                                                       pretrained_backbone=self.__pretrained,
-                                                                       trainable_backbone_layers=
-                                                                       trainable_backbone_layers)
-            self.__replace_model_head()
-
-        elif self.__model_name == 'fasterrcnn_mobilenet_v3_large_320_fpn':
-            self.__model = detection.fasterrcnn_mobilenet_v3_large_320_fpn(pretrained=self.__pretrained,
-                                                                           progress=progress,
-                                                                           pretrained_backbone=self.__pretrained,
-                                                                           trainable_backbone_layers=
-                                                                           trainable_backbone_layers)
-            self.__replace_model_head()
-
-        elif self.__model_name == 'retinanet_resnet50_fpn':
-            self.__model = detection.retinanet_resnet50_fpn(pretrained=self.__pretrained,
-                                                            progress=progress,
-                                                            pretrained_backbone=self.__pretrained,
-                                                            trainable_backbone_layers=
-                                                            trainable_backbone_layers)
-            self.__replace_model_head()
-
-        elif self.__model_name == 'detr':
-            """
-            To Do: Implement DETR
-
-            Paper:              https://arxiv.org/abs/2005.12872
-            Official Repo:      https://github.com/facebookresearch/detr
-            Unofficial Repo:    https://github.com/clive819/Modified-DETR
-            """
-            raise NotImplementedError
-
-        elif self.__model_name == 'perceiver':
-            """
-            To Do : Implement Perceiver
-
-            Paper:              https://arxiv.org/abs/2103.03206
-            Unofficial Repo:    https://github.com/lucidrains/perceiver-pytorch
-            Unofficial Repo:    https://github.com/louislva/deepmind-perceiver
-            """
-            raise NotImplementedError
-
-    def __replace_model_head(self) -> None:
-        """
-        Replace model head with the right number of classes (for transfer learning)
-        """
-        if 'fasterrcnn' in self.__model_name:
-            in_channels = self.__model.roi_heads.box_predictor.cls_score.in_features
-
-            self.__model.roi_heads.box_predictor = \
-                detection.faster_rcnn.FastRCNNPredictor(in_channels=in_channels,
-                                                        num_classes=self.__num_classes)
-
-        elif 'retinanet' in self.__model_name:
-            in_channels = self.__model.backbone.out_channels
-            num_anchors = self.__model.head.classification_head.num_anchors
-
-            self.__model.head = \
-                detection.retinanet.RetinaNetHead(in_channels=in_channels,
-                                                  num_anchors=num_anchors,
-                                                  num_classes=self.__num_classes)
-
-        else:
-            raise NotImplementedError
 
     def __save_batch(self, phase: str, loss: float) -> None:
         """

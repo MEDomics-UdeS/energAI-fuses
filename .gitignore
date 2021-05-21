@@ -93,5 +93,5 @@ target/
 
 # Scratchpad
 scratch.py
-# Trained models
-/models/
+# Trained saved_models
+/saved_models/

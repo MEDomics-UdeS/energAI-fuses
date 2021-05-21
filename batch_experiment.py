@@ -7,7 +7,7 @@ Authors:
     - Shreyas Sunil Kulkarni
 
 Description:
-    Allows to perform multiple src/models/experiment.py runs with different parameters
+    Allows to perform multiple src/saved_models/experiment.py runs with different parameters
 """
 
 import subprocess as sp

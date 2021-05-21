@@ -77,8 +77,8 @@ class EarlyStopper:
         :param percentage: bool, if True, percentage mode
                                  if False, absolute value mode
         """
-        if mode not in {'min', 'max'}:
-            raise ValueError('mode ' + mode + ' is unknown!')
+        assert mode in {'min', 'max'}
+
         if not percentage:
             if mode == 'min':
                 self.__is_better = lambda a, best: a < best - min_delta
