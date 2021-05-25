@@ -73,7 +73,8 @@ if __name__ == '__main__':
                                      validation_size=0,
                                      test_size=1,
                                      mean_std=args.mean_std,
-                                     no_gi=args.no_google_images)
+                                     no_gi=args.no_google_images,
+                                     seed=0)
 
     # Declare data loader manager
     data_loader_manager = DataLoaderManager(dataset_manager=dataset_manager,

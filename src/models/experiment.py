@@ -147,7 +147,8 @@ if __name__ == '__main__':
                                      validation_size=args.validation_size,
                                      test_size=args.test_size,
                                      mean_std=args.mean_std,
-                                     no_gi=args.no_google_images)
+                                     no_gi=args.no_google_images,
+                                     seed=args.random_seed)
 
     # Declare data loader manager
     data_loader_manager = DataLoaderManager(dataset_manager=dataset_manager,

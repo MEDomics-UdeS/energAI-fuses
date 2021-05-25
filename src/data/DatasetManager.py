@@ -21,8 +21,8 @@ import ray
 import requests
 from PIL import Image, ImageDraw
 from torchvision import transforms
-from tqdm import tqdm
-from tqdm import trange
+from sklearn.model_selection import StratifiedShuffleSplit
+from tqdm import tqdm, trange
 from typing import Tuple, List
 
 from src.utils.constants import *
@@ -33,6 +33,7 @@ class DatasetManager:
     """
     Dataset Manager class, handles the creation of the training, validation and testing datasets.
     """
+
     def __init__(self,
                  images_path: str,
                  targets_path: str,
@@ -42,7 +43,8 @@ class DatasetManager:
                  validation_size: float,
                  test_size: float,
                  mean_std: bool,
-                 no_gi: bool) -> None:
+                 no_gi: bool,
+                 seed: int) -> None:
         """
         Class constructor
 
@@ -57,6 +59,7 @@ class DatasetManager:
                                if False, mean and std precalculated values will be used
         """
         self.__no_gi = no_gi
+        self.__seed = seed
 
         if max_image_size > 0:
             # Declare image file extension format
@@ -261,20 +264,16 @@ class DatasetManager:
 
             google_image_paths, google_images, google_targets = dataset_in.extract_data(index_list=google_indices)
 
-        # Get input dataset size
-        dataset_size = len(dataset_in)
+        most_freq_labels = [max(set(target['labels'].tolist()), key=target['labels'].tolist().count)
+                            for target in dataset_in.targets]
 
-        # Get list of indices
-        indices = list(range(dataset_size))
+        strat_split = StratifiedShuffleSplit(n_splits=1,
+                                             test_size=split * total_size / len(dataset_in),
+                                             random_state=self.__seed)
 
-        # Find at which index the data should be split
-        split_idx = int(np.floor(split * total_size))
-
-        # Shuffle the indices
-        np.random.shuffle(indices)
-
-        # Slice the indices up to the split index
-        indices = indices[0:split_idx]
+        # Iterate through generator object once and break
+        for _, indices in strat_split.split([0] * len(dataset_in), most_freq_labels):
+            break
 
         # Extract the image paths, images and targets from dataset_in
         image_paths, images, targets = dataset_in.extract_data(index_list=indices)
