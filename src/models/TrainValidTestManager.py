@@ -22,7 +22,7 @@ from tqdm import tqdm
 from torch.utils.data import DataLoader
 from typing import List, Optional
 
-from src.utils.constants import CLASS_DICT, LOG_PATH, MODELS_PATH
+from src.utils.constants import CLASS_DICT, LOG_PATH, MODELS_PATH, EVAL_METRIC
 from src.data.DataLoaderManager import DataLoaderManager
 from src.models.EarlyStopper import EarlyStopper
 from src.models.models import load_model
@@ -130,22 +130,33 @@ class TrainValidTestManager:
         # Send the model to the device
         self.__model.to(self.__device)
 
+        self.__best_model = None
+        self.__best_epoch = 0
+        self.__best_score = 0
+
     def __call__(self, epochs: int) -> None:
         """
         Class __call__ method, called when object() is called
 
         :param epochs: int, number of epochs
         """
+        self.__epochs = epochs
+
         # Train the model for a specified number of epochs
         self.__train_model(epochs)
 
-        # Test the trained model
-        self.__test_model()
+        print(f'\nBest epoch:\t\t\t\t\t\t\t{self.__best_epoch}/{self.__epochs}')
+        print(f'Best score:\t\t\t\t\t\t\t{EVAL_METRIC}: {self.__best_score:.2%}')
 
         # Check if we need to save the model
         if self.__save_model:
             # Save the model in the saved_models/ folder
-            torch.save(self.__model, f'{MODELS_PATH}{self.__file_name}_s{self.__max_image_size}')
+            filename = f'{MODELS_PATH}{self.__file_name}_s{self.__max_image_size}'
+            torch.save(self.__best_model, filename)
+            print(f'Best model saved to:\t\t\t\t{filename}\n')
+
+        # Test the trained model
+        self.__test_model()
 
         # Flush and close the tensorboard writer
         self.__writer.flush()
@@ -190,20 +201,25 @@ class TrainValidTestManager:
             loss = self.__evaluate(self.__data_loader_valid, 'Validation Loss', epoch)
 
         # Evaluate the object detection metrics on the validation set
-        metrics_dict = self.__predict(self.__data_loader_valid, f'Validation Metrics Epoch {epoch}')
+        metrics_dict = self.__predict(self.__model, self.__data_loader_valid, f'Validation Metrics Epoch {epoch}')
+
+        if metrics_dict[EVAL_METRIC] > self.__best_score:
+            self.__best_model = self.__model
+            self.__best_score = metrics_dict[EVAL_METRIC]
+            self.__best_epoch = epoch
 
         # Save the validation results for the current epoch in tensorboard
         self.__save_epoch('Validation', loss, metrics_dict, epoch)
 
-        # Return the mean recall per image as an object detection evaluation metric
-        return metrics_dict['Recall (mean per image)']
+        # Return the evaluation metric
+        return metrics_dict[EVAL_METRIC]
 
     def __test_model(self) -> None:
         """
         Test the trained model
         """
         # Evaluate the object detection metrics on the testing set
-        metrics_dict = self.__predict(self.__data_loader_test, 'Testing Metrics')
+        metrics_dict = self.__predict(self.__best_model, self.__data_loader_test, 'Testing Metrics')
 
         # Print the testing object detection metrics results
         print('=== Testing Results ===\n')
@@ -314,7 +330,7 @@ class TrainValidTestManager:
         # Return the mean loss for the current epoch
         return float(np.mean(loss_list_epoch))
 
-    def __predict(self, data_loader: DataLoader, desc: str) -> dict:
+    def __predict(self, model, data_loader: DataLoader, desc: str) -> dict:
         """
         Perform forward passes to obtain the predicted bounding boxes with the model
 
@@ -326,7 +342,7 @@ class TrainValidTestManager:
         pbar = tqdm(total=len(data_loader), leave=False, desc=desc)
 
         # Specify that the model will be evaluated
-        self.__model.eval()
+        model.eval()
 
         # Declare empty lists to store the predicted bounding boxes and the ground truth targets
         preds_list = []
@@ -341,7 +357,7 @@ class TrainValidTestManager:
                 targets = [{k: v.to(self.__device) for k, v in t.items()} for t in targets]
 
                 # Get predicted bounding boxes
-                preds = self.__model(images)
+                preds = model(images)
 
                 # Append the current batch predictions and targets to the lists
                 preds_list += preds

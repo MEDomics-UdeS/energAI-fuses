@@ -39,6 +39,9 @@ ANNOTATIONS_ID = '1FdFLlb-RJY9IZ2zHLScTrwWlT4EPB2Oj'
 MEAN = (0.6221349083958952, 0.6097851650674193, 0.592938912173587)
 STD = (0.33986575693672466, 0.3446239730624245, 0.3541046569741213)
 
+# Evaluation metric for early stopping and best model saving
+EVAL_METRIC = 'Recall (mean per image)'
+
 # Class dictionary
 CLASS_DICT = {
     "Background":               0,
