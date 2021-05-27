@@ -1,6 +1,6 @@
 """
 File:
-    src/models/TrainValidTestManager.py
+    src/models/PipelineManager.py
 
 Authors:
     - Simon Giard-Leroux
@@ -29,7 +29,7 @@ from src.models.models import load_model
 from src.utils.helper_functions import filter_by_nms, filter_by_score
 
 
-class TrainValidTestManager:
+class PipelineManager:
     """
     Training, validation and testing manager.
     """

@@ -16,7 +16,7 @@ from multiprocessing import cpu_count
 
 from src.data.DataLoaderManager import DataLoaderManager
 from src.data.DatasetManager import DatasetManager
-from src.models.TrainValidTestManager import TrainValidTestManager
+from src.models.PipelineManager import PipelineManager
 from src.utils.helper_functions import print_args
 from src.utils.reproducibility import set_deterministic
 from src.utils.constants import RESIZED_PATH, TARGETS_PATH
@@ -158,22 +158,22 @@ if __name__ == '__main__':
                                             deterministic=args.deterministic)
 
     # Declare training, validation and testing manager
-    train_valid_test_manager = TrainValidTestManager(data_loader_manager=data_loader_manager,
-                                                     file_name=file_name,
-                                                     model_name=args.model,
-                                                     learning_rate=args.learning_rate,
-                                                     weight_decay=args.weight_decay,
-                                                     es_patience=args.es_patience,
-                                                     es_delta=args.es_delta,
-                                                     mixed_precision=args.mixed_precision,
-                                                     gradient_accumulation=args.gradient_accumulation,
-                                                     pretrained=args.pretrained,
-                                                     iou_threshold=args.iou_threshold,
-                                                     score_threshold=args.score_threshold,
-                                                     gradient_clip=args.gradient_clip,
-                                                     args_dict=vars(args),
-                                                     save_model=args.save_model,
-                                                     max_image_size=args.size)
+    train_valid_test_manager = PipelineManager(data_loader_manager=data_loader_manager,
+                                               file_name=file_name,
+                                               model_name=args.model,
+                                               learning_rate=args.learning_rate,
+                                               weight_decay=args.weight_decay,
+                                               es_patience=args.es_patience,
+                                               es_delta=args.es_delta,
+                                               mixed_precision=args.mixed_precision,
+                                               gradient_accumulation=args.gradient_accumulation,
+                                               pretrained=args.pretrained,
+                                               iou_threshold=args.iou_threshold,
+                                               score_threshold=args.score_threshold,
+                                               gradient_clip=args.gradient_clip,
+                                               args_dict=vars(args),
+                                               save_model=args.save_model,
+                                               max_image_size=args.size)
 
     # Call the training, validation and testing manager to run the pipeline
     train_valid_test_manager(args.epochs)

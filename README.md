@@ -113,7 +113,7 @@ python test_inference.py --model_file_name 2021-04-27_16-34-27
     │   │   ├── EarlyStopper.py
     │   │   ├── experiment.py
     │   │   ├── SummaryWriter.py
-    │   │   └── TrainValidTestManager.py
+    │   │   └── PipelineManager.py
     │   │
     │   ├── utils         	 	        <- Utility scripts.
     │   │   ├── constants.py
