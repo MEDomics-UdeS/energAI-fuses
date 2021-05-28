@@ -34,13 +34,17 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Processing inputs')
 
     # Model file name argument
-    parser.add_argument('-mfn', '--model_file_name', action='store', type=str, default='2021-05-20_12-03-28_s1024',
+    parser.add_argument('-mfn', '--model_file_name', action='store', type=str, default='2021-05-28_11-23-45_s1024',
                         help=f'Model file name located in {MODELS_PATH}')
 
-    # To compute mean & std deviation
-    parser.add_argument('-ms', '--mean_std', action='store_true',
-                        help='Compute mean & standard deviation on training set if true, '
-                             'otherwise use precalculated values')
+    # Compute mean & std deviation on training set argument
+    parser.add_argument('-norm', '--normalize', action='store', type=str,
+                        choices=['precalculated',
+                                 'calculated',
+                                 'disabled'],
+                        default='precalculated',
+                        help='Normalize the training dataset by mean & std using '
+                             'precalculated values, calculated values or disabled')
 
     # Batch size argument
     parser.add_argument('-b', '--batch', action='store', type=int, default=20,
@@ -55,8 +59,8 @@ if __name__ == '__main__':
                         help='Score threshold to filter box predictions')
 
     # Google Images argument
-    parser.add_argument('-no_gi', '--no_google_images', action='store_true',
-                        help='Exclude the Google Images photos from the training subset')
+    parser.add_argument('-no-gi', '--no_google_images', action='store_true',
+                        help='If specified, the Google Images photos will be excluded from the training subset')
 
     # Parse arguments
     args = parser.parse_args()
@@ -67,13 +71,13 @@ if __name__ == '__main__':
     # Declare dataset manager
     dataset_manager = DatasetManager(images_path=RESIZED_PATH,
                                      targets_path=TARGETS_PATH,
-                                     max_image_size=0,
+                                     image_size=0,
                                      num_workers=num_workers,
                                      data_aug=0,
                                      validation_size=0,
                                      test_size=1,
-                                     mean_std=args.mean_std,
-                                     no_gi=args.no_google_images,
+                                     norm=args.normalize,
+                                     google_images=not args.no_google_images,
                                      seed=0)
 
     # Declare data loader manager

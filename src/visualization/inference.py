@@ -28,6 +28,7 @@ def save_test_images(model_file_name: str,
     """
     Main inference testing function to save images with predicted and ground truth bounding boxes
 
+    :param score_threshold:
     :param model_file_name: str, model file name to load
     :param data_loader: DataLoader, data loader object
     :param iou_threshold: float, intersection-over-union threshold for predicted bounding boxes filtering

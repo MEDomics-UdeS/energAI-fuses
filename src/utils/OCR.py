@@ -56,7 +56,7 @@ def label_ocr(img: str, box: Tuple[float]) -> str:
 
         data_1 = pytesseract.image_to_string(
             gray_1, lang='eng', config='-c tessedit_char_whitelist=0123456789abcdefghijklmnopqrstuvwxyz --psm 11')
-        dataList_1 = re.split(r'[,.\n ]', data_1)  # split the string
+        dataList_1 = re.split(r'[,.\n ]', data_1)  # split_size the string
         result_list.append([(i.strip()) for i in dataList_1 if i != ''])
     except Exception:
         pass

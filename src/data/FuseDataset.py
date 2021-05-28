@@ -28,7 +28,7 @@ class FuseDataset(Dataset):
                  images_path: str = None,
                  targets_path: str = None,
                  num_workers: int = None,
-                 no_gi: bool = False) -> None:
+                 google_images: bool = True) -> None:
         """
         Class constructor
 
@@ -44,7 +44,7 @@ class FuseDataset(Dataset):
             # Get all survey images paths and ignore the .gitkeep file
             images = [img for img in sorted(os.listdir(images_path)) if img.startswith('S') or img.startswith('G')]
 
-            if no_gi:
+            if not google_images:
                 google_images = [image for image in images if image.startswith('G')]
                 google_indices = [images.index(google_image) for google_image in google_images]
                 images = [e for i, e in enumerate(images) if i not in google_indices]
@@ -95,7 +95,7 @@ class FuseDataset(Dataset):
             # Load the targets json into the targets attribute in the object
             self.targets = json.load(open(targets_path))
 
-            if no_gi:
+            if not google_images:
                 self.targets = [e for i, e in enumerate(self.targets) if i not in google_indices]
 
             # Convert the targets to tensors

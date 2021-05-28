@@ -49,7 +49,7 @@ class PipelineManager:
                  gradient_clip: float,
                  args_dict: dict,
                  save_model: bool,
-                 max_image_size: int) -> None:
+                 image_size: int) -> None:
         """
         Class constructor
 
@@ -81,7 +81,7 @@ class PipelineManager:
         self.__accumulation_size = gradient_accumulation
         self.__gradient_accumulation = False if gradient_accumulation == 1 else True
         self.__es_patience = es_patience
-        self.__max_image_size = max_image_size
+        self.__image_size = image_size
 
         # Declare steps for tensorboard logging
         self.__train_step = 0
@@ -151,9 +151,9 @@ class PipelineManager:
         # Check if we need to save the model
         if self.__save_model:
             # Save the model in the saved_models/ folder
-            filename = f'{MODELS_PATH}{self.__file_name}_s{self.__max_image_size}'
+            filename = f'{MODELS_PATH}{self.__file_name}_s{self.__image_size}'
             torch.save(self.__best_model, filename)
-            print(f'Best model saved to:\t\t\t\t{filename}\n')
+            print(f'Best model saved to:\t\t\t\t{filename}')
 
         # Test the trained model
         self.__test_model()
