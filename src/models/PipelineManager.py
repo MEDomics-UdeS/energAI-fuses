@@ -22,6 +22,9 @@ from tqdm import tqdm
 from torch.utils.data import DataLoader
 from typing import List, Optional
 
+from torch.optim.swa_utils import AveragedModel, SWALR
+from torch.optim.lr_scheduler import CosineAnnealingLR
+
 from src.utils.constants import CLASS_DICT, LOG_PATH, MODELS_PATH, EVAL_METRIC
 from src.data.DataLoaderManager import DataLoaderManager
 from src.models.EarlyStopper import EarlyStopper
@@ -118,17 +121,21 @@ class PipelineManager:
         # Get model and set last fully-connected layer with the right number of classes
         self.__model = load_model(self.__model_name, self.__pretrained, self.__num_classes)
 
+        # Define device as the GPU if available, else use the CPU
+        self.__device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+
+        # Send the model to the device
+        self.__model.to(self.__device)
+
         # Find which parameters to train (those with .requires_grad = True)
         params = [p for p in self.__model.parameters() if p.requires_grad]
 
         # Define Adam optimizer
         self.__optimizer = torch.optim.Adam(params, lr=learning_rate, weight_decay=weight_decay)
 
-        # Define device as the GPU if available, else use the CPU
-        self.__device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-
-        # Send the model to the device
-        self.__model.to(self.__device)
+        self.__swa_model = AveragedModel(self.__model, device=self.__device)
+        self.__scheduler = CosineAnnealingLR(self.__optimizer, T_max=100)
+        self.__swa_scheduler = SWALR(self.__optimizer, swa_lr=learning_rate)
 
         self.__best_model = None
         self.__best_epoch = 0
@@ -141,6 +148,7 @@ class PipelineManager:
         :param epochs: int, number of epochs
         """
         self.__epochs = epochs
+        self.__swa_start = int(0.75 * epochs)
 
         # Train the model for a specified number of epochs
         self.__train_model(epochs)
@@ -152,7 +160,7 @@ class PipelineManager:
         if self.__save_model:
             # Save the model in the saved_models/ folder
             filename = f'{MODELS_PATH}{self.__file_name}_s{self.__image_size}'
-            torch.save(self.__best_model, filename)
+            torch.save(self.__best_model.module, filename)
             print(f'Best model saved to:\t\t\t\t{filename}')
 
         # Test the trained model
@@ -171,13 +179,21 @@ class PipelineManager:
         # Loop through each epoch
         for epoch in range(1, epochs + 1):
             # Train the model and get the loss
-            loss = self.__evaluate(self.__data_loader_train, 'Training', epoch)
+            loss = self.__evaluate(self.__model, self.__data_loader_train, 'Training', epoch)
+
+            if epoch >= self.__swa_start:
+                self.__swa_model.update_parameters(self.__model)
+                self.__swa_scheduler.step()
+                torch.optim.swa_utils.update_bn(self.__data_loader_train, self.__swa_model)
+
+                metric = self.__validate_model(self.__swa_model, epoch)
+            else:
+                self.__scheduler.step()
+
+                metric = self.__validate_model(self.__model, epoch)
 
             # Save the current epoch loss for tensorboard
             self.__save_epoch('Training', loss, None, epoch)
-
-            # Validate the model and get a performance metric for early stopping
-            metric = self.__validate_model(epoch)
 
             # Check if early stopping is enabled
             if self.__es_patience:
@@ -187,52 +203,61 @@ class PipelineManager:
                     print(f'Early stopping criterion has been reached for {self.__es_patience} epochs\n')
                     break
 
-    def __validate_model(self, epoch: int) -> float:
+    def __evaluate(self, model, data_loader: DataLoader, phase: str, epoch: int) -> float:
         """
-        Validate the model for the current epoch
+        To perform forward passes, compute the losses and perform backward passes on the model
 
+        :param data_loader: DataLoader, data loader object
+        :param phase: str, current phase, either 'Training' or 'Validation'
         :param epoch: int, current epoch
-        :return: float, mean recall per image metric
+        :return: float, mean loss for the current epoch
         """
+        # Declare tqdm progress bar
+        pbar = tqdm(total=len(data_loader), leave=False, desc=f'{phase} Epoch {epoch}')
 
-        # Deactivate the autograd engine
-        with torch.no_grad():
-            # Evaluate the loss on the validation set
-            loss = self.__evaluate(self.__data_loader_valid, 'Validation Loss', epoch)
+        # Specify that the model will be trained
+        model.train()
 
-        # Evaluate the object detection metrics on the validation set
-        metrics_dict = self.__predict(self.__model, self.__data_loader_valid, f'Validation Metrics Epoch {epoch}')
+        # Declare empty list to save losses
+        loss_list_epoch = []
 
-        if metrics_dict[EVAL_METRIC] > self.__best_score:
-            self.__best_model = self.__model
-            self.__best_score = metrics_dict[EVAL_METRIC]
-            self.__best_epoch = epoch
+        # Reset the gradient if gradient accumulation is used
+        if self.__gradient_accumulation:
+            self.__optimizer.zero_grad()
 
-        # Save the validation results for the current epoch in tensorboard
-        self.__save_epoch('Validation', loss, metrics_dict, epoch)
+        # Loop through each batch in the data loader
+        for i, (images, targets) in enumerate(data_loader):
+            # Send images and targets to the device
+            images = torch.stack(images).to(self.__device)
+            targets = [{k: v.to(self.__device) for k, v in t.items()} for t in targets]
 
-        # Return the evaluation metric
-        return metrics_dict[EVAL_METRIC]
+            # Get losses for the current batch
+            with autocast(enabled=self.__mixed_precision):
+                loss_dict = model(images, targets)
+                losses = sum(loss for loss in loss_dict.values())
 
-    def __test_model(self) -> None:
-        """
-        Test the trained model
-        """
-        # Evaluate the object detection metrics on the testing set
-        metrics_dict = self.__predict(self.__best_model, self.__data_loader_test, 'Testing Metrics')
+            # Check if we are in the 'Training' phase to perform a backward pass
+            if 'Training' in phase:
+                self.__update_model(losses, i)
 
-        # Print the testing object detection metrics results
-        print('=== Testing Results ===\n')
+            # Append current batch loss to the loss list
+            loss_list_epoch.append(losses.item())
 
-        for key, value in metrics_dict.items():
-            print(f'{key}:\t\t\t{value:.2%}')
+            # Save batch losses to tensorboard
+            self.__save_batch(phase, losses)
 
-        # Append 'hparams/' to the start of each metrics dictionary key to log in tensorboard
-        for key in metrics_dict.fromkeys(metrics_dict):
-            metrics_dict[f'hparams/{key}'] = metrics_dict.pop(key)
+            # Save memory usage to tensorboard
+            self.__save_memory()
 
-        # Save the hyperparameters with tensorboard
-        self.__writer.add_hparams(self.__args_dict, metric_dict=metrics_dict)
+            # Update progress bar
+            pbar.set_postfix_str(f'Loss: {losses:.5f}')
+            pbar.update()
+
+        # Close progress bar
+        pbar.close()
+
+        # Return the mean loss for the current epoch
+        return float(np.mean(loss_list_epoch))
 
     def __update_model(self, losses: torch.Tensor, i: int) -> None:
         """
@@ -274,61 +299,54 @@ class PipelineManager:
                 self.__scaler.update()
                 self.__optimizer.zero_grad(set_to_none=True)
 
-    def __evaluate(self, data_loader: DataLoader, phase: str, epoch: int) -> float:
+    def __validate_model(self, model, epoch: int) -> float:
         """
-        To perform forward passes, compute the losses and perform backward passes on the model
+        Validate the model for the current epoch
 
-        :param data_loader: DataLoader, data loader object
-        :param phase: str, current phase, either 'Training' or 'Validation'
         :param epoch: int, current epoch
-        :return: float, mean loss for the current epoch
+        :return: float, mean recall per image metric
         """
-        # Declare tqdm progress bar
-        pbar = tqdm(total=len(data_loader), leave=False, desc=f'{phase} Epoch {epoch}')
+        # Deactivate the autograd engine
+        with torch.no_grad():
+            # Evaluate the loss on the validation set
+            loss = self.__evaluate(model, self.__data_loader_valid, 'Validation Loss', epoch)
 
-        # Specify that the model will be trained
-        self.__model.train()
+        # Evaluate the object detection metrics on the validation set
+        metrics_dict = self.__predict(model, self.__data_loader_valid, f'Validation Metrics Epoch {epoch}')
 
-        # Declare empty list to save losses
-        loss_list_epoch = []
+        if metrics_dict[EVAL_METRIC] > self.__best_score:
+            self.__best_model = model
+            self.__best_score = metrics_dict[EVAL_METRIC]
+            self.__best_epoch = epoch
 
-        # Reset the gradient if gradient accumulation is used
-        if self.__gradient_accumulation:
-            self.__optimizer.zero_grad()
+        # Save the validation results for the current epoch in tensorboard
+        self.__save_epoch('Validation', loss, metrics_dict, epoch)
 
-        # Loop through each batch in the data loader
-        for i, (images, targets) in enumerate(data_loader):
-            # Send images and targets to the device
-            images = torch.stack(images).to(self.__device)
-            targets = [{k: v.to(self.__device) for k, v in t.items()} for t in targets]
+        # Return the evaluation metric
+        return metrics_dict[EVAL_METRIC]
 
-            # Get losses for the current batch
-            with autocast(enabled=self.__mixed_precision):
-                loss_dict = self.__model(images, targets)
-                losses = sum(loss for loss in loss_dict.values())
+    def __test_model(self) -> None:
+        """
+        Test the trained model
+        """
+        # Update bn statistics for the swa_model at the end
+        torch.optim.swa_utils.update_bn(self.__data_loader_train, self.__best_model)
 
-            # Check if we are in the 'Training' phase to perform a backward pass
-            if 'Training' in phase:
-                self.__update_model(losses, i)
+        # Evaluate the object detection metrics on the testing set
+        metrics_dict = self.__predict(self.__best_model, self.__data_loader_test, 'Testing Metrics')
 
-            # Append current batch loss to the loss list
-            loss_list_epoch.append(losses.item())
+        # Print the testing object detection metrics results
+        print('=== Testing Results ===\n')
 
-            # Save batch losses to tensorboard
-            self.__save_batch(phase, losses)
+        for key, value in metrics_dict.items():
+            print(f'{key}:\t\t\t{value:.2%}')
 
-            # Save memory usage to tensorboard
-            self.__save_memory()
+        # Append 'hparams/' to the start of each metrics dictionary key to log in tensorboard
+        for key in metrics_dict.fromkeys(metrics_dict):
+            metrics_dict[f'hparams/{key}'] = metrics_dict.pop(key)
 
-            # Update progress bar
-            pbar.set_postfix_str(f'Loss: {losses:.5f}')
-            pbar.update()
-
-        # Close progress bar
-        pbar.close()
-
-        # Return the mean loss for the current epoch
-        return float(np.mean(loss_list_epoch))
+        # Save the hyperparameters with tensorboard
+        self.__writer.add_hparams(self.__args_dict, metric_dict=metrics_dict)
 
     def __predict(self, model, data_loader: DataLoader, desc: str) -> dict:
         """
