@@ -134,7 +134,6 @@ class PipelineManager:
         self.__optimizer = torch.optim.Adam(params, lr=learning_rate, weight_decay=weight_decay)
 
         self.__swa_model = AveragedModel(self.__model, device=self.__device)
-        # self.__swa_scheduler = SWALR(self.__optimizer, swa_lr=learning_rate * 2 / 3)
 
         self.__swa_started = False
 
