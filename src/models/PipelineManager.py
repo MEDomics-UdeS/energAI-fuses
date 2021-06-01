@@ -134,8 +134,9 @@ class PipelineManager:
         self.__optimizer = torch.optim.Adam(params, lr=learning_rate, weight_decay=weight_decay)
 
         self.__swa_model = AveragedModel(self.__model, device=self.__device)
-        self.__scheduler = CosineAnnealingLR(self.__optimizer, T_max=100)
-        self.__swa_scheduler = SWALR(self.__optimizer, swa_lr=learning_rate)
+        # self.__swa_scheduler = SWALR(self.__optimizer, swa_lr=learning_rate * 2 / 3)
+
+        self.__swa_started = False
 
         self.__best_model = None
         self.__best_epoch = 0
@@ -147,13 +148,13 @@ class PipelineManager:
 
         :param epochs: int, number of epochs
         """
-        self.__epochs = epochs
         self.__swa_start = int(0.75 * epochs)
+        self.__scheduler = CosineAnnealingLR(self.__optimizer, T_max=epochs)
 
         # Train the model for a specified number of epochs
         self.__train_model(epochs)
 
-        print(f'\nBest epoch:\t\t\t\t\t\t\t{self.__best_epoch}/{self.__epochs}')
+        print(f'\nBest epoch:\t\t\t\t\t\t\t{self.__best_epoch}/{epochs}')
         print(f'Best score:\t\t\t\t\t\t\t{EVAL_METRIC}: {self.__best_score:.2%}')
 
         # Check if we need to save the model
@@ -178,10 +179,18 @@ class PipelineManager:
         """
         # Loop through each epoch
         for epoch in range(1, epochs + 1):
+            if epoch >= self.__swa_start:
+                if not self.__swa_started:
+                    self.__swa_scheduler = SWALR(self.__optimizer, swa_lr=self.__scheduler.get_last_lr()[0])
+                    self.__swa_started = True
+
             # Train the model and get the loss
             loss = self.__evaluate(self.__model, self.__data_loader_train, 'Training', epoch)
 
-            if epoch >= self.__swa_start:
+            # Save the current epoch loss for tensorboard
+            self.__save_epoch('Training', loss, None, epoch)
+
+            if self.__swa_started:
                 self.__swa_model.update_parameters(self.__model)
                 self.__swa_scheduler.step()
                 torch.optim.swa_utils.update_bn(self.__data_loader_train, self.__swa_model)
@@ -191,9 +200,6 @@ class PipelineManager:
                 self.__scheduler.step()
 
                 metric = self.__validate_model(self.__model, epoch)
-
-            # Save the current epoch loss for tensorboard
-            self.__save_epoch('Training', loss, None, epoch)
 
             # Check if early stopping is enabled
             if self.__es_patience:
@@ -236,14 +242,13 @@ class PipelineManager:
                 loss_dict = model(images, targets)
                 losses = sum(loss for loss in loss_dict.values())
 
-            # Check if we are in the 'Training' phase to perform a backward pass
-            if 'Training' in phase:
-                self.__update_model(losses, i)
-
             # Append current batch loss to the loss list
             loss_list_epoch.append(losses.item())
 
-            # Save batch losses to tensorboard
+            # Check if we are in the 'Training' phase to perform a backward pass
+            if phase == 'Training':
+                self.__update_model(losses, i)
+
             self.__save_batch(phase, losses)
 
             # Save memory usage to tensorboard
@@ -489,6 +494,12 @@ class PipelineManager:
         if metrics_dict is not None:
             for key, value in metrics_dict.items():
                 self.__writer.add_scalar(f'{key}/{phase}', value, epoch)
+
+        if phase == 'Training':
+            if self.__swa_started:
+                self.__writer.add_scalar('Learning Rate', self.__swa_scheduler.get_last_lr()[0], epoch)
+            else:
+                self.__writer.add_scalar('Learning Rate', self.__scheduler.get_last_lr()[0], epoch)
 
     def __save_memory(self, scale: float = 1e-9) -> None:
         """
