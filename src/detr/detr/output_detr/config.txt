@@ -1,9 +1,0 @@
-Training parameters used for the model
-
-- num_epochs : 400
-- batch size : 8
-- training size : 2158
-- valid size : 527
-- test size : 1620
-- Pretrained : False
-
