@@ -48,15 +48,27 @@ class DataLoaderManager:
 
         # If the training dataset is not empty, declare the training data loader
         if len(dataset_manager.dataset_train) > 0:
-            self.data_loader_train = self.__get_data_loader(dataset_manager.dataset_train)
+            self.__data_loader_train = self.__get_data_loader(dataset_manager.dataset_train)
 
         # If the validation dataset is not empty, declare the validation data loader
         if len(dataset_manager.dataset_valid) > 0:
-            self.data_loader_valid = self.__get_data_loader(dataset_manager.dataset_valid)
+            self.__data_loader_valid = self.__get_data_loader(dataset_manager.dataset_valid)
 
         # If the testing dataset is not empty, declare the testing data loader
         if len(dataset_manager.dataset_test) > 0:
-            self.data_loader_test = self.__get_data_loader(dataset_manager.dataset_test)
+            self.__data_loader_test = self.__get_data_loader(dataset_manager.dataset_test)
+
+    @property
+    def data_loader_train(self):
+        return self.__data_loader_train
+
+    @property
+    def data_loader_valid(self):
+        return self.__data_loader_valid
+
+    @property
+    def data_loader_test(self):
+        return self.__data_loader_test
 
     def __get_data_loader(self, dataset: FuseDataset) -> DataLoader:
         return DataLoader(dataset,

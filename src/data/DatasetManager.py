@@ -100,19 +100,19 @@ class DatasetManager:
                         sys.exit(1)
 
         # Declare training, validation and testing datasets
-        self.dataset_train = FuseDataset(images_path, targets_path, num_workers, google_images)
-        self.dataset_valid = FuseDataset()
-        self.dataset_test = FuseDataset()
+        self.__dataset_train = FuseDataset(images_path, targets_path, num_workers, google_images)
+        self.__dataset_valid = FuseDataset()
+        self.__dataset_test = FuseDataset()
 
         # Get total dataset size
-        total_size = sum(image_path.rsplit('/')[-1].startswith('S') for image_path in self.dataset_train.image_paths)
+        total_size = sum(image_path.rsplit('/')[-1].startswith('S') for image_path in self.__dataset_train.image_paths)
 
         # Split the training set into training + validation
-        self.dataset_train, self.dataset_valid = self.__split_dataset(self.dataset_train, self.dataset_valid,
+        self.__dataset_train, self.__dataset_valid = self.__split_dataset(self.__dataset_train, self.__dataset_valid,
                                                                       validation_size, total_size)
 
         # Split the training set into training + testing
-        self.dataset_train, self.dataset_test = self.__split_dataset(self.dataset_train, self.dataset_test,
+        self.__dataset_train, self.__dataset_test = self.__split_dataset(self.__dataset_train, self.__dataset_test,
                                                                      test_size, total_size)
 
         if norm == 'precalculated':
@@ -125,9 +125,21 @@ class DatasetManager:
             mean, std = None, None
 
         # Apply transforms to the training, validation and testing datasets
-        self.dataset_train.transforms = self.__transforms_train(mean, std, data_aug)
-        self.dataset_valid.transforms = self.__transforms_base(mean, std)
-        self.dataset_test.transforms = self.__transforms_base(mean, std)
+        self.__dataset_train.transforms = self.__transforms_train(mean, std, data_aug)
+        self.__dataset_valid.transforms = self.__transforms_base(mean, std)
+        self.__dataset_test.transforms = self.__transforms_base(mean, std)
+
+    @property
+    def dataset_train(self):
+        return self.__dataset_train
+
+    @property
+    def dataset_valid(self):
+        return self.__dataset_valid
+
+    @property
+    def dataset_test(self):
+        return self.__dataset_test
 
     @staticmethod
     def __download_file_from_google_drive(file_id: str, dest: str, chunk_size: int = 32768) -> None:
@@ -306,10 +318,10 @@ class DatasetManager:
         ray.init(include_dashboard=False)
 
         # Get ray workers IDs
-        ids = [ray_get_rgb.remote(self.dataset_train.image_paths, i) for i in range(num_workers)]
+        ids = [ray_get_rgb.remote(self.__dataset_train.image_paths, i) for i in range(num_workers)]
 
         # Get dataset size
-        size = len(self.dataset_train.image_paths)
+        size = len(self.__dataset_train.image_paths)
 
         # Declare lists to store R, G, B values
         r = [None] * size
@@ -335,7 +347,7 @@ class DatasetManager:
             # Check if there are jobs left
             if nb_job_left > 0:
                 # Assign workers to the remaining tasks
-                ids.extend([ray_get_rgb.remote(self.dataset_train.image_paths, size - nb_job_left)])
+                ids.extend([ray_get_rgb.remote(self.__dataset_train.image_paths, size - nb_job_left)])
 
                 # Decreasing the number of jobs left
                 nb_job_left -= 1
