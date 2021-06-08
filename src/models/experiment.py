@@ -129,6 +129,11 @@ if __name__ == '__main__':
     parser.add_argument('-no-gi', '--no_google_images', action='store_true',
                         help='If specified, the Google Images photos will be excluded from the training subset')
 
+    # Best or last model saved/used for test inference argument
+    parser.add_argument('-sl', '--save_last', action='store_true',
+                        help='Specify whether to save/use for inference testing the last model, otherwise'
+                             'the best model will be used')
+
     # Parsing arguments
     args = parser.parse_args()
 
@@ -176,7 +181,8 @@ if __name__ == '__main__':
                                                gradient_clip=args.gradient_clip,
                                                args_dict=vars(args),
                                                save_model=not args.no_save_model,
-                                               image_size=args.image_size)
+                                               image_size=args.image_size,
+                                               save_last=args.save_last)
 
     # Call the training, validation and testing manager to run the pipeline
     train_valid_test_manager(args.epochs)

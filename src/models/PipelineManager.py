@@ -52,7 +52,8 @@ class PipelineManager:
                  gradient_clip: float,
                  args_dict: dict,
                  save_model: bool,
-                 image_size: int) -> None:
+                 image_size: int,
+                 save_last: bool) -> None:
         """
         Class constructor
 
@@ -85,6 +86,7 @@ class PipelineManager:
         self.__gradient_accumulation = False if gradient_accumulation == 1 else True
         self.__es_patience = es_patience
         self.__image_size = image_size
+        self.__save_last = save_last
 
         # Declare steps for tensorboard logging
         self.__train_step = 0
@@ -137,9 +139,10 @@ class PipelineManager:
 
         self.__swa_started = False
 
-        self.__best_model = None
-        self.__best_epoch = 0
-        self.__best_score = 0
+        if not self.__save_last:
+            self.__best_model = None
+            self.__best_epoch = 0
+            self.__best_score = 0
 
     def __call__(self, epochs: int) -> None:
         """
@@ -153,15 +156,17 @@ class PipelineManager:
         # Train the model for a specified number of epochs
         self.__train_model(epochs)
 
-        print(f'\nBest epoch:\t\t\t\t\t\t\t{self.__best_epoch}/{epochs}')
-        print(f'Best score:\t\t\t\t\t\t\t{EVAL_METRIC}: {self.__best_score:.2%}')
+        if not self.__save_last:
+            print(f'\nBest epoch:\t\t\t\t\t\t\t{self.__best_epoch}/{epochs}')
+            print(f'Best score:\t\t\t\t\t\t\t{EVAL_METRIC}: {self.__best_score:.2%}')
 
         # Check if we need to save the model
         if self.__save_model:
             # Save the model in the saved_models/ folder
             filename = f'{MODELS_PATH}{self.__file_name}_s{self.__image_size}'
-            torch.save(self.__best_model.module, filename)
-            print(f'Best model saved to:\t\t\t\t{filename}')
+
+            torch.save(self.__swa_model.module if self.__save_last else self.__best_model.module, filename)
+            print(f'{"Last" if self.__save_last else "Best"} model saved to:\t\t\t\t{filename}\n')
 
         # Test the trained model
         self.__test_model()
@@ -318,10 +323,11 @@ class PipelineManager:
         # Evaluate the object detection metrics on the validation set
         metrics_dict = self.__predict(model, self.__data_loader_valid, f'Validation Metrics Epoch {epoch}')
 
-        if metrics_dict[EVAL_METRIC] > self.__best_score:
-            self.__best_model = model
-            self.__best_score = metrics_dict[EVAL_METRIC]
-            self.__best_epoch = epoch
+        if not self.__save_last:
+            if metrics_dict[EVAL_METRIC] > self.__best_score:
+                self.__best_model = model
+                self.__best_score = metrics_dict[EVAL_METRIC]
+                self.__best_epoch = epoch
 
         # Save the validation results for the current epoch in tensorboard
         self.__save_epoch('Validation', loss, metrics_dict, epoch)
@@ -334,10 +340,12 @@ class PipelineManager:
         Test the trained model
         """
         # Update bn statistics for the swa_model at the end
-        torch.optim.swa_utils.update_bn(self.__data_loader_train, self.__best_model)
+        torch.optim.swa_utils.update_bn(self.__data_loader_train,
+                                        self.__swa_model if self.__save_last else self.__best_model)
 
         # Evaluate the object detection metrics on the testing set
-        metrics_dict = self.__predict(self.__best_model, self.__data_loader_test, 'Testing Metrics')
+        metrics_dict = self.__predict(self.__swa_model if self.__save_last else self.__best_model,
+                                      self.__data_loader_test, 'Testing Metrics')
 
         # Print the testing object detection metrics results
         print('=== Testing Results ===\n')
