@@ -109,11 +109,11 @@ class DatasetManager:
 
         # Split the training set into training + validation
         self.__dataset_train, self.__dataset_valid = self.__split_dataset(self.__dataset_train, self.__dataset_valid,
-                                                                      validation_size, total_size)
+                                                                          validation_size, total_size)
 
         # Split the training set into training + testing
         self.__dataset_train, self.__dataset_test = self.__split_dataset(self.__dataset_train, self.__dataset_test,
-                                                                     test_size, total_size)
+                                                                         test_size, total_size)
 
         if norm == 'precalculated':
             # Use precalculated mean and standard deviation
