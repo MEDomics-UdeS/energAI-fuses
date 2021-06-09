@@ -30,7 +30,6 @@ from src.data.DataLoaderManager import DataLoaderManager
 from src.models.EarlyStopper import EarlyStopper
 from src.models.models import load_model
 from src.utils.helper_functions import filter_by_nms, filter_by_score
-from src.utils.coco_eval import CocoEvaluator
 
 
 class PipelineManager:
