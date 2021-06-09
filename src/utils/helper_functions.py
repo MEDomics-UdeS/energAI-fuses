@@ -22,7 +22,7 @@ from torchvision.ops import nms
 from typing import List
 from argparse import Namespace
 
-from src.utils.constants import REQUIRED_PYTHON
+from src.utils.constants import REQUIRED_PYTHON, IMAGE_EXT
 
 
 def count_images(path: str = "C:/Users/gias2402/Google Drive/"
@@ -201,4 +201,4 @@ def rename_photos(root_dir: str = 'C:/Users/simon.giard-leroux/Google Drive/'
     """
     for subdir, dirs, files in os.walk(root_dir):
         for i, file in enumerate(files, start=1):
-            os.rename(subdir + os.sep + file, subdir + "-" + str(i) + ".JPG")
+            os.rename(subdir + os.sep + file, subdir + "-" + str(i) + f".{IMAGE_EXT}")
