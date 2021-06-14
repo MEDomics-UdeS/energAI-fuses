@@ -3,9 +3,9 @@ COCO Evaluation Metrics
 
 Imported from: https://github.com/pytorch/vision/blob/master/references/detection/coco_eval.py
 """
-
 import json
 import tempfile
+
 import numpy as np
 import copy
 import time
@@ -18,7 +18,7 @@ import pycocotools.mask as mask_util
 
 from collections import defaultdict
 
-import utils
+import src.coco.utils as utils
 
 
 class CocoEvaluator(object):

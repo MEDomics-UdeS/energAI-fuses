@@ -21,15 +21,18 @@ from torchvision.ops import box_iou
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 from typing import List, Optional
+from copy import deepcopy
 
 from torch.optim.swa_utils import AveragedModel, SWALR
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
-from src.utils.constants import CLASS_DICT, LOG_PATH, MODELS_PATH, EVAL_METRIC
+from src.utils.constants import CLASS_DICT, LOG_PATH, MODELS_PATH, EVAL_METRIC, COCO_PARAMS_LIST
 from src.data.DataLoaderManager import DataLoaderManager
 from src.models.EarlyStopper import EarlyStopper
 from src.models.models import load_model
 from src.utils.helper_functions import filter_by_nms, filter_by_score
+
+from src.coco.engine import evaluate
 
 
 class PipelineManager:
@@ -143,8 +146,6 @@ class PipelineManager:
             self.__best_model = None
             self.__best_epoch = 0
             self.__best_score = 0
-
-        # self.__coco_evaluator = CocoEvaluator(coco_gt=, iou_types='bbox')
 
     def __call__(self, epochs: int) -> None:
         """
@@ -323,7 +324,7 @@ class PipelineManager:
             loss = self.__evaluate(model, self.__data_loader_valid, 'Validation Loss', epoch)
 
         # Evaluate the object detection metrics on the validation set
-        metrics_dict = self.__predict(model, self.__data_loader_valid, f'Validation Metrics Epoch {epoch}')
+        metrics_dict = self.__coco_evaluate(model, self.__data_loader_valid)
 
         if not self.__save_last:
             if metrics_dict[EVAL_METRIC] > self.__best_score:
@@ -341,13 +342,13 @@ class PipelineManager:
         """
         Test the trained model
         """
-        # Update bn statistics for the swa_model at the end
-        torch.optim.swa_utils.update_bn(self.__data_loader_train,
-                                        self.__swa_model if self.__save_last else self.__best_model)
+        model = self.__swa_model if self.__save_last else self.__best_model
 
-        # Evaluate the object detection metrics on the testing set
-        metrics_dict = self.__predict(self.__swa_model if self.__save_last else self.__best_model,
-                                      self.__data_loader_test, 'Testing Metrics')
+        # Update bn statistics for the swa_model at the end
+        torch.optim.swa_utils.update_bn(self.__data_loader_train, model)
+
+        # COCO Evaluation
+        metrics_dict = self.__coco_evaluate(model, self.__data_loader_test)
 
         # Print the testing object detection metrics results
         print('=== Testing Results ===\n')
@@ -362,118 +363,130 @@ class PipelineManager:
         # Save the hyperparameters with tensorboard
         self.__writer.add_hparams(self.__args_dict, metric_dict=metrics_dict)
 
-    def __predict(self, model, data_loader: DataLoader, desc: str) -> dict:
+    def __coco_evaluate(self, model, data_loader: DataLoader) -> dict:
         """
-        Perform forward passes to obtain the predicted bounding boxes with the model
 
-        :param data_loader: DataLoader, data loader object
-        :param desc: str, description for the progress bar
-        :return: dict, object detection metrics results
+        :param model:
+        :param data_loader:
+        :return:
         """
-        # Declare progress bar
-        pbar = tqdm(total=len(data_loader), leave=False, desc=desc)
+        coco_evaluator = evaluate(model, deepcopy(data_loader), self.__device)
+        coco_results = coco_evaluator.coco_eval['bbox'].stats.tolist()
 
-        # Specify that the model will be evaluated
-        model.eval()
+        return dict(zip(COCO_PARAMS_LIST, coco_results))
 
-        # Declare empty lists to store the predicted bounding boxes and the ground truth targets
-        preds_list = []
-        targets_list = []
-
-        # Deactivate the autograd engine
-        with torch.no_grad():
-            # Loop through each batch in the data loader
-            for images, targets in data_loader:
-                # Send the images and targets to the device
-                images = torch.stack(images).to(self.__device)
-                targets = [{k: v.to(self.__device) for k, v in t.items()} for t in targets]
-
-                # Get predicted bounding boxes
-                preds = model(images)
-
-                # Append the current batch predictions and targets to the lists
-                preds_list += preds
-                targets_list += targets
-
-                # Save the current memory usage
-                self.__save_memory()
-
-                # Update the progress bar
-                pbar.update()
-
-        # Close the progress bar
-        pbar.close()
-
-        # Filter the predictions by non-maximum suppression
-        preds_list = filter_by_nms(preds_list, self.__iou_threshold)
-
-        # Filter the predictions by bounding box confidence score
-        preds_list = filter_by_score(preds_list, self.__score_threshold)
-
-        # Return the calculated object detection evaluation metrics
-        return self.__calculate_metrics(preds_list, targets_list)
-
-    def __calculate_metrics(self, preds_list: List[dict], targets_list: List[dict]) -> dict:
-        """
-        Calculate the object detection evaluation metrics
-
-        :param preds_list: list, contains dictionaries of tensors of predicted bounding boxes
-        :param targets_list: list, contains dictionaries of tensors of ground truth bounding boxes
-        :return: dict, contains the object detection evaluation metrics results
-        """
-        # Save ground truth and predicted bounding boxes and labels in lists
-        targets_boxes = [target['boxes'] for target in targets_list]
-        targets_labels = [target['labels'] for target in targets_list]
-        preds_boxes = [pred['boxes'] for pred in preds_list]
-        preds_labels = [pred['labels'] for pred in preds_list]
-
-        # Declare empty intersection-over-union (iou) list
-        iou_list = []
-
-        # For each image, calculate an iou matrix giving the iou score for each prediction/ground truth combination
-        for pred_boxes, target_boxes in zip(preds_boxes, targets_boxes):
-            iou_list.append(box_iou(pred_boxes, target_boxes))
-
-        # Declare empty max iou and True/False positives lists
-        max_iou_list = []
-        types_list = []
-
-        # Loop through each image
-        for iou, target_labels, pred_labels in zip(iou_list, targets_labels, preds_labels):
-            # Check if there are predicted boxes
-            if iou.nelement() > 0:
-                # Calculate the maximum iou values and indices for each predicted box
-                max_iou_list.append(torch.max(iou, dim=1))
-
-                # Declare an empty True/False positives lists for the current iteration
-                type_list_iter = []
-
-                # Evaluate if the predictions are True or False positives
-                for i, (value, index) in enumerate(zip(max_iou_list[-1].values, max_iou_list[-1].indices)):
-                    if value.greater(self.__iou_threshold) and \
-                            target_labels.data[index].equal(pred_labels.data[i]):
-                        type_list_iter.append(True)
-                    else:
-                        type_list_iter.append(False)
-
-                types_list.append(type_list_iter)
-            else:
-                types_list.append([])
-
-        # Calculate recall
-        recall_list = [sum(types) / len(targets_labels[i]) for i, types in enumerate(types_list)]
-
-        # Calculate precision
-        precision_list = [0 if len(types) == 0 else sum(types) / len(types) for types in types_list]
-
-        # Calculate mean recall and mean precision over all images and store them into a results dictionary
-        metrics_dict = {
-            'Recall (mean per image)': np.mean(recall_list),
-            'Precision (mean per image)': np.mean(precision_list)
-        }
-
-        # Return the results dictionary
-        return metrics_dict
+    # def __predict(self, model, data_loader: DataLoader, desc: str) -> dict:
+    #     """
+    #     Perform forward passes to obtain the predicted bounding boxes with the model
+    #
+    #     :param data_loader: DataLoader, data loader object
+    #     :param desc: str, description for the progress bar
+    #     :return: dict, object detection metrics results
+    #     """
+    #     # Declare progress bar
+    #     pbar = tqdm(total=len(data_loader), leave=False, desc=desc)
+    #
+    #     # Specify that the model will be evaluated
+    #     model.eval()
+    #
+    #     # Declare empty lists to store the predicted bounding boxes and the ground truth targets
+    #     preds_list = []
+    #     targets_list = []
+    #
+    #     # Deactivate the autograd engine
+    #     with torch.no_grad():
+    #         # Loop through each batch in the data loader
+    #         for images, targets in data_loader:
+    #             # Send the images and targets to the device
+    #             images = torch.stack(images).to(self.__device)
+    #             targets = [{k: v.to(self.__device) for k, v in t.items()} for t in targets]
+    #
+    #             # Get predicted bounding boxes
+    #             preds = model(images)
+    #
+    #             # Append the current batch predictions and targets to the lists
+    #             preds_list += preds
+    #             targets_list += targets
+    #
+    #             # Save the current memory usage
+    #             self.__save_memory()
+    #
+    #             # Update the progress bar
+    #             pbar.update()
+    #
+    #     # Close the progress bar
+    #     pbar.close()
+    #
+    #     # Filter the predictions by non-maximum suppression
+    #     preds_list = filter_by_nms(preds_list, self.__iou_threshold)
+    #
+    #     # Filter the predictions by bounding box confidence score
+    #     preds_list = filter_by_score(preds_list, self.__score_threshold)
+    #
+    #     # Return the calculated object detection evaluation metrics
+    #     return self.__calculate_metrics(preds_list, targets_list)
+    #
+    # def __calculate_metrics(self, preds_list: List[dict], targets_list: List[dict]) -> dict:
+    #     """
+    #     Calculate the object detection evaluation metrics
+    #
+    #     :param preds_list: list, contains dictionaries of tensors of predicted bounding boxes
+    #     :param targets_list: list, contains dictionaries of tensors of ground truth bounding boxes
+    #     :return: dict, contains the object detection evaluation metrics results
+    #     """
+    #     # Save ground truth and predicted bounding boxes and labels in lists
+    #     targets_boxes = [target['boxes'] for target in targets_list]
+    #     targets_labels = [target['labels'] for target in targets_list]
+    #     preds_boxes = [pred['boxes'] for pred in preds_list]
+    #     preds_labels = [pred['labels'] for pred in preds_list]
+    #
+    #     # Declare empty intersection-over-union (iou) list
+    #     iou_list = []
+    #
+    #     # For each image, calculate an iou matrix giving the iou score for each prediction/ground truth combination
+    #     for pred_boxes, target_boxes in zip(preds_boxes, targets_boxes):
+    #         iou_list.append(box_iou(pred_boxes, target_boxes))
+    #
+    #     # Declare empty max iou and True/False positives lists
+    #     max_iou_list = []
+    #     types_list = []
+    #
+    #     # Loop through each image
+    #     for iou, target_labels, pred_labels in zip(iou_list, targets_labels, preds_labels):
+    #         # Check if there are predicted boxes
+    #         if iou.nelement() > 0:
+    #             # Calculate the maximum iou values and indices for each predicted box
+    #             max_iou_list.append(torch.max(iou, dim=1))
+    #
+    #             # Declare an empty True/False positives lists for the current iteration
+    #             type_list_iter = []
+    #
+    #             # Evaluate if the predictions are True or False positives
+    #             for i, (value, index) in enumerate(zip(max_iou_list[-1].values, max_iou_list[-1].indices)):
+    #                 if value.greater(self.__iou_threshold) and \
+    #                         target_labels.data[index].equal(pred_labels.data[i]):
+    #                     type_list_iter.append(True)
+    #                 else:
+    #                     type_list_iter.append(False)
+    #
+    #             types_list.append(type_list_iter)
+    #         else:
+    #             types_list.append([])
+    #
+    #     # Calculate recall
+    #     recall_list = [sum(types) / len(targets_labels[i]) for i, types in enumerate(types_list)]
+    #
+    #     # Calculate precision
+    #     precision_list = [0 if len(types) == 0 else sum(types) / len(types) for types in types_list]
+    #
+    #     # Calculate mean recall and mean precision over all images and store them into a results dictionary
+    #     metrics_dict = {
+    #         'Recall (mean per image)': np.mean(recall_list),
+    #         'Precision (mean per image)': np.mean(precision_list)
+    #     }
+    #
+    #     # Return the results dictionary
+    #     return metrics_dict
 
     def __save_batch(self, phase: str, loss: float) -> None:
         """
@@ -501,8 +514,8 @@ class PipelineManager:
         self.__writer.add_scalar(f'Loss (mean per epoch)/{phase}', loss, epoch)
 
         if metrics_dict is not None:
-            for key, value in metrics_dict.items():
-                self.__writer.add_scalar(f'{key}/{phase}', value, epoch)
+            for i, (key, value) in enumerate(metrics_dict.items(), start=1):
+                self.__writer.add_scalar(f'{key[:2]}/{i}. {key[6:-1]}', value, epoch)
 
         if phase == 'Training':
             if self.__swa_started:
