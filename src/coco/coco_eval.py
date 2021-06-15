@@ -4,11 +4,9 @@ COCO Evaluation Metrics
 Imported from: https://github.com/pytorch/vision/blob/master/references/detection/coco_eval.py
 """
 import json
-import tempfile
 
 import numpy as np
 import copy
-import time
 import torch
 import torch._six
 
@@ -63,7 +61,7 @@ class CocoEvaluator(object):
     def summarize(self):
         with utils.HiddenPrints():
             for iou_type, coco_eval in self.coco_eval.items():
-                # print("IoU metric: {}".format(iou_type))
+                print("IoU metric: {}".format(iou_type))
                 coco_eval.summarize()
 
     def prepare(self, predictions, iou_type):

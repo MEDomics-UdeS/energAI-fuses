@@ -10,8 +10,6 @@ Description:
     Training, validation and testing pipeline manager
 """
 
-import sys
-import os
 import numpy as np
 import torch
 from torch.nn.utils import clip_grad_norm_
@@ -19,10 +17,9 @@ from torch.cuda.amp import autocast
 from torch.cuda.amp.grad_scaler import GradScaler
 from torch.cuda import memory_reserved, memory_allocated
 from src.models.SummaryWriter import SummaryWriter
-from torchvision.ops import box_iou
 from tqdm import tqdm
 from torch.utils.data import DataLoader
-from typing import List, Optional
+from typing import Optional
 from copy import deepcopy
 
 from torch.optim.swa_utils import AveragedModel, SWALR
@@ -32,11 +29,9 @@ from src.utils.constants import CLASS_DICT, LOG_PATH, MODELS_PATH, EVAL_METRIC, 
 from src.data.DataLoaderManager import DataLoaderManager
 from src.models.EarlyStopper import EarlyStopper
 from src.models.models import load_model
-# from src.utils.helper_functions import filter_by_nms, filter_by_score
 from src.coco.coco_utils import get_coco_api_from_dataset
 from src.coco.coco_eval import CocoEvaluator
-from src.coco.utils import HiddenPrints
-# from src.coco.engine import evaluate
+from src.utils.helper_functions import print_dict
 
 
 class PipelineManager:
@@ -361,9 +356,7 @@ class PipelineManager:
 
         # Print the testing object detection metrics results
         print('=== Testing Results ===\n')
-
-        for key, value in metrics_dict.items():
-            print(f'{key}:\t\t\t{value:.2%}')
+        print_dict(metrics_dict, 6, '.2%')
 
         # Append 'hparams/' to the start of each metrics dictionary key to log in tensorboard
         for key in metrics_dict.fromkeys(metrics_dict):

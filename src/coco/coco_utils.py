@@ -4,9 +4,6 @@ COCO Evaluation Metrics Utilities
 Imported from: https://github.com/pytorch/vision/blob/master/references/detection/coco_utils.py
 """
 import copy
-import os
-from PIL import Image
-
 import torch
 import torch.utils.data
 import torchvision
@@ -14,9 +11,7 @@ import torchvision
 from pycocotools import mask as coco_mask
 from pycocotools.coco import COCO
 
-
 from src.coco.coco_eval import createIndex
-# import src.coco.transforms as T
 
 
 class FilterAndRemapCocoCategories(object):

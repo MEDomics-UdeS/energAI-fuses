@@ -17,7 +17,7 @@ from multiprocessing import cpu_count
 from src.data.DataLoaderManager import DataLoaderManager
 from src.data.DatasetManager import DatasetManager
 from src.models.PipelineManager import PipelineManager
-from src.utils.helper_functions import print_args
+from src.utils.helper_functions import print_dict
 from src.utils.reproducibility import set_deterministic
 from src.utils.constants import RESIZED_PATH, TARGETS_PATH
 
@@ -144,7 +144,8 @@ if __name__ == '__main__':
     file_name = start.strftime('%Y-%m-%d_%H-%M-%S')
 
     # Display arguments in console
-    print_args(args)
+    print('\n=== Arguments & Hyperparameters ===\n')
+    print_dict(vars(args), 6)
 
     # Declare dataset manager
     dataset_manager = DatasetManager(images_path=RESIZED_PATH,

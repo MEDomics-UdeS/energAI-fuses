@@ -180,16 +180,22 @@ def json_to_csv(dir_list: List[str]) -> None:
                 csv_file.close()
 
 
-def print_args(args: Namespace) -> None:
+def print_dict(dictionary: dict, n_spaces: int, str_format: str = None) -> None:
     """
-    Print all arguments and hyperparameters in the argparse Namespace
 
-    :param args: argparse Namespace
+    :param dictionary:
+    :param n_spaces:
+    :param str_format:
+    :return:
     """
-    print('\n=== Arguments & Hyperparameters ===\n')
+    max_key_length = max(map(len, dictionary)) + n_spaces
 
-    for key, value in vars(args).items():
-        print(f'{key}:{" " * (27 - len(key))}{value}')
+    if str_format is None:
+        for key, value in dictionary.items():
+            print(f'{key}:{" " * (max_key_length - len(key))}{value}')
+    else:
+        for key, value in dictionary.items():
+            print(f'{key}:{" " * (max_key_length - len(key))}{value:{str_format}}')
 
 
 def rename_photos(root_dir: str = 'C:/Users/simon.giard-leroux/Google Drive/'

@@ -34,7 +34,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Processing inputs')
 
     # Model file name argument
-    parser.add_argument('-mfn', '--model_file_name', action='store', type=str, default='2021-06-01_12-51-52_s1024',
+    parser.add_argument('-mfn', '--model_file_name', action='store', type=str, default='2021-06-14_19-02-07_s1024',
                         help=f'Model file name located in {MODELS_PATH}')
 
     # Compute mean & std deviation on training set argument
