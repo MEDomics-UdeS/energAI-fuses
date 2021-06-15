@@ -10,6 +10,8 @@ Description:
     Training, validation and testing pipeline manager
 """
 
+import sys
+import os
 import numpy as np
 import torch
 from torch.nn.utils import clip_grad_norm_
@@ -30,9 +32,11 @@ from src.utils.constants import CLASS_DICT, LOG_PATH, MODELS_PATH, EVAL_METRIC, 
 from src.data.DataLoaderManager import DataLoaderManager
 from src.models.EarlyStopper import EarlyStopper
 from src.models.models import load_model
-from src.utils.helper_functions import filter_by_nms, filter_by_score
-
-from src.coco.engine import evaluate
+# from src.utils.helper_functions import filter_by_nms, filter_by_score
+from src.coco.coco_utils import get_coco_api_from_dataset
+from src.coco.coco_eval import CocoEvaluator
+from src.coco.utils import HiddenPrints
+# from src.coco.engine import evaluate
 
 
 class PipelineManager:
@@ -168,7 +172,11 @@ class PipelineManager:
             # Save the model in the saved_models/ folder
             filename = f'{MODELS_PATH}{self.__file_name}_s{self.__image_size}'
 
-            torch.save(self.__swa_model.module if self.__save_last else self.__best_model.module, filename)
+            if self.__best_epoch >= self.__swa_start:
+                torch.save(self.__swa_model.module if self.__save_last else self.__best_model.module, filename)
+            else:
+                torch.save(self.__model if self.__save_last else self.__best_model, filename)
+
             print(f'{"Last" if self.__save_last else "Best"} model saved to:\t\t\t\t{filename}\n')
 
         # Test the trained model
@@ -324,7 +332,8 @@ class PipelineManager:
             loss = self.__evaluate(model, self.__data_loader_valid, 'Validation Loss', epoch)
 
         # Evaluate the object detection metrics on the validation set
-        metrics_dict = self.__coco_evaluate(model, self.__data_loader_valid)
+        metrics_dict = self.__coco_evaluate(model, deepcopy(self.__data_loader_valid),
+                                            f'Validation Metrics Epoch {epoch}')
 
         if not self.__save_last:
             if metrics_dict[EVAL_METRIC] > self.__best_score:
@@ -348,7 +357,7 @@ class PipelineManager:
         torch.optim.swa_utils.update_bn(self.__data_loader_train, model)
 
         # COCO Evaluation
-        metrics_dict = self.__coco_evaluate(model, self.__data_loader_test)
+        metrics_dict = self.__coco_evaluate(model, self.__data_loader_test, 'Testing Metrics')
 
         # Print the testing object detection metrics results
         print('=== Testing Results ===\n')
@@ -363,18 +372,41 @@ class PipelineManager:
         # Save the hyperparameters with tensorboard
         self.__writer.add_hparams(self.__args_dict, metric_dict=metrics_dict)
 
-    def __coco_evaluate(self, model, data_loader: DataLoader) -> dict:
+    @torch.no_grad()
+    def __coco_evaluate(self, model, data_loader: DataLoader, desc: str) -> dict:
         """
 
         :param model:
         :param data_loader:
         :return:
         """
-        coco_evaluator = evaluate(model, deepcopy(data_loader), self.__device)
-        coco_results = coco_evaluator.coco_eval['bbox'].stats.tolist()
+        pbar = tqdm(total=len(data_loader), leave=False, desc=desc)
 
-        return dict(zip(COCO_PARAMS_LIST, coco_results))
+        coco = get_coco_api_from_dataset(data_loader.dataset)
+        coco_evaluator = CocoEvaluator(coco, ['bbox'])
 
+        model.eval()
+
+        for images, targets in data_loader:
+            images = list(img.to(self.__device) for img in images)
+
+            outputs = model(images)
+            outputs = [{k: v.to(self.__device) for k, v in t.items()} for t in outputs]
+
+            results = {target["image_id"].item(): output for target, output in zip(targets, outputs)}
+            coco_evaluator.update(results)
+
+            pbar.update()
+
+        pbar.close()
+
+        coco_evaluator.synchronize_between_processes()
+        coco_evaluator.accumulate()
+        coco_evaluator.summarize()
+
+        return dict(zip(COCO_PARAMS_LIST, coco_evaluator.coco_eval['bbox'].stats.tolist()))
+
+    # @torch.no_grad()
     # def __predict(self, model, data_loader: DataLoader, desc: str) -> dict:
     #     """
     #     Perform forward passes to obtain the predicted bounding boxes with the model
@@ -393,26 +425,24 @@ class PipelineManager:
     #     preds_list = []
     #     targets_list = []
     #
-    #     # Deactivate the autograd engine
-    #     with torch.no_grad():
-    #         # Loop through each batch in the data loader
-    #         for images, targets in data_loader:
-    #             # Send the images and targets to the device
-    #             images = torch.stack(images).to(self.__device)
-    #             targets = [{k: v.to(self.__device) for k, v in t.items()} for t in targets]
+    #     # Loop through each batch in the data loader
+    #     for images, targets in data_loader:
+    #         # Send the images and targets to the device
+    #         images = torch.stack(images).to(self.__device)
+    #         targets = [{k: v.to(self.__device) for k, v in t.items()} for t in targets]
     #
-    #             # Get predicted bounding boxes
-    #             preds = model(images)
+    #         # Get predicted bounding boxes
+    #         preds = model(images)
     #
-    #             # Append the current batch predictions and targets to the lists
-    #             preds_list += preds
-    #             targets_list += targets
+    #         # Append the current batch predictions and targets to the lists
+    #         preds_list += preds
+    #         targets_list += targets
     #
-    #             # Save the current memory usage
-    #             self.__save_memory()
+    #         # Save the current memory usage
+    #         self.__save_memory()
     #
-    #             # Update the progress bar
-    #             pbar.update()
+    #         # Update the progress bar
+    #         pbar.update()
     #
     #     # Close the progress bar
     #     pbar.close()
@@ -425,7 +455,7 @@ class PipelineManager:
     #
     #     # Return the calculated object detection evaluation metrics
     #     return self.__calculate_metrics(preds_list, targets_list)
-    #
+
     # def __calculate_metrics(self, preds_list: List[dict], targets_list: List[dict]) -> dict:
     #     """
     #     Calculate the object detection evaluation metrics

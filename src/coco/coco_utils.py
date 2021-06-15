@@ -14,6 +14,8 @@ import torchvision
 from pycocotools import mask as coco_mask
 from pycocotools.coco import COCO
 
+
+from src.coco.coco_eval import createIndex
 # import src.coco.transforms as T
 
 
@@ -196,7 +198,10 @@ def convert_to_coco_api(ds):
             ann_id += 1
     dataset['categories'] = [{'id': i} for i in sorted(categories)]
     coco_ds.dataset = dataset
-    coco_ds.createIndex()
+
+    # coco_ds.createIndex()
+    createIndex(coco_ds)
+
     return coco_ds
 
 

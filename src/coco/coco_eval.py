@@ -56,13 +56,15 @@ class CocoEvaluator(object):
             create_common_coco_eval(self.coco_eval[iou_type], self.img_ids, self.eval_imgs[iou_type])
 
     def accumulate(self):
-        for coco_eval in self.coco_eval.values():
-            coco_eval.accumulate()
+        with utils.HiddenPrints():
+            for coco_eval in self.coco_eval.values():
+                coco_eval.accumulate()
 
     def summarize(self):
-        for iou_type, coco_eval in self.coco_eval.items():
-            print("IoU metric: {}".format(iou_type))
-            coco_eval.summarize()
+        with utils.HiddenPrints():
+            for iou_type, coco_eval in self.coco_eval.items():
+                # print("IoU metric: {}".format(iou_type))
+                coco_eval.summarize()
 
     def prepare(self, predictions, iou_type):
         if iou_type == "bbox":
