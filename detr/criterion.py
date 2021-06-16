@@ -39,7 +39,7 @@ class SetCriterion(nn.Module):
         empty_weight[-1] = self.eos_coef
         self.register_buffer('empty_weight', empty_weight)
 
-    def loss_labels(self, outputs, targets, indices, log=True):
+    def loss_labels(self, outputs, targets, indices, num_boxes, log=True):
         """Classification loss (NLL)
         targets dicts must contain the key "labels" containing a tensor of dim [nb_target_boxes]
         """
@@ -61,7 +61,7 @@ class SetCriterion(nn.Module):
         return losses
 
     @torch.no_grad()
-    def loss_cardinality(self, outputs, targets):
+    def loss_cardinality(self, outputs, targets, indices, num_boxes):
         """ Compute the cardinality error, ie the absolute error in the number of predicted non-empty boxes
         This is not really a loss, it is intended for logging purposes only. It doesn't propagate gradients
         """
@@ -184,8 +184,7 @@ def build_criterion(num_classes: int):
             {k + f'_{i}': v for k, v in weight_dict.items()})
             
     weight_dict.update(aux_weight_dict)
-
-    # TODO add detr hyperparameter for eos-coef in expirement.py
+    # TODO add eos_coef to hyperparmams in experiment.py
     criterion = SetCriterion(num_classes, matcher=matcher, weight_dict=weight_dict,
                              eos_coef=0.1, losses=losses)
 
