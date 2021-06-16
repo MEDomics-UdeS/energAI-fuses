@@ -21,6 +21,8 @@ from google_images_download import google_images_download
 from torchvision.ops import nms
 from typing import List
 from argparse import Namespace
+import torch.nn.functional as F
+from detr.box_ops import box_xyxy_to_cxcywh, box_cxcywh_to_xyxy
 
 from src.utils.constants import REQUIRED_PYTHON
 
@@ -202,3 +204,49 @@ def rename_photos(root_dir: str = 'C:/Users/simon.giard-leroux/Google Drive/'
     for subdir, dirs, files in os.walk(root_dir):
         for i, file in enumerate(files, start=1):
             os.rename(subdir + os.sep + file, subdir + "-" + str(i) + ".JPG")
+
+
+def format_class_dict_for_detr(class_dict: dict) -> dict:
+
+    del class_dict["Background"]
+
+    for key, value in class_dict.items():
+        class_dict[key] = value - 1
+
+
+def format_targets_for_detr(targets, img_size):
+
+    for target in targets:
+
+        target["labels"] -= 1
+        target["area"] = torch.as_tensor(target["area"], dtype=torch.float32)    
+            
+        boxes = target["boxes"]
+        # guard against no boxes via resizing
+        boxes = torch.as_tensor(boxes, dtype=torch.float32).reshape(-1, 4)
+
+        # Normalizing the bboxes
+        target["boxes"] = box_xyxy_to_cxcywh(boxes) / img_size
+
+
+def format_detr_outputs(outputs: List[dict], target_sizes) -> List[dict]:
+
+    out_logits, out_bbox = outputs['pred_logits'], outputs['pred_boxes']
+
+    assert len(out_logits) == len(target_sizes)
+    assert target_sizes.shape[1] == 2
+
+    prob = F.softmax(out_logits, -1)
+    scores, labels = prob[..., :-1].max(-1)
+
+    # convert to [x0, y0, x1, y1] format
+    boxes = box_cxcywh_to_xyxy(out_bbox)
+    # and from relative [0, 1] to absolute [0, height] coordinates
+    img_h, img_w = target_sizes.unbind(1)
+    scale_fct = torch.stack([img_w, img_h, img_w, img_h], dim=1).to(boxes.get_device())
+    boxes = boxes * scale_fct[:, None, :]
+
+    results = [{'boxes': b, 'labels': l, 'scores': s}
+                for b, l, s in zip(boxes, labels, scores)]
+
+    return results

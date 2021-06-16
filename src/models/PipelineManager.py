@@ -16,6 +16,7 @@ from torch.nn.utils import clip_grad_norm_
 from torch.cuda.amp import autocast
 from torch.cuda.amp.grad_scaler import GradScaler
 from torch.cuda import memory_reserved, memory_allocated
+from detr import build_criterion
 from src.models.SummaryWriter import SummaryWriter
 from torchvision.ops import box_iou
 from tqdm import tqdm
@@ -29,9 +30,8 @@ from src.utils.constants import CLASS_DICT, LOG_PATH, MODELS_PATH, EVAL_METRIC
 from src.data.DataLoaderManager import DataLoaderManager
 from src.models.EarlyStopper import EarlyStopper
 from src.models.models import load_model
-from src.utils.helper_functions import filter_by_nms, filter_by_score
-from src.utils.coco_eval import CocoEvaluator
-
+from src.utils.helper_functions import filter_by_nms, filter_by_score, format_detr_outputs, format_targets_for_detr, format_class_dict_for_detr
+#from src.utils.coco_eval import CocoEvaluator
 
 class PipelineManager:
     """
@@ -98,6 +98,11 @@ class PipelineManager:
         self.__writer = SummaryWriter(LOG_PATH + file_name)
 
         # Get number of classes
+        if self.__model_name == 'detr':
+            # It's important to modify the CLASS_DICT in order to train the detr since
+            # the model already accounts for a background class
+            format_class_dict_for_detr(CLASS_DICT)
+
         self.__num_classes = len(CLASS_DICT)
 
         # If early stopping patience is specified, declare an early stopper
@@ -122,17 +127,32 @@ class PipelineManager:
               f'{len(self.__data_loader_test)} batches\n')
 
         # Get model and set last fully-connected layer with the right number of classes
-        self.__model = load_model(self.__model_name, self.__pretrained, self.__num_classes)
+        self.__model = load_model(self.__model_name, self.__pretrained, self.__num_classes)         
 
         # Define device as the GPU if available, else use the CPU
         self.__device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
         # Send the model to the device
         self.__model.to(self.__device)
+        
+        if self.__model_name == 'detr':
+            self.__criterion = build_criterion(self.__num_classes)
+            self.__criterion.to(self.__device)
 
-        # Find which parameters to train (those with .requires_grad = True)
-        params = [p for p in self.__model.parameters() if p.requires_grad]
+            params = [
+                {"params": [p for n, p in self.__model.named_parameters(
+                ) if "backbone" not in n and p.requires_grad]},
+                {
+                    "params": [p for n, p in self.__model.named_parameters() if "backbone" in n and p.requires_grad],
+                    "lr": learning_rate,
+                },
+            ]
+        else:
+            # Find which parameters to train (those with .requires_grad = True)
+            params = [p for p in self.__model.parameters() if p.requires_grad]
 
+
+        
         # Define Adam optimizer
         self.__optimizer = torch.optim.Adam(params, lr=learning_rate, weight_decay=weight_decay)
 
@@ -153,6 +173,7 @@ class PipelineManager:
 
         :param epochs: int, number of epochs
         """
+
         self.__swa_start = int(0.75 * epochs)
         self.__scheduler = CosineAnnealingLR(self.__optimizer, T_max=epochs)
 
@@ -168,8 +189,12 @@ class PipelineManager:
             # Save the model in the saved_models/ folder
             filename = f'{MODELS_PATH}{self.__file_name}_s{self.__image_size}'
 
-            torch.save(self.__swa_model.module if self.__save_last else self.__best_model.module, filename)
-            print(f'{"Last" if self.__save_last else "Best"} model saved to:\t\t\t\t{filename}\n')
+            # TODO fix model saving for detr 
+            # torch.save(self.__swa_model.module if self.__save_last else self.__best_model.module, filename)
+            # print(f'{"Last" if self.__save_last else "Best"} model saved to:\t\t\t\t{filename}\n')
+
+            # This is a hack to save the detr model for inference testing
+            torch.save(self.__model.state_dict(), filename)
 
         # Test the trained model
         self.__test_model()
@@ -231,6 +256,9 @@ class PipelineManager:
         # Specify that the model will be trained
         model.train()
 
+        if self.__model_name == 'detr':
+            self.__criterion.train()
+
         # Declare empty list to save losses
         loss_list_epoch = []
 
@@ -240,14 +268,28 @@ class PipelineManager:
 
         # Loop through each batch in the data loader
         for i, (images, targets) in enumerate(data_loader):
+            
+            if self.__model_name == 'detr':
+                format_targets_for_detr(targets, self.__image_size)
+            
             # Send images and targets to the device
             images = torch.stack(images).to(self.__device)
             targets = [{k: v.to(self.__device) for k, v in t.items()} for t in targets]
 
             # Get losses for the current batch
             with autocast(enabled=self.__mixed_precision):
-                loss_dict = model(images, targets)
-                losses = sum(loss for loss in loss_dict.values())
+                
+                if self.__model_name == 'detr':
+                    loss_dict = model(images)
+                    loss_dict = self.__criterion(loss_dict, targets)
+
+                    # Calculating the detr losses
+                    weight_dict = self.__criterion.weight_dict
+                    losses = sum(loss_dict[k] * weight_dict[k] for k in loss_dict.keys() if k in weight_dict)
+                    
+                else:
+                    loss_dict = model(images, targets)
+                    losses = sum(loss for loss in loss_dict.values())
 
             # Append current batch loss to the loss list
             loss_list_epoch.append(losses.item())
@@ -385,12 +427,17 @@ class PipelineManager:
         with torch.no_grad():
             # Loop through each batch in the data loader
             for images, targets in data_loader:
+
                 # Send the images and targets to the device
                 images = torch.stack(images).to(self.__device)
                 targets = [{k: v.to(self.__device) for k, v in t.items()} for t in targets]
 
                 # Get predicted bounding boxes
                 preds = model(images)
+                
+                if self.__model_name == 'detr':
+                    target_sizes = torch.stack([torch.tensor([self.__image_size, self.__image_size]) for _ in targets], dim=0)
+                    preds = format_detr_outputs(preds, target_sizes)
 
                 # Append the current batch predictions and targets to the lists
                 preds_list += preds
