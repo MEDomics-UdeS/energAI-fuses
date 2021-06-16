@@ -68,10 +68,12 @@ if __name__ == '__main__':
     # Display arguments in console
     print_args(args)
 
+    image_size = int(args.model_file_name[args.model_file_name.find('s') + 1:])
+
     # Declare dataset manager
     dataset_manager = DatasetManager(images_path=RESIZED_PATH,
                                      targets_path=TARGETS_PATH,
-                                     image_size=0,
+                                     image_size=image_size,
                                      num_workers=num_workers,
                                      data_aug=0,
                                      validation_size=0,
@@ -92,7 +94,8 @@ if __name__ == '__main__':
                      data_loader=data_loader_manager.data_loader_test,
                      iou_threshold=args.iou_threshold,
                      score_threshold=args.score_threshold,
-                     save_path=INFERENCE_PATH)
+                     save_path=INFERENCE_PATH,
+                     image_size=image_size)
 
     # Print file save path location
     print(f'\nInference results saved to: {INFERENCE_PATH}')

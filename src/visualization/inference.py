@@ -16,7 +16,7 @@ from tqdm import tqdm
 from torch.utils.data import DataLoader
 from typing import Tuple
 
-from src.utils.constants import CLASS_DICT, FONT_PATH, MODELS_PATH, RESIZED_PATH, RAW_PATH
+from src.utils.constants import CLASS_DICT, FONT_PATH, MODELS_PATH, RESIZED_PATH, RAW_PATH, IMAGE_EXT
 from src.utils.helper_functions import filter_by_nms, filter_by_score
 
 
@@ -24,7 +24,8 @@ def save_test_images(model_file_name: str,
                      data_loader: DataLoader,
                      iou_threshold: float,
                      score_threshold: float,
-                     save_path: str) -> None:
+                     save_path: str,
+                     image_size: int) -> None:
     """
     Main inference testing function to save images with predicted and ground truth bounding boxes
 
@@ -34,8 +35,6 @@ def save_test_images(model_file_name: str,
     :param iou_threshold: float, intersection-over-union threshold for predicted bounding boxes filtering
     :param save_path: str, save path for the inference test images
     """
-    image_size = int(model_file_name[model_file_name.find('s') + 1:])
-
     image_paths_raw = [image_path.replace(RESIZED_PATH, RAW_PATH) for image_path in data_loader.dataset.image_paths]
 
     # Declare device
@@ -110,7 +109,8 @@ def save_test_images(model_file_name: str,
 
                 # Save the image
                 image_raw.save(f'{save_path}'
-                               f'{data_loader.dataset.image_paths[index].rsplit("/", 1)[-1].split(".", 1)[0]}.jpg')
+                               f'{data_loader.dataset.image_paths[index].rsplit("/", 1)[-1].split(".", 1)[0]}'
+                               f'.{IMAGE_EXT}')
 
             # Update the progress bar
             pbar.update()

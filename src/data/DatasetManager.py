@@ -61,43 +61,39 @@ class DatasetManager:
         self.__google_images = google_images
         self.__seed = seed
 
-        if image_size > 0:
-            # Declare image file extension format
-            image_ext = '.jpg'
+        # Check if any image exists in the data/resized folder
+        if any(file.endswith(f'.{IMAGE_EXT}') for file in os.listdir(RESIZED_PATH)):
+            # Get the first found image's size
+            for file in os.listdir(RESIZED_PATH):
+                if file.endswith(f'.{IMAGE_EXT}'):
+                    img_size = Image.open(f'{RESIZED_PATH}{file}').size
+                    break
 
-            # Check if any image exists in the data/resized folder
-            if any(file.endswith(image_ext) for file in os.listdir(RESIZED_PATH)):
-                # Get the first found image's size
-                for file in os.listdir(RESIZED_PATH):
-                    if file.endswith(image_ext):
-                        img_size = Image.open(f'{RESIZED_PATH}{file}').size
-                        break
+            # Check if the first image's size is not equal to the image_size parameter
+            if img_size != (image_size, image_size):
+                print(f'Max image size argument is {(image_size, image_size)} '
+                      f'but a resized image of {img_size} was found')
+                print(f'All images will be resized to {(image_size, image_size)}')
 
-                # Check if the first image's size is not equal to the image_size parameter
-                if img_size != (image_size, image_size):
-                    print(f'Max image size argument is {(image_size, image_size)} '
-                          f'but a resized image of {img_size} was found')
-                    print(f'All images will be resized to {(image_size, image_size)}')
-
-                    # Resize all images
-                    self.__resize_images(image_size, num_workers)
+                # Resize all images
+                self.__resize_images(image_size, num_workers)
+        else:
+            # Check if any image exists in the data/raw folder
+            if any(file.endswith(f'.{IMAGE_EXT}') for file in os.listdir(RAW_PATH)):
+                # Resize all images
+                self.__resize_images(image_size, num_workers)
             else:
-                # Check if any image exists in the data/raw folder
-                if any(file.endswith(image_ext) for file in os.listdir(RAW_PATH)):
+                # Ask the user if the data should be downloaded
+                if input('Raw data folder contains no images. '
+                         'Do you want to download them? (~ 3 GB) (y/n): ') == 'y':
+                    # Download the data
+                    self.__fetch_data(IMAGES_ID, ANNOTATIONS_ID)
+
                     # Resize all images
                     self.__resize_images(image_size, num_workers)
                 else:
-                    # Ask the user if the data should be downloaded
-                    if input('Raw data folder contains no images. '
-                             'Do you want to download them? (~ 3 GB) (y/n): ') == 'y':
-                        # Download the data
-                        self.__fetch_data(IMAGES_ID, ANNOTATIONS_ID)
-
-                        # Resize all images
-                        self.__resize_images(image_size, num_workers)
-                    else:
-                        # Exit the program
-                        sys.exit(1)
+                    # Exit the program
+                    sys.exit(1)
 
         # Declare training, validation and testing datasets
         self.__dataset_train = FuseDataset(images_path, targets_path, num_workers, google_images)

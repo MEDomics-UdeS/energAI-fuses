@@ -24,7 +24,7 @@ from argparse import Namespace
 import torch.nn.functional as F
 from detr.box_ops import box_xyxy_to_cxcywh, box_cxcywh_to_xyxy
 
-from src.utils.constants import REQUIRED_PYTHON
+from src.utils.constants import REQUIRED_PYTHON, IMAGE_EXT
 
 
 def count_images(path: str = "C:/Users/gias2402/Google Drive/"
@@ -203,7 +203,7 @@ def rename_photos(root_dir: str = 'C:/Users/simon.giard-leroux/Google Drive/'
     """
     for subdir, dirs, files in os.walk(root_dir):
         for i, file in enumerate(files, start=1):
-            os.rename(subdir + os.sep + file, subdir + "-" + str(i) + ".JPG")
+            os.rename(subdir + os.sep + file, subdir + "-" + str(i) + f".{IMAGE_EXT}")
 
 
 def format_class_dict_for_detr(class_dict: dict) -> dict:
@@ -250,3 +250,4 @@ def format_detr_outputs(outputs: List[dict], target_sizes) -> List[dict]:
                 for b, l, s in zip(boxes, labels, scores)]
 
     return results
+

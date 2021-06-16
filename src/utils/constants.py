@@ -42,6 +42,9 @@ STD = (0.33986575693672466, 0.3446239730624245, 0.3541046569741213)
 # Evaluation metric for early stopping and best model saving
 EVAL_METRIC = 'Recall (mean per image)'
 
+# Image extension
+IMAGE_EXT = 'jpg'
+
 # Class dictionary
 CLASS_DICT = {
     "Background":               0,
