@@ -250,4 +250,3 @@ def format_detr_outputs(outputs: List[dict], target_sizes) -> List[dict]:
                 for b, l, s in zip(boxes, labels, scores)]
 
     return results
-
