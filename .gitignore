@@ -92,6 +92,7 @@ target/
 /logdir/
 
 # Scratchpad
-scratch.py
+# scratch.py
+
 # Trained saved_models
 /saved_models/

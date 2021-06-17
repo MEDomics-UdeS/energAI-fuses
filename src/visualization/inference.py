@@ -46,6 +46,8 @@ def save_test_images(model_file_name: str,
     # Load saved model
     model = torch.load(f'{MODELS_PATH}{model_file_name}')
 
+    model.to(device)
+
     # Put the model into eval() mode for inference
     model.eval()
 
@@ -171,4 +173,3 @@ def resize_box_coord(box_dict: dict, downsize_ratio: float, x_offset: float, y_o
             box_dict['boxes'][i][j] = int(box_dict['boxes'][i][j] / downsize_ratio)
 
     return box_dict
-
