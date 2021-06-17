@@ -65,7 +65,7 @@ if __name__ == '__main__':
                              'precalculated values, calculated values or disabled')
 
     # Learning rate argument
-    parser.add_argument('-lr', '--learning_rate', action='store', type=float, default=0.0003,
+    parser.add_argument('-lr', '--learning_rate', action='store', type=float, default=0.00003,
                         help='Learning rate for optimizer')
 
     # Weight decay argument
