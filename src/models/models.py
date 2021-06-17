@@ -10,6 +10,7 @@ Description:
     File to load different models
 """
 
+import torch
 import torchvision.models.detection as detection
 from typing import Optional
 
@@ -60,23 +61,13 @@ def load_model(model_name: str,
         model = replace_model_head(model, model_name, num_classes)
 
     elif model_name == 'detr':
-        """
-        To Do: Implement DETR
+        model = torch.hub.load('facebookresearch/detr',
+                               'detr_resnet50', pretrained=False, num_classes=num_classes)
+        
+        if pretrained:
+            model = replace_model_head(model, model_name, num_classes)            
 
-        Paper:              https://arxiv.org/abs/2005.12872
-        Official Repo:      https://github.com/facebookresearch/detr
-        Unofficial Repo:    https://github.com/clive819/Modified-DETR
-        """
-        raise NotImplementedError
-
-    elif model_name == 'perceiver':
-        """
-        To Do : Implement Perceiver
-
-        Paper:              https://arxiv.org/abs/2103.03206
-        Unofficial Repo:    https://github.com/lucidrains/perceiver-pytorch
-        Unofficial Repo:    https://github.com/louislva/deepmind-perceiver
-        """
+    else:
         raise NotImplementedError
 
     return model
@@ -105,6 +96,16 @@ def replace_model_head(model, model_name: str, num_classes: int):
                                                        num_anchors=num_anchors,
                                                        num_classes=num_classes)
 
+    elif 'detr' in model_name:
+        checkpoint = torch.hub.load_state_dict_from_url(
+            url='https://dl.fbaipublicfiles.com/detr/detr-r50-e632da11.pth',
+            map_location='cpu',
+            check_hash=True)
+
+        del checkpoint["model"]["class_embed.weight"]
+        del checkpoint["model"]["class_embed.bias"]
+        model.load_state_dict(checkpoint["model"], strict=False)
+        
     else:
         raise NotImplementedError
 

@@ -16,6 +16,7 @@ from torch.nn.utils import clip_grad_norm_
 from torch.cuda.amp import autocast
 from torch.cuda.amp.grad_scaler import GradScaler
 from torch.cuda import memory_reserved, memory_allocated
+from detr.criterion import build_criterion
 from src.models.SummaryWriter import SummaryWriter
 from tqdm import tqdm
 from torch.utils.data import DataLoader
@@ -31,8 +32,7 @@ from src.models.EarlyStopper import EarlyStopper
 from src.models.models import load_model
 from src.coco.coco_utils import get_coco_api_from_dataset
 from src.coco.coco_eval import CocoEvaluator
-from src.utils.helper_functions import print_dict
-
+from src.utils.helper_functions import print_dict, format_detr_outputs, format_targets_for_detr
 
 class PipelineManager:
     """
@@ -55,7 +55,11 @@ class PipelineManager:
                  args_dict: dict,
                  save_model: bool,
                  image_size: int,
-                 save_last: bool) -> None:
+                 save_last: bool,
+                 class_loss_ceof: float,
+                 bbox_loss_coef: float, 
+                 giou_loss_coef: float, 
+                 eos_coef: float) -> None:
         """
         Class constructor
 
@@ -89,7 +93,11 @@ class PipelineManager:
         self.__es_patience = es_patience
         self.__image_size = image_size
         self.__save_last = save_last
-
+        self.__class_loss_ceof = class_loss_ceof
+        self.__bbox_loss_coef = bbox_loss_coef
+        self.__giou_loss_coef = giou_loss_coef
+        self.__eos_coef = eos_coef
+        
         # Declare steps for tensorboard logging
         self.__train_step = 0
         self.__valid_step = 0
@@ -98,7 +106,6 @@ class PipelineManager:
         # Declare tensorboard writer
         self.__writer = SummaryWriter(LOG_PATH + file_name)
 
-        # Get number of classes
         self.__num_classes = len(CLASS_DICT)
 
         # If early stopping patience is specified, declare an early stopper
@@ -123,16 +130,31 @@ class PipelineManager:
               f'{len(self.__data_loader_test)} batches\n')
 
         # Get model and set last fully-connected layer with the right number of classes
-        self.__model = load_model(self.__model_name, self.__pretrained, self.__num_classes)
+        self.__model = load_model(self.__model_name, self.__pretrained, self.__num_classes)         
 
         # Define device as the GPU if available, else use the CPU
         self.__device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
         # Send the model to the device
         self.__model.to(self.__device)
+        
+        if self.__model_name == 'detr':
+            self.__criterion = build_criterion(
+                self.__class_loss_ceof, self.__bbox_loss_coef, self.__giou_loss_coef, self.__eos_coef, self.__num_classes)
+            self.__criterion.to(self.__device)
 
-        # Find which parameters to train (those with .requires_grad = True)
-        params = [p for p in self.__model.parameters() if p.requires_grad]
+            params = [
+                {"params": [p for n, p in self.__model.named_parameters(
+                ) if "backbone" not in n and p.requires_grad]},
+                {
+                    "params": [p for n, p in self.__model.named_parameters() if "backbone" in n and p.requires_grad],
+                    "lr": learning_rate,
+                },
+            ]
+        else:
+            # Find which parameters to train (those with .requires_grad = True)
+            params = [p for p in self.__model.parameters() if p.requires_grad]
+
 
         # Define Adam optimizer
         self.__optimizer = torch.optim.Adam(params, lr=learning_rate, weight_decay=weight_decay)
@@ -152,6 +174,7 @@ class PipelineManager:
 
         :param epochs: int, number of epochs
         """
+
         self.__swa_start = int(0.75 * epochs)
         self.__scheduler = CosineAnnealingLR(self.__optimizer, T_max=epochs)
 
@@ -167,11 +190,7 @@ class PipelineManager:
             # Save the model in the saved_models/ folder
             filename = f'{MODELS_PATH}{self.__file_name}_s{self.__image_size}'
 
-            if self.__best_epoch >= self.__swa_start:
-                torch.save(self.__swa_model.module if self.__save_last else self.__best_model.module, filename)
-            else:
-                torch.save(self.__model if self.__save_last else self.__best_model, filename)
-
+            torch.save(self.__swa_model.module if self.__save_last else self.__best_model.module, filename)
             print(f'{"Last" if self.__save_last else "Best"} model saved to:\t\t\t\t{filename}\n')
 
         # Test the trained model
@@ -234,6 +253,9 @@ class PipelineManager:
         # Specify that the model will be trained
         model.train()
 
+        if self.__model_name == 'detr':
+            self.__criterion.train()
+
         # Declare empty list to save losses
         loss_list_epoch = []
 
@@ -243,14 +265,28 @@ class PipelineManager:
 
         # Loop through each batch in the data loader
         for i, (images, targets) in enumerate(data_loader):
+            
+            if self.__model_name == 'detr':
+                format_targets_for_detr(targets, self.__image_size)
+            
             # Send images and targets to the device
             images = torch.stack(images).to(self.__device)
             targets = [{k: v.to(self.__device) for k, v in t.items()} for t in targets]
 
             # Get losses for the current batch
             with autocast(enabled=self.__mixed_precision):
-                loss_dict = model(images, targets)
-                losses = sum(loss for loss in loss_dict.values())
+                
+                if self.__model_name == 'detr':
+                    loss_dict = model(images)
+                    loss_dict = self.__criterion(loss_dict, targets)
+
+                    # Calculating the detr losses
+                    weight_dict = self.__criterion.weight_dict
+                    losses = sum(loss_dict[k] * weight_dict[k] for k in loss_dict.keys() if k in weight_dict)
+                    
+                else:
+                    loss_dict = model(images, targets)
+                    losses = sum(loss for loss in loss_dict.values())
 
             # Append current batch loss to the loss list
             loss_list_epoch.append(losses.item())
@@ -384,6 +420,12 @@ class PipelineManager:
             images = list(img.to(self.__device) for img in images)
 
             outputs = model(images)
+
+            if self.__model_name == 'detr':
+                target_sizes = torch.stack(
+                    [torch.tensor([self.__image_size, self.__image_size]) for _ in targets], dim=0)
+                outputs = format_detr_outputs(outputs, target_sizes)
+
             outputs = [{k: v.to(self.__device) for k, v in t.items()} for t in outputs]
 
             results = {target["image_id"].item(): output for target, output in zip(targets, outputs)}
