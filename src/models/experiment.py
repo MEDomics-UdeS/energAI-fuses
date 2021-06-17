@@ -133,6 +133,16 @@ if __name__ == '__main__':
     parser.add_argument('-sl', '--save_last', action='store_true',
                         help='Specify whether to save/use for inference testing the last model, otherwise'
                              'the best model will be used')
+    
+    # DE:TR loss coefficients
+    parser.add_argument('--set_cost_class', default=1, type=float,
+                        help="Class coefficient in the matching cost")
+    parser.add_argument('--set_cost_bbox', default=5, type=float,
+                        help="L1 box coefficient in the matching cost")
+    parser.add_argument('--set_cost_giou', default=2, type=float,
+                        help="giou box coefficient in the matching cost")
+    parser.add_argument('--eos_coef', default=0.1, type=float,
+                        help="Relative classification weight of the no-object class")
 
     # Parsing arguments
     args = parser.parse_args()
@@ -183,7 +193,11 @@ if __name__ == '__main__':
                                                args_dict=vars(args),
                                                save_model=not args.no_save_model,
                                                image_size=args.image_size,
-                                               save_last=args.save_last)
+                                               save_last=args.save_last,
+                                               class_loss_ceof=args.set_cost_class,
+                                               bbox_loss_coef=args.set_cost_bbox,
+                                               giou_loss_coef=args.set_cost_giou,
+                                               eos_coef=args.eos_coef)
 
     # Call the training, validation and testing manager to run the pipeline
     train_valid_test_manager(args.epochs)

@@ -82,6 +82,5 @@ class HungarianMatcher(nn.Module):
         return [(torch.as_tensor(i, dtype=torch.int64), torch.as_tensor(j, dtype=torch.int64)) for i, j in indices]
 
 
-def build_matcher():
-    # TODO add detr hyperparameters in expirement.py for 3 Hungarian matcher arguments
-    return HungarianMatcher(cost_class=1, cost_bbox=5, cost_giou=2)
+def build_matcher(cost_class: float, cost_bbox: float, cost_giou: float):
+    return HungarianMatcher(cost_class=cost_class, cost_bbox=cost_bbox, cost_giou=cost_giou)

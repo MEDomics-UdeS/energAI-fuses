@@ -16,7 +16,7 @@ from torch.nn.utils import clip_grad_norm_
 from torch.cuda.amp import autocast
 from torch.cuda.amp.grad_scaler import GradScaler
 from torch.cuda import memory_reserved, memory_allocated
-from detr import build_criterion
+from detr.criterion import build_criterion
 from src.models.SummaryWriter import SummaryWriter
 from tqdm import tqdm
 from torch.utils.data import DataLoader
@@ -55,7 +55,11 @@ class PipelineManager:
                  args_dict: dict,
                  save_model: bool,
                  image_size: int,
-                 save_last: bool) -> None:
+                 save_last: bool,
+                 class_loss_ceof: float,
+                 bbox_loss_coef: float, 
+                 giou_loss_coef: float, 
+                 eos_coef: float) -> None:
         """
         Class constructor
 
@@ -89,7 +93,11 @@ class PipelineManager:
         self.__es_patience = es_patience
         self.__image_size = image_size
         self.__save_last = save_last
-
+        self.__class_loss_ceof = class_loss_ceof
+        self.__bbox_loss_coef = bbox_loss_coef
+        self.__giou_loss_coef = giou_loss_coef
+        self.__eos_coef = eos_coef
+        
         # Declare steps for tensorboard logging
         self.__train_step = 0
         self.__valid_step = 0
@@ -131,7 +139,8 @@ class PipelineManager:
         self.__model.to(self.__device)
         
         if self.__model_name == 'detr':
-            self.__criterion = build_criterion(self.__num_classes)
+            self.__criterion = build_criterion(
+                self.__class_loss_ceof, self.__bbox_loss_coef, self.__giou_loss_coef, self.__eos_coef, self.__num_classes)
             self.__criterion.to(self.__device)
 
             params = [
