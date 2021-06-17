@@ -17,7 +17,7 @@ from multiprocessing import cpu_count
 
 from src.data.DataLoaderManager import DataLoaderManager
 from src.data.DatasetManager import DatasetManager
-from src.utils.helper_functions import print_args, env_tests
+from src.utils.helper_functions import print_dict, env_tests
 from src.visualization.inference import save_test_images
 from src.utils.constants import RESIZED_PATH, TARGETS_PATH, INFERENCE_PATH, MODELS_PATH
 
@@ -66,7 +66,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # Display arguments in console
-    print_args(args)
+    print('\n=== Arguments & Hyperparameters ===\n')
+    print_dict(vars(args), 6)
 
     image_size = int(args.model_file_name[args.model_file_name.find('s') + 1:])
 

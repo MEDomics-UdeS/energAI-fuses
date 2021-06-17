@@ -86,7 +86,7 @@ if __name__ == '__main__':
                                  'fasterrcnn_mobilenet_v3_large_fpn',
                                  'fasterrcnn_mobilenet_v3_large_320_fpn',
                                  'retinanet_resnet50_fpn',
-                                 'detr', 'perceiver'],
+                                 'detr'],
                         default='fasterrcnn_resnet50_fpn',
                         help='Specify which object detection model to use')
 
