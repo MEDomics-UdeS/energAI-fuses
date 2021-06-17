@@ -32,8 +32,7 @@ from src.models.EarlyStopper import EarlyStopper
 from src.models.models import load_model
 from src.coco.coco_utils import get_coco_api_from_dataset
 from src.coco.coco_eval import CocoEvaluator
-from src.utils.helper_functions import print_dict, format_detr_outputs, format_targets_for_detr, format_class_dict_for_detr
-
+from src.utils.helper_functions import print_dict, format_detr_outputs, format_targets_for_detr
 
 class PipelineManager:
     """
