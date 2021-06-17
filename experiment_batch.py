@@ -24,8 +24,8 @@ if __name__ == '__main__':
 
     # Declare list of commands to be executed
     cmds = [
-        ['python', 'src/models/experiment.py', '--epochs', '1', '--model', 'detr', '-b', '14'],
-        # ['python', 'src/models/experiment.py', '--epochs', '1'],
+        ['python', 'experiment.py', '--epochs', '1', '--model', 'detr', '-b', '14'],
+        # ['python', 'experiment.py', '--epochs', '1'],
     ]
 
     # Loop through each command
