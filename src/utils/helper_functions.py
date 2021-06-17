@@ -210,21 +210,12 @@ def rename_photos(root_dir: str = 'C:/Users/simon.giard-leroux/Google Drive/'
     for subdir, dirs, files in os.walk(root_dir):
         for i, file in enumerate(files, start=1):
             os.rename(subdir + os.sep + file, subdir + "-" + str(i) + f".{IMAGE_EXT}")
-
-
-def format_class_dict_for_detr(class_dict: dict) -> dict:
-
-    del class_dict["Background"]
-
-    for key, value in class_dict.items():
-        class_dict[key] = value - 1
-
+            
 
 def format_targets_for_detr(targets, img_size):
 
     for target in targets:
 
-        target["labels"] -= 1
         target["area"] = torch.as_tensor(target["area"], dtype=torch.float32)    
             
         boxes = target["boxes"]

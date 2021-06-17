@@ -99,12 +99,6 @@ class PipelineManager:
         # Declare tensorboard writer
         self.__writer = SummaryWriter(LOG_PATH + file_name)
 
-        # Get number of classes
-        if self.__model_name == 'detr':
-            # It's important to modify the CLASS_DICT in order to train the detr since
-            # the model already accounts for a background class
-            format_class_dict_for_detr(CLASS_DICT)
-
         self.__num_classes = len(CLASS_DICT)
 
         # If early stopping patience is specified, declare an early stopper
