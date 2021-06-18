@@ -169,6 +169,7 @@ def build_criterion(class_loss_coef: float, bbox_loss_coef: float, giou_loss_coe
     losses = ['labels', 'boxes', 'cardinality']
 
     aux_weight_dict = {}
+    # Auxilary weight coefs for num_transformer_heads
     for i in range(5):
 
         aux_weight_dict.update(

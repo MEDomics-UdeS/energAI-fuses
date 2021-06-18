@@ -34,7 +34,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Processing inputs')
 
     # Model file name argument
-    parser.add_argument('-mfn', '--model_file_name', action='store', type=str, default='detr_100_epoch_s1024',
+    parser.add_argument('-mfn', '--model_file_name', action='store', type=str,
                         help=f'Model file name located in {MODELS_PATH}')
 
     # Compute mean & std deviation on training set argument
@@ -47,7 +47,7 @@ if __name__ == '__main__':
                              'precalculated values, calculated values or disabled')
 
     # Batch size argument
-    parser.add_argument('-b', '--batch', action='store', type=int, default=14,
+    parser.add_argument('-b', '--batch', action='store', type=int, default=1,
                         help='Batch size')
 
     # IOU threshold argument

@@ -22,7 +22,7 @@ from torchvision.ops import nms
 from typing import List
 from argparse import Namespace
 import torch.nn.functional as F
-from detr.box_ops import box_xyxy_to_cxcywh, box_cxcywh_to_xyxy
+from detr.box_ops import box_cxcywh_to_xyxy
 
 from src.utils.constants import REQUIRED_PYTHON, IMAGE_EXT
 
@@ -210,28 +210,14 @@ def rename_photos(root_dir: str = 'C:/Users/simon.giard-leroux/Google Drive/'
     for subdir, dirs, files in os.walk(root_dir):
         for i, file in enumerate(files, start=1):
             os.rename(subdir + os.sep + file, subdir + "-" + str(i) + f".{IMAGE_EXT}")
-            
-
-def format_targets_for_detr(targets, img_size):
-
-    for target in targets:
-
-        target["area"] = torch.as_tensor(target["area"], dtype=torch.float32)    
-            
-        boxes = target["boxes"]
-        # guard against no boxes via resizing
-        boxes = torch.as_tensor(boxes, dtype=torch.float32).reshape(-1, 4)
-
-        # Normalizing the bboxes
-        target["boxes"] = box_xyxy_to_cxcywh(boxes) / img_size
 
 
-def format_detr_outputs(outputs: List[dict], target_sizes) -> List[dict]:
+def format_detr_outputs(outputs: List[dict], target_sizes: torch.Tensor) -> List[dict]:
 
     out_logits, out_bbox = outputs['pred_logits'], outputs['pred_boxes']
 
-    assert len(out_logits) == len(target_sizes)
-    assert target_sizes.shape[1] == 2
+    assert len(out_logits) == len(target_sizes), "target_sizes tensor must be of size 'batch_size' in 1st dimension"
+    assert target_sizes.shape[1] == 2, "target_sizes tensor must be of size '2' in 2nd dimension"
 
     prob = F.softmax(out_logits, -1)
     scores, labels = prob[..., :-1].max(-1)

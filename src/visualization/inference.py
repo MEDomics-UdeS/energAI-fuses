@@ -44,19 +44,21 @@ def save_test_images(model_file_name: str,
     # Declare progress bar
     pbar = tqdm(total=len(data_loader), leave=False, desc='Inference Test')
 
-    # Loading the model 
-    with ZipFile(f'{MODELS_PATH}{model_file_name}', 'r') as zipObj:
-        model_type = str(zipObj.read('archive/data.pkl')).split("\\n")[1]
+    model_data = f'{MODELS_PATH}{model_file_name}'
 
-        if model_type == 'DETR':
+    # Loading the model 
+    with ZipFile(model_data, 'r') as zipObj:
+        # Extracting model type from the data.pkl file
+        model_type = str(zipObj.read('archive/data.pkl')).split("\\n")[1].lower()
+
+        if model_type == 'detr':
             model = torch.hub.load('facebookresearch/detr',
                                     'detr_resnet50', pretrained=False, num_classes=len(CLASS_DICT))
 
-            model.load_state_dict(torch.load(
-                f'{MODELS_PATH}{model_file_name}').state_dict())
+            model.load_state_dict(torch.load(model_data).state_dict())
             
         else:
-            model = torch.load(f'{MODELS_PATH}{model_file_name}')
+            model = torch.load(model_data)
                 
     model.to(device)
 
@@ -78,7 +80,7 @@ def save_test_images(model_file_name: str,
         # Perform a forward pass and obtain bounding boxes predictions
         preds = model(images)
 
-        if model_type == 'DETR':
+        if model_type == 'detr':
             target_sizes = torch.stack(
                 [torch.tensor([image_size, image_size]) for _ in range(data_loader.batch_size)], dim=0)
             preds = format_detr_outputs(preds, target_sizes)

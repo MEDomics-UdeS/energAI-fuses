@@ -65,7 +65,7 @@ def load_model(model_name: str,
                                'detr_resnet50', pretrained=False, num_classes=num_classes)
         
         if pretrained:
-            model = replace_model_head(model, model_name, num_classes)            
+            model = load_detr_state_dict(model)
 
     else:
         raise NotImplementedError
@@ -95,18 +95,23 @@ def replace_model_head(model, model_name: str, num_classes: int):
         model.head = detection.retinanet.RetinaNetHead(in_channels=in_channels,
                                                        num_anchors=num_anchors,
                                                        num_classes=num_classes)
-
-    elif 'detr' in model_name:
-        checkpoint = torch.hub.load_state_dict_from_url(
-            url='https://dl.fbaipublicfiles.com/detr/detr-r50-e632da11.pth',
-            map_location='cpu',
-            check_hash=True)
-
-        del checkpoint["model"]["class_embed.weight"]
-        del checkpoint["model"]["class_embed.bias"]
-        model.load_state_dict(checkpoint["model"], strict=False)
         
     else:
         raise NotImplementedError
 
+    return model
+
+
+def load_detr_state_dict(model):
+    """
+    Load pretrained weights for DE:TR model
+    """
+    checkpoint = torch.hub.load_state_dict_from_url(
+        url='https://dl.fbaipublicfiles.com/detr/detr-r50-e632da11.pth',
+        map_location='cpu',
+        check_hash=True)
+
+    del checkpoint["model"]["class_embed.weight"]
+    del checkpoint["model"]["class_embed.bias"]
+    model.load_state_dict(checkpoint["model"], strict=False)
     return model

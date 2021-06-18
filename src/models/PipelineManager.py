@@ -32,7 +32,8 @@ from src.models.EarlyStopper import EarlyStopper
 from src.models.models import load_model
 from src.coco.coco_utils import get_coco_api_from_dataset
 from src.coco.coco_eval import CocoEvaluator
-from src.utils.helper_functions import print_dict, format_detr_outputs, format_targets_for_detr
+from src.utils.helper_functions import print_dict, format_detr_outputs
+from detr.box_ops import batch_box_xyxy_to_cxcywh
 
 class PipelineManager:
     """
@@ -93,10 +94,6 @@ class PipelineManager:
         self.__es_patience = es_patience
         self.__image_size = image_size
         self.__save_last = save_last
-        self.__class_loss_ceof = class_loss_ceof
-        self.__bbox_loss_coef = bbox_loss_coef
-        self.__giou_loss_coef = giou_loss_coef
-        self.__eos_coef = eos_coef
         
         # Declare steps for tensorboard logging
         self.__train_step = 0
@@ -106,6 +103,7 @@ class PipelineManager:
         # Declare tensorboard writer
         self.__writer = SummaryWriter(LOG_PATH + file_name)
 
+        # Get number of classes
         self.__num_classes = len(CLASS_DICT)
 
         # If early stopping patience is specified, declare an early stopper
@@ -130,7 +128,7 @@ class PipelineManager:
               f'{len(self.__data_loader_test)} batches\n')
 
         # Get model and set last fully-connected layer with the right number of classes
-        self.__model = load_model(self.__model_name, self.__pretrained, self.__num_classes)         
+        self.__model = load_model(self.__model_name, self.__pretrained, self.__num_classes)
 
         # Define device as the GPU if available, else use the CPU
         self.__device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
@@ -140,12 +138,11 @@ class PipelineManager:
         
         if self.__model_name == 'detr':
             self.__criterion = build_criterion(
-                self.__class_loss_ceof, self.__bbox_loss_coef, self.__giou_loss_coef, self.__eos_coef, self.__num_classes)
+                class_loss_ceof, bbox_loss_coef, giou_loss_coef, eos_coef, self.__num_classes)
             self.__criterion.to(self.__device)
 
             params = [
-                {"params": [p for n, p in self.__model.named_parameters(
-                ) if "backbone" not in n and p.requires_grad]},
+                {"params": [p for n, p in self.__model.named_parameters() if "backbone" not in n and p.requires_grad]},
                 {
                     "params": [p for n, p in self.__model.named_parameters() if "backbone" in n and p.requires_grad],
                     "lr": learning_rate,
@@ -189,6 +186,13 @@ class PipelineManager:
         if self.__save_model:
             # Save the model in the saved_models/ folder
             filename = f'{MODELS_PATH}{self.__file_name}_s{self.__image_size}'
+
+            if self.__best_epoch >= self.__swa_start:
+                torch.save(
+                    self.__swa_model.module if self.__save_last else self.__best_model.module, filename)
+            else:
+                torch.save(
+                    self.__model if self.__save_last else self.__best_model, filename)
 
             torch.save(self.__swa_model.module if self.__save_last else self.__best_model.module, filename)
             print(f'{"Last" if self.__save_last else "Best"} model saved to:\t\t\t\t{filename}\n')
@@ -267,7 +271,7 @@ class PipelineManager:
         for i, (images, targets) in enumerate(data_loader):
             
             if self.__model_name == 'detr':
-                format_targets_for_detr(targets, self.__image_size)
+                batch_box_xyxy_to_cxcywh(targets, self.__image_size)
             
             # Send images and targets to the device
             images = torch.stack(images).to(self.__device)
