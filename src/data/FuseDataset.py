@@ -45,8 +45,8 @@ class FuseDataset(Dataset):
             images = [img for img in sorted(os.listdir(images_path)) if img.startswith('S') or img.startswith('G')]
 
             if not google_images:
-                google_images = [image for image in images if image.startswith('G')]
-                google_indices = [images.index(google_image) for google_image in google_images]
+                google_imgs = [image for image in images if image.startswith('G')]
+                google_indices = [images.index(google_image) for google_image in google_imgs]
                 images = [e for i, e in enumerate(images) if i not in google_indices]
 
             # Save the image paths as an object attribute

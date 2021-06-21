@@ -25,11 +25,12 @@ if __name__ == '__main__':
     # Record start time
     start = datetime.now()
 
-    # Get number of cpu threads for PyTorch DataLoader and ray paralleling
-    num_workers = cpu_count()
-
     # Declare argument parser
     parser = argparse.ArgumentParser(description='Processing inputs')
+
+    # Number of workers argument
+    parser.add_argument('-nw', '--num_workers', action='store', type=int, default=cpu_count(),
+                        help='Number of workers')
 
     # Number of epochs argument
     parser.add_argument('-e', '--epochs', action='store', type=int, default=1,
@@ -71,14 +72,6 @@ if __name__ == '__main__':
     # Weight decay argument
     parser.add_argument('-wd', '--weight_decay', action='store', type=float, default=0.0001,
                         help='Weight decay (L2 penalty) for optimizer')
-
-    # IOU threshold argument
-    parser.add_argument('-iou', '--iou_threshold', action='store', type=float, default=0.5,
-                        help='IOU threshold for non-max suppression')
-
-    # Score threshold argument
-    parser.add_argument('-sc', '--score_threshold', action='store', type=float, default=0.5,
-                        help='Score threshold to filter box predictions')
 
     # Model argument
     parser.add_argument('-mo', '--model', action='store', type=str,
@@ -129,6 +122,14 @@ if __name__ == '__main__':
     parser.add_argument('-no-gi', '--no_google_images', action='store_true',
                         help='If specified, the Google Images photos will be excluded from the training subset')
 
+    # Calculate training set metrics
+    parser.add_argument('-ltm', '--log_training_metrics', action='store_true',
+                        help='If specified, the AP and AR metrics will be calculated and logged for training set')
+
+    # Calculate training set metrics
+    parser.add_argument('-lm', '--log_memory', action='store_true',
+                        help='If specified, the memory will be logged')
+
     # Best or last model saved/used for test inference argument
     parser.add_argument('-sl', '--save_last', action='store_true',
                         help='Specify whether to save/use for inference testing the last model, otherwise'
@@ -155,7 +156,7 @@ if __name__ == '__main__':
     set_deterministic(args.deterministic, args.random_seed)
 
     # Declare file name as yyyy-mm-dd_hh-mm-ss
-    file_name = start.strftime('%Y-%m-%d_%H-%M-%S')
+    file_name = f'{args.model.split("_")[0]}_{args.epochs}_{start.strftime("%Y-%m-%d_%H-%M-%S")}'
 
     # Display arguments in console
     print('\n=== Arguments & Hyperparameters ===\n')
@@ -165,7 +166,7 @@ if __name__ == '__main__':
     dataset_manager = DatasetManager(images_path=RESIZED_PATH,
                                      targets_path=TARGETS_PATH,
                                      image_size=args.image_size,
-                                     num_workers=num_workers,
+                                     num_workers=args.num_workers,
                                      data_aug=args.data_aug,
                                      validation_size=args.validation_size,
                                      test_size=args.test_size,
@@ -177,7 +178,7 @@ if __name__ == '__main__':
     data_loader_manager = DataLoaderManager(dataset_manager=dataset_manager,
                                             batch_size=args.batch,
                                             gradient_accumulation=args.gradient_accumulation,
-                                            num_workers=num_workers,
+                                            num_workers=args.num_workers,
                                             deterministic=args.deterministic)
 
     # Declare training, validation and testing manager
@@ -191,13 +192,13 @@ if __name__ == '__main__':
                                                mixed_precision=args.mixed_precision,
                                                gradient_accumulation=args.gradient_accumulation,
                                                pretrained=not args.no_pretrained,
-                                               iou_threshold=args.iou_threshold,
-                                               score_threshold=args.score_threshold,
                                                gradient_clip=args.gradient_clip,
                                                args_dict=vars(args),
                                                save_model=not args.no_save_model,
                                                image_size=args.image_size,
                                                save_last=args.save_last,
+                                               log_training_metrics=args.log_training_metrics,
+                                               log_memory=args.log_memory,
                                                class_loss_ceof=args.set_cost_class if args.model == 'detr' else None,
                                                bbox_loss_coef=args.set_cost_bbox if args.model == 'detr' else None,
                                                giou_loss_coef=args.set_cost_giou if args.model == 'detr' else None,
