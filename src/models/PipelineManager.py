@@ -16,7 +16,7 @@ from torch.nn.utils import clip_grad_norm_
 from torch.cuda.amp import autocast
 from torch.cuda.amp.grad_scaler import GradScaler
 from torch.cuda import memory_reserved, memory_allocated
-from detr.criterion import build_criterion
+from src.detr.criterion import build_criterion
 from src.models.SummaryWriter import SummaryWriter
 from tqdm import tqdm
 from torch.utils.data import DataLoader
@@ -33,7 +33,7 @@ from src.models.models import load_model
 from src.coco.coco_utils import get_coco_api_from_dataset
 from src.coco.coco_eval import CocoEvaluator
 from src.utils.helper_functions import print_dict, format_detr_outputs
-from detr.box_ops import batch_box_xyxy_to_cxcywh
+from src.detr.box_ops import batch_box_xyxy_to_cxcywh
 
 class PipelineManager:
     """

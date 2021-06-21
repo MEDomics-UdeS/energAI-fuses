@@ -25,7 +25,7 @@ if __name__ == '__main__':
     # Declare list of commands to be executed
     cmds = [
         # ['python', 'experiment.py', '--epochs', '1', '--model', 'detr', '-b', '14', '-lr', '0.00003'],
-        ['python', 'experiment.py', '--epochs', '3', '--batch', '20', '-no-gi'],
+        ['python', 'experiment.py', '--epochs', '3', '--batch', '14', '--model', 'detr'],
         # ['python', 'inference_test.py', '-mfn', 'detr_100_epoch_s1024', '-b', '14'],
     ]
 
