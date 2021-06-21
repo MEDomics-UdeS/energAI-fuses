@@ -16,6 +16,7 @@ from torch.nn.utils import clip_grad_norm_
 from torch.cuda.amp import autocast
 from torch.cuda.amp.grad_scaler import GradScaler
 from torch.cuda import memory_reserved, memory_allocated
+from detr.criterion import build_criterion
 from src.models.SummaryWriter import SummaryWriter
 from tqdm import tqdm
 from torch.utils.data import DataLoader
@@ -31,8 +32,8 @@ from src.models.EarlyStopper import EarlyStopper
 from src.models.models import load_model
 from src.coco.coco_utils import get_coco_api_from_dataset
 from src.coco.coco_eval import CocoEvaluator
-from src.utils.helper_functions import print_dict
-
+from src.utils.helper_functions import print_dict, format_detr_outputs
+from detr.box_ops import batch_box_xyxy_to_cxcywh
 
 class PipelineManager:
     """
@@ -55,7 +56,11 @@ class PipelineManager:
                  args_dict: dict,
                  save_model: bool,
                  image_size: int,
-                 save_last: bool) -> None:
+                 save_last: bool,
+                 class_loss_ceof: float,
+                 bbox_loss_coef: float, 
+                 giou_loss_coef: float, 
+                 eos_coef: float) -> None:
         """
         Class constructor
 
@@ -89,7 +94,7 @@ class PipelineManager:
         self.__es_patience = es_patience
         self.__image_size = image_size
         self.__save_last = save_last
-
+        
         # Declare steps for tensorboard logging
         self.__train_step = 0
         self.__valid_step = 0
@@ -130,9 +135,23 @@ class PipelineManager:
 
         # Send the model to the device
         self.__model.to(self.__device)
+        
+        if self.__model_name == 'detr':
+            self.__criterion = build_criterion(
+                class_loss_ceof, bbox_loss_coef, giou_loss_coef, eos_coef, self.__num_classes)
+            self.__criterion.to(self.__device)
 
-        # Find which parameters to train (those with .requires_grad = True)
-        params = [p for p in self.__model.parameters() if p.requires_grad]
+            params = [
+                {"params": [p for n, p in self.__model.named_parameters() if "backbone" not in n and p.requires_grad]},
+                {
+                    "params": [p for n, p in self.__model.named_parameters() if "backbone" in n and p.requires_grad],
+                    "lr": learning_rate,
+                },
+            ]
+        else:
+            # Find which parameters to train (those with .requires_grad = True)
+            params = [p for p in self.__model.parameters() if p.requires_grad]
+
 
         # Define Adam optimizer
         self.__optimizer = torch.optim.Adam(params, lr=learning_rate, weight_decay=weight_decay)
@@ -152,6 +171,7 @@ class PipelineManager:
 
         :param epochs: int, number of epochs
         """
+
         self.__swa_start = int(0.75 * epochs)
         self.__scheduler = CosineAnnealingLR(self.__optimizer, T_max=epochs)
 
@@ -168,10 +188,13 @@ class PipelineManager:
             filename = f'{MODELS_PATH}{self.__file_name}_s{self.__image_size}'
 
             if self.__best_epoch >= self.__swa_start:
-                torch.save(self.__swa_model.module if self.__save_last else self.__best_model.module, filename)
+                torch.save(
+                    self.__swa_model.module if self.__save_last else self.__best_model.module, filename)
             else:
-                torch.save(self.__model if self.__save_last else self.__best_model, filename)
+                torch.save(
+                    self.__model if self.__save_last else self.__best_model, filename)
 
+            torch.save(self.__swa_model.module if self.__save_last else self.__best_model.module, filename)
             print(f'{"Last" if self.__save_last else "Best"} model saved to:\t\t\t\t{filename}\n')
 
         # Test the trained model
@@ -234,6 +257,9 @@ class PipelineManager:
         # Specify that the model will be trained
         model.train()
 
+        if self.__model_name == 'detr':
+            self.__criterion.train()
+
         # Declare empty list to save losses
         loss_list_epoch = []
 
@@ -243,14 +269,28 @@ class PipelineManager:
 
         # Loop through each batch in the data loader
         for i, (images, targets) in enumerate(data_loader):
+            
+            if self.__model_name == 'detr':
+                batch_box_xyxy_to_cxcywh(targets, self.__image_size)
+            
             # Send images and targets to the device
             images = torch.stack(images).to(self.__device)
             targets = [{k: v.to(self.__device) for k, v in t.items()} for t in targets]
 
             # Get losses for the current batch
             with autocast(enabled=self.__mixed_precision):
-                loss_dict = model(images, targets)
-                losses = sum(loss for loss in loss_dict.values())
+                
+                if self.__model_name == 'detr':
+                    loss_dict = model(images)
+                    loss_dict = self.__criterion(loss_dict, targets)
+
+                    # Calculating the detr losses
+                    weight_dict = self.__criterion.weight_dict
+                    losses = sum(loss_dict[k] * weight_dict[k] for k in loss_dict.keys() if k in weight_dict)
+                    
+                else:
+                    loss_dict = model(images, targets)
+                    losses = sum(loss for loss in loss_dict.values())
 
             # Append current batch loss to the loss list
             loss_list_epoch.append(losses.item())
@@ -384,6 +424,12 @@ class PipelineManager:
             images = list(img.to(self.__device) for img in images)
 
             outputs = model(images)
+
+            if self.__model_name == 'detr':
+                target_sizes = torch.stack(
+                    [torch.tensor([self.__image_size, self.__image_size]) for _ in targets], dim=0)
+                outputs = format_detr_outputs(outputs, target_sizes)
+
             outputs = [{k: v.to(self.__device) for k, v in t.items()} for t in outputs]
 
             results = {target["image_id"].item(): output for target, output in zip(targets, outputs)}
@@ -398,118 +444,7 @@ class PipelineManager:
         coco_evaluator.summarize()
 
         return dict(zip(COCO_PARAMS_LIST, coco_evaluator.coco_eval['bbox'].stats.tolist()))
-
-    # @torch.no_grad()
-    # def __predict(self, model, data_loader: DataLoader, desc: str) -> dict:
-    #     """
-    #     Perform forward passes to obtain the predicted bounding boxes with the model
-    #
-    #     :param data_loader: DataLoader, data loader object
-    #     :param desc: str, description for the progress bar
-    #     :return: dict, object detection metrics results
-    #     """
-    #     # Declare progress bar
-    #     pbar = tqdm(total=len(data_loader), leave=False, desc=desc)
-    #
-    #     # Specify that the model will be evaluated
-    #     model.eval()
-    #
-    #     # Declare empty lists to store the predicted bounding boxes and the ground truth targets
-    #     preds_list = []
-    #     targets_list = []
-    #
-    #     # Loop through each batch in the data loader
-    #     for images, targets in data_loader:
-    #         # Send the images and targets to the device
-    #         images = torch.stack(images).to(self.__device)
-    #         targets = [{k: v.to(self.__device) for k, v in t.items()} for t in targets]
-    #
-    #         # Get predicted bounding boxes
-    #         preds = model(images)
-    #
-    #         # Append the current batch predictions and targets to the lists
-    #         preds_list += preds
-    #         targets_list += targets
-    #
-    #         # Save the current memory usage
-    #         self.__save_memory()
-    #
-    #         # Update the progress bar
-    #         pbar.update()
-    #
-    #     # Close the progress bar
-    #     pbar.close()
-    #
-    #     # Filter the predictions by non-maximum suppression
-    #     preds_list = filter_by_nms(preds_list, self.__iou_threshold)
-    #
-    #     # Filter the predictions by bounding box confidence score
-    #     preds_list = filter_by_score(preds_list, self.__score_threshold)
-    #
-    #     # Return the calculated object detection evaluation metrics
-    #     return self.__calculate_metrics(preds_list, targets_list)
-
-    # def __calculate_metrics(self, preds_list: List[dict], targets_list: List[dict]) -> dict:
-    #     """
-    #     Calculate the object detection evaluation metrics
-    #
-    #     :param preds_list: list, contains dictionaries of tensors of predicted bounding boxes
-    #     :param targets_list: list, contains dictionaries of tensors of ground truth bounding boxes
-    #     :return: dict, contains the object detection evaluation metrics results
-    #     """
-    #     # Save ground truth and predicted bounding boxes and labels in lists
-    #     targets_boxes = [target['boxes'] for target in targets_list]
-    #     targets_labels = [target['labels'] for target in targets_list]
-    #     preds_boxes = [pred['boxes'] for pred in preds_list]
-    #     preds_labels = [pred['labels'] for pred in preds_list]
-    #
-    #     # Declare empty intersection-over-union (iou) list
-    #     iou_list = []
-    #
-    #     # For each image, calculate an iou matrix giving the iou score for each prediction/ground truth combination
-    #     for pred_boxes, target_boxes in zip(preds_boxes, targets_boxes):
-    #         iou_list.append(box_iou(pred_boxes, target_boxes))
-    #
-    #     # Declare empty max iou and True/False positives lists
-    #     max_iou_list = []
-    #     types_list = []
-    #
-    #     # Loop through each image
-    #     for iou, target_labels, pred_labels in zip(iou_list, targets_labels, preds_labels):
-    #         # Check if there are predicted boxes
-    #         if iou.nelement() > 0:
-    #             # Calculate the maximum iou values and indices for each predicted box
-    #             max_iou_list.append(torch.max(iou, dim=1))
-    #
-    #             # Declare an empty True/False positives lists for the current iteration
-    #             type_list_iter = []
-    #
-    #             # Evaluate if the predictions are True or False positives
-    #             for i, (value, index) in enumerate(zip(max_iou_list[-1].values, max_iou_list[-1].indices)):
-    #                 if value.greater(self.__iou_threshold) and \
-    #                         target_labels.data[index].equal(pred_labels.data[i]):
-    #                     type_list_iter.append(True)
-    #                 else:
-    #                     type_list_iter.append(False)
-    #
-    #             types_list.append(type_list_iter)
-    #         else:
-    #             types_list.append([])
-    #
-    #     # Calculate recall
-    #     recall_list = [sum(types) / len(targets_labels[i]) for i, types in enumerate(types_list)]
-    #
-    #     # Calculate precision
-    #     precision_list = [0 if len(types) == 0 else sum(types) / len(types) for types in types_list]
-    #
-    #     # Calculate mean recall and mean precision over all images and store them into a results dictionary
-    #     metrics_dict = {
-    #         'Recall (mean per image)': np.mean(recall_list),
-    #         'Precision (mean per image)': np.mean(precision_list)
-    #     }
-    #
-    #     # Return the results dictionary
-    #     return metrics_dict
+    
 
     def __save_batch(self, phase: str, loss: float) -> None:
         """

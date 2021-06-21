@@ -36,7 +36,7 @@ if __name__ == '__main__':
                         help='Number of epochs')
 
     # Batch size argument
-    parser.add_argument('-b', '--batch', action='store', type=int, default=20,
+    parser.add_argument('-b', '--batch', action='store', type=int, default=1,
                         help='Batch size')
 
     # Validation size argument
@@ -137,6 +137,20 @@ if __name__ == '__main__':
     # Parsing arguments
     args = parser.parse_args()
 
+    # Addtional arguments for DE:TR model
+    if args.model == 'detr':
+        # DE:TR loss coefficients
+        parser.add_argument('--set_cost_class', default=1, type=float,
+                            help="Class coefficient in the matching cost")
+        parser.add_argument('--set_cost_bbox', default=5, type=float,
+                            help="L1 box coefficient in the matching cost")
+        parser.add_argument('--set_cost_giou', default=2, type=float,
+                            help="giou box coefficient in the matching cost")
+        parser.add_argument('--eos_coef', default=0.1, type=float,
+                            help="Relative classification weight of the no-object class")
+        # Parsing arguments
+        args = parser.parse_args()
+
     # Set deterministic behavior
     set_deterministic(args.deterministic, args.random_seed)
 
@@ -183,7 +197,11 @@ if __name__ == '__main__':
                                                args_dict=vars(args),
                                                save_model=not args.no_save_model,
                                                image_size=args.image_size,
-                                               save_last=args.save_last)
+                                               save_last=args.save_last,
+                                               class_loss_ceof=args.set_cost_class if args.model == 'detr' else None,
+                                               bbox_loss_coef=args.set_cost_bbox if args.model == 'detr' else None,
+                                               giou_loss_coef=args.set_cost_giou if args.model == 'detr' else None,
+                                               eos_coef=args.eos_coef if args.model == 'detr' else None)
 
     # Call the training, validation and testing manager to run the pipeline
     train_valid_test_manager(args.epochs)
