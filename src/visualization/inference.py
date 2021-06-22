@@ -160,17 +160,18 @@ def draw_annotations(draw: ImageDraw.ImageDraw, pred_box_dict: dict, target_box_
     # Declare list of confidence scores as 100% confidence score for each box
     target_scores = [1] * len(target_labels)
     
-    # Drawing the bounding boxes on the image
+    # Drawing ground truth bounding boxes on the image
     for target_box, (box_width, font) in zip(target_boxes, target_annotations):
         draw.rectangle(target_box, outline="green", width=box_width)
+    # Drawing predicted bounding boxes on the image
     for pred_box, (box_width, font) in zip(pred_boxes, pred_annotations):
         draw.rectangle(pred_box, outline="red", width=box_width)
-
-    # Drawing the text over the bounding boxes on the image
+    # Drawing ground truth labels over the bounding boxes on the image
     for target_box, target_label, target_score, (box_width, font)\
             in zip(target_boxes, target_labels, target_scores, target_annotations):
         draw.text(
             (target_box[0], target_box[1]), text=f'{target_label} {target_score:.4f}', font=font, fill=(255, 255, 0, 0))
+    # Drawing predicted labels over the bounding boxes on the image
     for pred_box, pred_label, pred_score, (box_width, font)\
             in zip(pred_boxes, pred_labels, pred_scores, pred_annotations):
         draw.text(
@@ -206,7 +207,6 @@ def scale_annotation_sizes(img: Image, pred_boxes: list, target_boxes: list, box
     target_annotations = []
     
     for box in pred_boxes:
-        
         box_area = (box[0] - box[2]) * (box[1] - box[3])
         
         box_width = min(int(img_area / box_area * box_scaler) + 8, MAX_BBOX_SIZE)
@@ -215,15 +215,12 @@ def scale_annotation_sizes(img: Image, pred_boxes: list, target_boxes: list, box
         pred_annotations.append((box_width, ImageFont.truetype(FONT_PATH, font_size)))
 
     for box in target_boxes:
-
         box_area = (box[0] - box[2]) * (box[1] - box[3])
 
-        box_width = min(
-            int(img_area / box_area * box_scaler) + 4, MAX_BBOX_SIZE)
+        box_width = min(int(img_area / box_area * box_scaler) + 4, MAX_BBOX_SIZE)
         font_size = min(int(max(img.size) * text_scaler) + 6, MAX_FONT_SIZE)
 
-        target_annotations.append(
-            (box_width, ImageFont.truetype(FONT_PATH, font_size)))
+        target_annotations.append((box_width, ImageFont.truetype(FONT_PATH, font_size)))
     
     # Declare the font object to write the confidence scores on the images
     return pred_annotations, target_annotations
