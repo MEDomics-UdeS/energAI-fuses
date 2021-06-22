@@ -65,9 +65,6 @@ def save_test_images(model_file_name: str,
     # Put the model into eval() mode for inference
     model.eval()
 
-    # Declare the font object to write the confidence scores on the images
-    font = ImageFont.truetype(FONT_PATH, 12)
-
     # Loop through each batch in the data loader
     for batch_no, (images, targets) in enumerate(data_loader):
         # Get current batch indices
@@ -120,11 +117,11 @@ def save_test_images(model_file_name: str,
             # Declare an ImageDraw object
             draw = ImageDraw.Draw(image_raw)
 
-            # Draw ground truth bounding boxes
-            draw_boxes(draw, target, 'green', 3, font, (255, 255, 0, 0))
+            # Defines bbox outlines width and font for image drawing
+            pred_annotations, target_annotations = scale_annotation_sizes(image_raw, pred["boxes"], target["boxes"])
 
-            # Draw predicted bounding boxes
-            draw_boxes(draw, pred, 'red', 3, font, (255, 255, 255, 0))
+            # Drawing the annotations on the image
+            draw_annotations(draw, pred, target, pred_annotations, target_annotations)
 
             # Save the image
             image_raw.save(f'{save_path}'
@@ -136,43 +133,49 @@ def save_test_images(model_file_name: str,
 
     # Close the progress bar
     pbar.close()
-
-
-def draw_boxes(draw: ImageDraw.ImageDraw, box_dict: dict, outline_color: str, outline_width: int,
-               font: ImageFont.ImageFont, font_color: Tuple[int, int, int, int]) -> None:
+    
+    
+def draw_annotations(draw: ImageDraw.ImageDraw, pred_box_dict: dict, target_box_dict: dict, pred_annotations: list, target_annotations: list):
     """
     Function to draw bounding boxes on an image
 
     :param draw: ImageDraw, ImageDraw PIL object
-    :param box_dict: dict, dictionary containing bounding boxes
-    :param outline_color: str, bounding box outline color in plain english
-    :param outline_width: int, bounding box outline width in pixels
-    :param font: ImageFont, ImageFont PIL object to specify which font to use to write the bounding boxes confidence
-                 scores on the images
-    :param font_color: tuple, four integers in the range (0, 255) to indicate font color in RGBA format
+    :param pred_box_dict: dict, dictionary containing predicted bounding boxes
+    :param target_box_dict: dict, dictionary containing ground truth bounding boxes
+    :param pred_annotations: list, contains the width and font of every individual predicted bounding boxes
+    :param target_annotations: list, contains the width and font of every individual ground truth bounding boxes
     """
     # Get list of boxes
-    boxes = box_dict['boxes'].tolist()
+    pred_boxes = pred_box_dict['boxes'].tolist()
+    target_boxes = target_box_dict['boxes'].tolist()
 
     # Convert labels from integer indices values to class strings
-    labels = [list(CLASS_DICT.keys())[list(CLASS_DICT.values()).index(label)]
-              for label in box_dict['labels'].tolist()]
+    pred_labels = [list(CLASS_DICT.keys())[list(CLASS_DICT.values()).index(label)]
+              for label in pred_box_dict['labels'].tolist()]
+    target_labels = [list(CLASS_DICT.keys())[list(CLASS_DICT.values()).index(label)]
+                   for label in target_box_dict['labels'].tolist()]
 
-    # Check if confidence scores are present in the dictionary
-    if 'scores' in box_dict:
-        # Get list of confidence scores
-        scores = box_dict['scores'].tolist()
-    else:
-        # Declare list of confidence scores as 100% confidence score for each box
-        scores = [1] * len(labels)
-
-    # Loop through each bounding box
-    for box, label, score in zip(boxes, labels, scores):
-        # Draw the bounding box
-        draw.rectangle(box, outline=outline_color, width=outline_width)
-
-        # Write the confidence score
-        draw.text((box[0], box[1]), text=f'{label} {score:.4f}', font=font, fill=font_color)
+    # Get list of confidence scores
+    pred_scores = pred_box_dict['scores'].tolist()
+    # Declare list of confidence scores as 100% confidence score for each box
+    target_scores = [1] * len(target_labels)
+    
+    # Drawing ground truth bounding boxes on the image
+    for target_box, (box_width, font) in zip(target_boxes, target_annotations):
+        draw.rectangle(target_box, outline="green", width=box_width)
+    # Drawing predicted bounding boxes on the image
+    for pred_box, (box_width, font) in zip(pred_boxes, pred_annotations):
+        draw.rectangle(pred_box, outline="red", width=box_width)
+    # Drawing ground truth labels over the bounding boxes on the image
+    for target_box, target_label, target_score, (box_width, font)\
+            in zip(target_boxes, target_labels, target_scores, target_annotations):
+        draw.text(
+            (target_box[0], target_box[1]), text=f'{target_label} {target_score:.4f}', font=font, fill=(255, 255, 0, 0))
+    # Drawing predicted labels over the bounding boxes on the image
+    for pred_box, pred_label, pred_score, (box_width, font)\
+            in zip(pred_boxes, pred_labels, pred_scores, pred_annotations):
+        draw.text(
+            (pred_box[0], pred_box[1] + font.size), text=f'{pred_label} {pred_score:.4f}', font=font, fill=(255, 255, 255, 0))
 
 
 def resize_box_coord(box_dict: dict, downsize_ratio: float, x_offset: float, y_offset: float) -> dict:
@@ -190,3 +193,34 @@ def resize_box_coord(box_dict: dict, downsize_ratio: float, x_offset: float, y_o
             box_dict['boxes'][i][j] = int(box_dict['boxes'][i][j] / downsize_ratio)
 
     return box_dict
+
+
+def scale_annotation_sizes(img: Image, pred_boxes: list, target_boxes: list, box_scaler: float = 0.006, text_scaler: float = 0.015) -> Tuple[list, list]:
+    """
+    Function to scale the annotations drawn on an image during inference
+    """
+    MAX_BBOX_SIZE = 32
+    MAX_FONT_SIZE = 64
+    img_area = img.size[0] * img.size[1]
+
+    pred_annotations = []
+    target_annotations = []
+    
+    for box in pred_boxes:
+        box_area = (box[0] - box[2]) * (box[1] - box[3])
+        
+        box_width = min(int(img_area / box_area * box_scaler) + 8, MAX_BBOX_SIZE)
+        font_size = min(int(max(img.size) * text_scaler) + 6, MAX_FONT_SIZE)
+        
+        pred_annotations.append((box_width, ImageFont.truetype(FONT_PATH, font_size)))
+
+    for box in target_boxes:
+        box_area = (box[0] - box[2]) * (box[1] - box[3])
+
+        box_width = min(int(img_area / box_area * box_scaler) + 4, MAX_BBOX_SIZE)
+        font_size = min(int(max(img.size) * text_scaler) + 6, MAX_FONT_SIZE)
+
+        target_annotations.append((box_width, ImageFont.truetype(FONT_PATH, font_size)))
+    
+    # Declare the font object to write the confidence scores on the images
+    return pred_annotations, target_annotations
