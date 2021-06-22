@@ -20,9 +20,8 @@ import matplotlib.pyplot as plt
 from google_images_download import google_images_download
 from torchvision.ops import nms
 from typing import List
-from argparse import Namespace
 import torch.nn.functional as F
-from detr.box_ops import box_cxcywh_to_xyxy
+from src.detr.box_ops import box_cxcywh_to_xyxy
 
 from src.utils.constants import REQUIRED_PYTHON, IMAGE_EXT
 

@@ -113,5 +113,7 @@ def load_detr_state_dict(model):
 
     del checkpoint["model"]["class_embed.weight"]
     del checkpoint["model"]["class_embed.bias"]
+
     model.load_state_dict(checkpoint["model"], strict=False)
+
     return model

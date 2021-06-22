@@ -16,7 +16,7 @@ from torch.nn.utils import clip_grad_norm_
 from torch.cuda.amp import autocast
 from torch.cuda.amp.grad_scaler import GradScaler
 from torch.cuda import memory_reserved, memory_allocated
-from detr.criterion import build_criterion
+from src.detr.criterion import build_criterion
 from src.models.SummaryWriter import SummaryWriter
 from tqdm import tqdm
 from torch.utils.data import DataLoader
@@ -33,7 +33,7 @@ from src.models.models import load_model
 from src.coco.coco_utils import get_coco_api_from_dataset
 from src.coco.coco_eval import CocoEvaluator
 from src.utils.helper_functions import print_dict, format_detr_outputs
-from detr.box_ops import batch_box_xyxy_to_cxcywh
+from src.detr.box_ops import batch_box_xyxy_to_cxcywh
 
 class PipelineManager:
     """
@@ -50,13 +50,13 @@ class PipelineManager:
                  mixed_precision: bool,
                  gradient_accumulation: int,
                  pretrained: bool,
-                 iou_threshold: float,
-                 score_threshold: float,
                  gradient_clip: float,
                  args_dict: dict,
                  save_model: bool,
                  image_size: int,
                  save_last: bool,
+                 log_training_metrics: bool,
+                 log_memory: bool,
                  class_loss_ceof: float,
                  bbox_loss_coef: float, 
                  giou_loss_coef: float, 
@@ -84,8 +84,6 @@ class PipelineManager:
         self.__save_model = save_model
         self.__args_dict = args_dict
         self.__gradient_clip = gradient_clip
-        self.__iou_threshold = iou_threshold
-        self.__score_threshold = score_threshold
         self.__pretrained = pretrained
         self.__model_name = model_name
         self.__mixed_precision = mixed_precision
@@ -94,11 +92,15 @@ class PipelineManager:
         self.__es_patience = es_patience
         self.__image_size = image_size
         self.__save_last = save_last
+        self.__log_training_metrics = log_training_metrics
+        self.__log_memory = log_memory
         
         # Declare steps for tensorboard logging
         self.__train_step = 0
         self.__valid_step = 0
-        self.__total_step = 0
+
+        if self.__log_memory:
+            self.__total_step = 0
 
         # Declare tensorboard writer
         self.__writer = SummaryWriter(LOG_PATH + file_name)
@@ -137,8 +139,8 @@ class PipelineManager:
         self.__model.to(self.__device)
         
         if self.__model_name == 'detr':
-            self.__criterion = build_criterion(
-                class_loss_ceof, bbox_loss_coef, giou_loss_coef, eos_coef, self.__num_classes)
+            self.__criterion = build_criterion(class_loss_ceof, bbox_loss_coef, giou_loss_coef, eos_coef,
+                                               self.__num_classes)
             self.__criterion.to(self.__device)
 
             params = [
@@ -151,7 +153,6 @@ class PipelineManager:
         else:
             # Find which parameters to train (those with .requires_grad = True)
             params = [p for p in self.__model.parameters() if p.requires_grad]
-
 
         # Define Adam optimizer
         self.__optimizer = torch.optim.Adam(params, lr=learning_rate, weight_decay=weight_decay)
@@ -188,13 +189,10 @@ class PipelineManager:
             filename = f'{MODELS_PATH}{self.__file_name}_s{self.__image_size}'
 
             if self.__best_epoch >= self.__swa_start:
-                torch.save(
-                    self.__swa_model.module if self.__save_last else self.__best_model.module, filename)
+                torch.save(self.__swa_model.module if self.__save_last else self.__best_model.module, filename)
             else:
-                torch.save(
-                    self.__model if self.__save_last else self.__best_model, filename)
+                torch.save(self.__model if self.__save_last else self.__best_model, filename)
 
-            torch.save(self.__swa_model.module if self.__save_last else self.__best_model.module, filename)
             print(f'{"Last" if self.__save_last else "Best"} model saved to:\t\t\t\t{filename}\n')
 
         # Test the trained model
@@ -220,19 +218,25 @@ class PipelineManager:
             # Train the model and get the loss
             loss = self.__evaluate(self.__model, self.__data_loader_train, 'Training', epoch)
 
-            # Save the current epoch loss for tensorboard
-            self.__save_epoch('Training', loss, None, epoch)
-
             if self.__swa_started:
                 self.__swa_model.update_parameters(self.__model)
                 self.__swa_scheduler.step()
                 torch.optim.swa_utils.update_bn(self.__data_loader_train, self.__swa_model)
-
-                metric = self.__validate_model(self.__swa_model, epoch)
             else:
                 self.__scheduler.step()
 
-                metric = self.__validate_model(self.__model, epoch)
+            model = self.__swa_model if self.__swa_started else self.__model
+
+            if self.__log_training_metrics:
+                metrics_dict = self.__coco_evaluate(model, deepcopy(self.__data_loader_train),
+                                                    f'Training Metrics Epoch {epoch}')
+            else:
+                metrics_dict = None
+
+            # Save the current epoch loss for tensorboard
+            self.__save_epoch('Training', loss, metrics_dict, epoch)
+
+            metric = self.__validate_model(model, epoch)
 
             # Check if early stopping is enabled
             if self.__es_patience:
@@ -269,7 +273,6 @@ class PipelineManager:
 
         # Loop through each batch in the data loader
         for i, (images, targets) in enumerate(data_loader):
-            
             if self.__model_name == 'detr':
                 batch_box_xyxy_to_cxcywh(targets, self.__image_size)
             
@@ -279,7 +282,6 @@ class PipelineManager:
 
             # Get losses for the current batch
             with autocast(enabled=self.__mixed_precision):
-                
                 if self.__model_name == 'detr':
                     loss_dict = model(images)
                     loss_dict = self.__criterion(loss_dict, targets)
@@ -287,7 +289,6 @@ class PipelineManager:
                     # Calculating the detr losses
                     weight_dict = self.__criterion.weight_dict
                     losses = sum(loss_dict[k] * weight_dict[k] for k in loss_dict.keys() if k in weight_dict)
-                    
                 else:
                     loss_dict = model(images, targets)
                     losses = sum(loss for loss in loss_dict.values())
@@ -302,7 +303,8 @@ class PipelineManager:
             self.__save_batch(phase, losses)
 
             # Save memory usage to tensorboard
-            self.__save_memory()
+            if self.__log_memory:
+                self.__save_memory()
 
             # Update progress bar
             pbar.set_postfix_str(f'Loss: {losses:.5f}')
@@ -432,7 +434,7 @@ class PipelineManager:
 
             outputs = [{k: v.to(self.__device) for k, v in t.items()} for t in outputs]
 
-            results = {target["image_id"].item(): output for target, output in zip(targets, outputs)}
+            results = {target['image_id'].item(): output for target, output in zip(targets, outputs)}
             coco_evaluator.update(results)
 
             pbar.update()
@@ -444,7 +446,6 @@ class PipelineManager:
         coco_evaluator.summarize()
 
         return dict(zip(COCO_PARAMS_LIST, coco_evaluator.coco_eval['bbox'].stats.tolist()))
-    
 
     def __save_batch(self, phase: str, loss: float) -> None:
         """
@@ -454,10 +455,10 @@ class PipelineManager:
         :param loss: float, total loss per batch
         """
         if phase == 'Training':
-            self.__writer.add_scalar(f'Loss (total per batch)/{phase}', loss, self.__train_step)
+            self.__writer.add_scalar(f'Loss/{phase} (total per batch)', loss, self.__train_step)
             self.__train_step += 1
         elif phase == 'Validation':
-            self.__writer.add_scalar(f'Loss (total per batch)/{phase}', loss, self.__valid_step)
+            self.__writer.add_scalar(f'Loss/{phase} (total per batch)', loss, self.__valid_step)
             self.__valid_step += 1
 
     def __save_epoch(self, phase: str, loss: float, metrics_dict: Optional[dict], epoch: int) -> None:
@@ -469,11 +470,11 @@ class PipelineManager:
         :param metrics_dict: dict, contains the object detection evaluation metrics
         :param epoch: int, current epoch
         """
-        self.__writer.add_scalar(f'Loss (mean per epoch)/{phase}', loss, epoch)
+        self.__writer.add_scalar(f'Loss/{phase} (mean per epoch)', loss, epoch)
 
         if metrics_dict is not None:
             for i, (key, value) in enumerate(metrics_dict.items(), start=1):
-                self.__writer.add_scalar(f'{key[:2]}/{i}. {key[6:-1]}', value, epoch)
+                self.__writer.add_scalar(f'{key[:2]} ({phase})/{i}. {key[6:-1]}', value, epoch)
 
         if phase == 'Training':
             if self.__swa_started:
