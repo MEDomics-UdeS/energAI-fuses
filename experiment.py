@@ -33,7 +33,7 @@ if __name__ == '__main__':
                         help='Number of workers')
 
     # Number of epochs argument
-    parser.add_argument('-e', '--epochs', action='store', type=int, default=1,
+    parser.add_argument('-e', '--epochs', action='store', type=int, default=200,
                         help='Number of epochs')
 
     # Batch size argument
@@ -84,7 +84,7 @@ if __name__ == '__main__':
                         help='Specify which object detection model to use')
 
     # Early stopping patience argument
-    parser.add_argument('-esp', '--es_patience', action='store', type=int,
+    parser.add_argument('-esp', '--es_patience', action='store', type=int, default=5,
                         help='Early stopping patience')
 
     # Early stopping delta argument
@@ -104,7 +104,7 @@ if __name__ == '__main__':
                         help='Gradient clipping value')
 
     # Random seed argument
-    parser.add_argument('-rs', '--random_seed', action='store', type=int, default=42,
+    parser.add_argument('-rs', '--random_seed', action='store', type=int, default=54288,
                         help='Set random seed')
 
     # Deterministic argument

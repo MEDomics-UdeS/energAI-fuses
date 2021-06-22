@@ -35,6 +35,7 @@ from src.coco.coco_eval import CocoEvaluator
 from src.utils.helper_functions import print_dict, format_detr_outputs
 from src.detr.box_ops import batch_box_xyxy_to_cxcywh
 
+
 class PipelineManager:
     """
     Training, validation and testing manager.
@@ -243,7 +244,7 @@ class PipelineManager:
                 # Check if the early stopping criterion has been reached
                 if self.__early_stopper.step(torch.as_tensor(metric, dtype=torch.float16)):
                     # Early stop
-                    print(f'Early stopping criterion has been reached for {self.__es_patience} epochs\n')
+                    print(f'Early stopping criterion has been reached after {self.__es_patience} epochs\n')
                     break
 
     def __evaluate(self, model, data_loader: DataLoader, phase: str, epoch: int) -> float:

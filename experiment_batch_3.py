@@ -12,6 +12,7 @@ Description:
 
 import subprocess as sp
 from datetime import datetime
+from itertools import product
 
 from src.utils.helper_functions import env_tests
 
@@ -22,12 +23,19 @@ if __name__ == '__main__':
     # Run environment tests
     env_tests()
 
+    da_list = ['0.1', '0.25', '0.5']
+    lr_list = ['3e-3', '3e-4', '3e-5']
+    wd_list = ['3e-2', '3e-3', '3e-4']
+
     # Declare list of commands to be executed
-    cmds = [
-        # ['python', 'experiment.py', '--epochs', '1', '--model', 'detr', '-b', '14', '-lr', '0.00003'],
-        ['python', 'experiment.py', '--epochs', '3', '--batch', '14', '--model', 'detr'],
-        # ['python', 'inference_test.py', '-mfn', 'detr_100_epoch_s1024', '-b', '14'],
-    ]
+    cmds = list(list(cmd) for cmd in product(da_list, lr_list, wd_list))
+
+    for i in range(len(cmds)):
+        cmds[i].insert(0, '-da')
+        cmds[i].insert(2, '-lr')
+        cmds[i].insert(4, '-wd')
+
+    cmds = [['python', 'experiment.py', '-mo', 'detr', '-b', '14'] + cmd for cmd in cmds]
 
     # Loop through each command
     for i, cmd in enumerate(cmds, start=1):
