@@ -24,7 +24,7 @@ if __name__ == '__main__':
     env_tests()
 
     da_list = ['0.1', '0.25', '0.5']
-    lr_list = ['3e-3', '3e-4', '3e-5']
+    lr_list = ['3e-4', '3e-5', '3e-6']
     wd_list = ['3e-2', '3e-3', '3e-4']
 
     # Declare list of commands to be executed
