@@ -15,6 +15,7 @@ import argparse
 from datetime import datetime
 from multiprocessing import cpu_count
 
+import torch
 from src.data.DataLoaderManager import DataLoaderManager
 from src.data.DatasetManager import DatasetManager
 from src.utils.helper_functions import print_dict, env_tests
@@ -69,7 +70,7 @@ if __name__ == '__main__':
     print('\n=== Arguments & Hyperparameters ===\n')
     print_dict(vars(args), 6)
 
-    image_size = int(args.model_file_name[args.model_file_name.find('s') + 1:])
+    image_size = torch.load(f'{MODELS_PATH}{args.model_file_name}')["img_size"]
 
     # Declare dataset manager
     dataset_manager = DatasetManager(images_path=RESIZED_PATH,

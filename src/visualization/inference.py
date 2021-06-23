@@ -15,7 +15,7 @@ from PIL import Image, ImageDraw, ImageFont
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 from typing import Tuple
-from zipfile import ZipFile
+from ..models.models import load_model
 
 from src.utils.constants import CLASS_DICT, FONT_PATH, MODELS_PATH, RESIZED_PATH, RAW_PATH, IMAGE_EXT
 from src.utils.helper_functions import filter_by_nms, filter_by_score, format_detr_outputs
@@ -36,6 +36,8 @@ def save_test_images(model_file_name: str,
     :param iou_threshold: float, intersection-over-union threshold for predicted bounding boxes filtering
     :param save_path: str, save path for the inference test images
     """
+    save_state = torch.load(f'{MODELS_PATH}{model_file_name}')
+
     image_paths_raw = [image_path.replace(RESIZED_PATH, RAW_PATH) for image_path in data_loader.dataset.image_paths]
 
     # Declare device
@@ -44,22 +46,10 @@ def save_test_images(model_file_name: str,
     # Declare progress bar
     pbar = tqdm(total=len(data_loader), leave=False, desc='Inference Test')
 
-    model_data = f'{MODELS_PATH}{model_file_name}'
+    model_name = save_state["model_name"]
+    model = load_model(model_name=model_name, pretrained=False, num_classes=len(CLASS_DICT), progress=True)
+    model.load_state_dict(save_state["model"])
 
-    # Loading the model 
-    with ZipFile(model_data, 'r') as zipObj:
-        # Extracting model type from the data.pkl file
-        model_type = str(zipObj.read('archive/data.pkl')).split("\\n")[1].lower()
-
-        if model_type == 'detr':
-            model = torch.hub.load('facebookresearch/detr',
-                                    'detr_resnet50', pretrained=False, num_classes=len(CLASS_DICT))
-
-            model.load_state_dict(torch.load(model_data).state_dict())
-            
-        else:
-            model = torch.load(model_data)
-                
     model.to(device)
 
     # Put the model into eval() mode for inference
@@ -77,7 +67,7 @@ def save_test_images(model_file_name: str,
         # Perform a forward pass and obtain bounding boxes predictions
         preds = model(images)
 
-        if model_type == 'detr':
+        if model_name == 'detr':
             target_sizes = torch.stack(
                 [torch.tensor([image_size, image_size]) for _ in range(data_loader.batch_size)], dim=0)
             preds = format_detr_outputs(preds, target_sizes)

@@ -187,12 +187,21 @@ class PipelineManager:
         # Check if we need to save the model
         if self.__save_model:
             # Save the model in the saved_models/ folder
-            filename = f'{MODELS_PATH}{self.__file_name}_s{self.__image_size}'
-
+            filename = f'{MODELS_PATH}{self.__file_name}'
+            
             if self.__best_epoch >= self.__swa_start:
-                torch.save(self.__swa_model.module if self.__save_last else self.__best_model.module, filename)
+                ranking_model = self.__swa_model.module if self.__save_last else self.__best_model.module
             else:
-                torch.save(self.__model if self.__save_last else self.__best_model, filename)
+                ranking_model = self.__model if self.__save_last else self.__best_model
+            
+            # Storing the model and meta data in the save state
+            save_state = {
+                "model": ranking_model.state_dict(),
+                "model_name": self.__model_name,
+                "img_size": self.__image_size,
+                "ranked_imgs": self.__rank_images_by_loss(ranking_model)
+            }
+            torch.save(save_state, filename)
 
             print(f'{"Last" if self.__save_last else "Best"} model saved to:\t\t\t\t{filename}\n')
 
@@ -498,3 +507,83 @@ class PipelineManager:
         self.__writer.add_scalar('Memory/Free', mem_free, self.__total_step)
 
         self.__total_step += 1
+
+    def __rank_images_by_loss(self, model) -> dict:
+        
+        results = {
+            "training": [],
+            "validation": [],
+            "testing": []
+        }
+
+        self.__ranking_pass(model, dataloader=self.__data_loader_train,
+                            data_type="training", results=results, desc="Ranking training images by loss")
+        self.__ranking_pass(model, dataloader=self.__data_loader_valid,
+                            data_type="validation", results=results, desc="Ranking validation images by loss")
+        self.__ranking_pass(model, dataloader=self.__data_loader_test, data_type="testing",
+                            results=results, desc="Ranking test images by loss")
+        return results
+
+    @torch.no_grad()
+    def __ranking_pass(self, model, dataloader: DataLoader, data_type: str, results: dict, desc: str) -> None:
+        # Declare tqdm progress bar
+        pbar = tqdm(total=len(dataloader), leave=False, desc=desc)
+        
+        # Specify that the model will be trained
+        model.train()
+        if self.__model_name == 'detr':
+            self.__criterion.train()
+
+        # Loop through each batch in the data loader
+        for _, (images, targets) in enumerate(dataloader):
+            if self.__model_name == 'detr':
+                batch_box_xyxy_to_cxcywh(targets, self.__image_size)
+
+            # Send images and targets to the device
+            images = torch.stack(images).to(self.__device)
+            targets = [{k: v.to(self.__device) for k, v in t.items()} for t in targets]
+
+            # Loop through the batch to calculate losses individually
+            for i in range(dataloader.batch_size):
+                try:
+                    # Reshaping image tensor to be of shape [1, 3, img_size, img_size]
+                    image = images[i][...].reshape(1, images.shape[1], images.shape[2], images.shape[3])
+                except IndexError:
+                    break
+                else:
+                    # Selecting relevant target info
+                    target = [targets[i]]
+
+                    if self.__model_name == 'detr':
+                        loss_dict = model(image)
+                        loss_dict = self.__criterion(loss_dict, target)
+
+                        # Calculate the loss
+                        weight_dict = self.__criterion.weight_dict
+                        loss = sum(loss_dict[k] * weight_dict[k] for k in loss_dict.keys() if k in weight_dict)
+                        
+                        # Adding image path and associated loss to results dict
+                        results[data_type].append({
+                            "img_path": dataloader.dataset.image_paths[i],
+                            "loss": round(loss.item(), 4)
+                        })
+                        
+                    else:
+                        loss_dict = model(image, target)
+
+                        # Calculate the loss
+                        loss = sum(loss for loss in loss_dict.values())
+
+                        # Adding image path and associated loss to results dict
+                        results[data_type].append({
+                            "img_path": dataloader.dataset.image_paths[i],
+                            "loss": round(loss.item(), 4)
+                        })
+            # Updating the progress bar
+            pbar.update()
+
+        # Sorting the values in the dictionnary from highest to lowest
+        results[data_type] = sorted(results[data_type], key=lambda x: x["loss"], reverse=True)
+
+        # Closing the progress bar
+        pbar.close()
