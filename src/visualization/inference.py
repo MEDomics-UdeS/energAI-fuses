@@ -16,10 +16,11 @@ from PIL import Image, ImageDraw, ImageFont
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 from typing import Tuple
-from ..models.models import load_model
+from src.models.models import load_model
 
 from src.utils.constants import CLASS_DICT, FONT_PATH, MODELS_PATH, RESIZED_PATH, RAW_PATH, IMAGE_EXT
 from src.utils.helper_functions import filter_by_nms, filter_by_score, format_detr_outputs
+
 
 @torch.no_grad()
 def save_test_images(model_file_name: str,
