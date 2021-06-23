@@ -199,7 +199,7 @@ class PipelineManager:
             save_state = {
                 "model": ranking_model.state_dict(),
                 "args_dict": self.__args_dict,
-                "ranked_imgs": self.__rank_images(ranking_model)
+                "ranked_imgs": self.__rank_images(ranking_model, metrics='coco')
             }
             torch.save(save_state, filename)
 
@@ -516,11 +516,11 @@ class PipelineManager:
             "testing": []
         }
         if metrics == 'coco':
-            self.__coco_ranking_pass(model, data_loader=self.__data_loader_train,
+            self.__coco_ranking_pass(model, data_loader=deepcopy(self.__data_loader_train),
                                 data_type="training", performance_dict=performance_dict, desc="Ranking training images by AP")
-            self.__coco_ranking_pass(model, data_loader=self.__data_loader_valid,
+            self.__coco_ranking_pass(model, data_loader=deepcopy(self.__data_loader_valid),
                                 data_type="validation", performance_dict=performance_dict, desc="Ranking validation images by AP")
-            self.__coco_ranking_pass(model, data_loader=self.__data_loader_test, 
+            self.__coco_ranking_pass(model, data_loader=deepcopy(self.__data_loader_test), 
                                 data_type="testing", performance_dict=performance_dict, desc="Ranking test images by AP")
         elif metrics == 'loss':
             self.__loss_ranking_pass(model, data_loader=self.__data_loader_train,
@@ -608,9 +608,7 @@ class PipelineManager:
         
         # Loop through each batch in the data loader
         for (images, targets) in data_loader:
-            if self.__model_name == 'detr':
-                batch_box_xyxy_to_cxcywh(targets, self.__image_size)
-
+            
             # Send images and targets to the device
             images = list(img.to(self.__device) for img in images)
 
@@ -621,7 +619,7 @@ class PipelineManager:
                     image = [images[i]]
                 except IndexError:
                     break
-                else:
+                else:                  
                     # Selecting relevant target info
                     target = targets[i]
 
@@ -634,9 +632,10 @@ class PipelineManager:
                     outputs = [{k: v.to(self.__device)
                                 for k, v in t.items()} for t in outputs]
 
-                    results = {target['image_id'].item(): outputs}
+                    results = {target['image_id'].item(): outputs[0]}
                     coco_evaluator.update(results)
 
+                    # This breaks the coco_evaluator after the first pass
                     coco_evaluator.synchronize_between_processes()
                     coco_evaluator.accumulate()
                     coco_evaluator.summarize()
