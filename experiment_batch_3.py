@@ -4,6 +4,7 @@ File:
 
 Authors:
     - Simon Giard-Leroux
+    - Guillaume Cléroux
     - Shreyas Sunil Kulkarni
 
 Description:

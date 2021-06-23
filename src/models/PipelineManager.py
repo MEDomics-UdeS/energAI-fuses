@@ -4,6 +4,7 @@ File:
 
 Authors:
     - Simon Giard-Leroux
+    - Guillaume Cléroux
     - Shreyas Sunil Kulkarni
 
 Description:
@@ -197,9 +198,8 @@ class PipelineManager:
             # Storing the model and meta data in the save state
             save_state = {
                 "model": ranking_model.state_dict(),
-                "model_name": self.__model_name,
-                "img_size": self.__image_size,
-                "ranked_imgs": self.__rank_images_by_loss(ranking_model)
+                "args_dict": self.__args_dict,
+                "ranked_imgs": self.__rank_images(ranking_model)
             }
             torch.save(save_state, filename)
 
@@ -508,26 +508,33 @@ class PipelineManager:
 
         self.__total_step += 1
 
-    def __rank_images_by_loss(self, model) -> dict:
+    def __rank_images(self, model, metrics: str = 'loss') -> dict:
         
-        results = {
+        performance_dict = {
             "training": [],
             "validation": [],
             "testing": []
         }
-
-        self.__ranking_pass(model, dataloader=self.__data_loader_train,
-                            data_type="training", results=results, desc="Ranking training images by loss")
-        self.__ranking_pass(model, dataloader=self.__data_loader_valid,
-                            data_type="validation", results=results, desc="Ranking validation images by loss")
-        self.__ranking_pass(model, dataloader=self.__data_loader_test, data_type="testing",
-                            results=results, desc="Ranking test images by loss")
-        return results
+        if metrics == 'coco':
+            self.__coco_ranking_pass(model, data_loader=self.__data_loader_train,
+                                data_type="training", performance_dict=performance_dict, desc="Ranking training images by AP")
+            self.__coco_ranking_pass(model, data_loader=self.__data_loader_valid,
+                                data_type="validation", performance_dict=performance_dict, desc="Ranking validation images by AP")
+            self.__coco_ranking_pass(model, data_loader=self.__data_loader_test, 
+                                data_type="testing", performance_dict=performance_dict, desc="Ranking test images by AP")
+        elif metrics == 'loss':
+            self.__loss_ranking_pass(model, data_loader=self.__data_loader_train,
+                                     data_type="training", performance_dict=performance_dict, desc="Ranking training images by loss")
+            self.__loss_ranking_pass(model, data_loader=self.__data_loader_valid,
+                                     data_type="validation", performance_dict=performance_dict, desc="Ranking validation images by loss")
+            self.__loss_ranking_pass(model, data_loader=self.__data_loader_test,
+                                     data_type="testing", performance_dict=performance_dict, desc="Ranking test images by loss")
+        return performance_dict
 
     @torch.no_grad()
-    def __ranking_pass(self, model, dataloader: DataLoader, data_type: str, results: dict, desc: str) -> None:
+    def __loss_ranking_pass(self, model, data_loader: DataLoader, data_type: str, performance_dict: dict, desc: str) -> None:
         # Declare tqdm progress bar
-        pbar = tqdm(total=len(dataloader), leave=False, desc=desc)
+        pbar = tqdm(total=len(data_loader), leave=False, desc=desc)
         
         # Specify that the model will be trained
         model.train()
@@ -535,7 +542,7 @@ class PipelineManager:
             self.__criterion.train()
 
         # Loop through each batch in the data loader
-        for _, (images, targets) in enumerate(dataloader):
+        for (images, targets) in data_loader:
             if self.__model_name == 'detr':
                 batch_box_xyxy_to_cxcywh(targets, self.__image_size)
 
@@ -544,7 +551,7 @@ class PipelineManager:
             targets = [{k: v.to(self.__device) for k, v in t.items()} for t in targets]
 
             # Loop through the batch to calculate losses individually
-            for i in range(dataloader.batch_size):
+            for i in range(data_loader.batch_size):
                 try:
                     # Reshaping image tensor to be of shape [1, 3, img_size, img_size]
                     image = images[i][...].reshape(1, images.shape[1], images.shape[2], images.shape[3])
@@ -563,9 +570,9 @@ class PipelineManager:
                         loss = sum(loss_dict[k] * weight_dict[k] for k in loss_dict.keys() if k in weight_dict)
                         
                         # Adding image path and associated loss to results dict
-                        results[data_type].append({
-                            "img_path": dataloader.dataset.image_paths[i],
-                            "loss": round(loss.item(), 4)
+                        performance_dict[data_type].append({
+                            "img_path": data_loader.dataset.image_paths[i],
+                            "metrics": round(loss.item(), 4)
                         })
                         
                     else:
@@ -575,15 +582,74 @@ class PipelineManager:
                         loss = sum(loss for loss in loss_dict.values())
 
                         # Adding image path and associated loss to results dict
-                        results[data_type].append({
-                            "img_path": dataloader.dataset.image_paths[i],
-                            "loss": round(loss.item(), 4)
+                        performance_dict[data_type].append({
+                            "img_path": data_loader.dataset.image_paths[i],
+                            "metrics": round(loss.item(), 4)
                         })
             # Updating the progress bar
             pbar.update()
 
         # Sorting the values in the dictionnary from highest to lowest
-        results[data_type] = sorted(results[data_type], key=lambda x: x["loss"], reverse=True)
+        performance_dict[data_type] = sorted(performance_dict[data_type], key=lambda x: x["metrics"])
+
+        # Closing the progress bar
+        pbar.close()
+    
+    # FIXME do not use, function doesn't work yet  
+    @torch.no_grad()
+    def __coco_ranking_pass(self, model, data_loader: DataLoader, data_type: str, performance_dict: dict, desc: str) -> None:
+        # Declare tqdm progress bar
+        pbar = tqdm(total=len(data_loader), leave=False, desc=desc)
+
+        # Preparing the coco evaluator class for ranking
+        coco = get_coco_api_from_dataset(data_loader.dataset)
+        coco_evaluator = CocoEvaluator(coco, ['bbox'])
+        model.eval()
+        
+        # Loop through each batch in the data loader
+        for (images, targets) in data_loader:
+            if self.__model_name == 'detr':
+                batch_box_xyxy_to_cxcywh(targets, self.__image_size)
+
+            # Send images and targets to the device
+            images = list(img.to(self.__device) for img in images)
+
+            # Loop through the batch to calculate losses individually
+            for i in range(data_loader.batch_size):
+                try:
+                    # Reshaping image tensor to be of shape [1, 3, img_size, img_size]
+                    image = [images[i]]
+                except IndexError:
+                    break
+                else:
+                    # Selecting relevant target info
+                    target = targets[i]
+
+                    outputs = model(image)
+
+                    if self.__model_name == 'detr':
+                        target_sizes = torch.tensor([[self.__image_size, self.__image_size]])
+                        outputs = format_detr_outputs(outputs, target_sizes)
+
+                    outputs = [{k: v.to(self.__device)
+                                for k, v in t.items()} for t in outputs]
+
+                    results = {target['image_id'].item(): outputs}
+                    coco_evaluator.update(results)
+
+                    coco_evaluator.synchronize_between_processes()
+                    coco_evaluator.accumulate()
+                    coco_evaluator.summarize()
+
+                    performance_dict[data_type].append({
+                        "img_path": data_loader.dataset.image_paths[i],
+                        "metrics": dict(zip(COCO_PARAMS_LIST, coco_evaluator.coco_eval['bbox'].stats.tolist()))[EVAL_METRIC]
+                    })
+            # Updating the progress bar
+            pbar.update()
+
+        # Sorting the values in the dictionnary from highest to lowest
+        performance_dict[data_type] = sorted(performance_dict[data_type], key=lambda x: x["metrics"])
 
         # Closing the progress bar
         pbar.close()

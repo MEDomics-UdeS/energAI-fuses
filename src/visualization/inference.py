@@ -4,6 +4,7 @@ File:
 
 Authors:
     - Simon Giard-Leroux
+    - Guillaume Cléroux
     - Shreyas Sunil Kulkarni
 
 Description:
@@ -46,7 +47,7 @@ def save_test_images(model_file_name: str,
     # Declare progress bar
     pbar = tqdm(total=len(data_loader), leave=False, desc='Inference Test')
 
-    model_name = save_state["model_name"]
+    model_name = save_state["args_dict"]["model"]
     model = load_model(model_name=model_name, pretrained=False, num_classes=len(CLASS_DICT), progress=True)
     model.load_state_dict(save_state["model"])
 

@@ -4,6 +4,7 @@ File:
 
 Authors:
     - Simon Giard-Leroux
+    - Guillaume Cléroux
     - Shreyas Sunil Kulkarni
 
 Description:
@@ -70,7 +71,7 @@ if __name__ == '__main__':
     print('\n=== Arguments & Hyperparameters ===\n')
     print_dict(vars(args), 6)
 
-    image_size = torch.load(f'{MODELS_PATH}{args.model_file_name}')["img_size"]
+    image_size = torch.load(f'{MODELS_PATH}{args.model_file_name}')["args_dict"]["image_size"]
 
     # Declare dataset manager
     dataset_manager = DatasetManager(images_path=RESIZED_PATH,
