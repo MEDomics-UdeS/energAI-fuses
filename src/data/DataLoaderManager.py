@@ -4,6 +4,7 @@ File:
 
 Authors:
     - Simon Giard-Leroux
+    - Guillaume Cléroux
     - Shreyas Sunil Kulkarni
 
 Description:
@@ -11,6 +12,7 @@ Description:
 """
 
 from src.data.DatasetManager import DatasetManager
+from src.data.FuseDataset import FuseDataset
 from src.utils.reproducibility import seed_worker
 from torch.utils.data import DataLoader
 
@@ -39,38 +41,46 @@ class DataLoaderManager:
                                     - worker_init_fn will not be specified for the data loaders
                                     - data will be shuffled in the data loaders
         """
+        self.__num_workers = num_workers
+        self.__deterministic = deterministic
+
         # Calculate the effective batch size with regards to the gradient accumulation size
-        batch_size_ga = int(batch_size / gradient_accumulation)
+        self.__batch_size_ga = int(batch_size / gradient_accumulation)
 
         # If the training dataset is not empty, declare the training data loader
         if len(dataset_manager.dataset_train) > 0:
-            self.data_loader_train = DataLoader(dataset_manager.dataset_train,
-                                                batch_size=batch_size_ga,
-                                                shuffle=not deterministic,
-                                                num_workers=num_workers,
-                                                collate_fn=self.collate_fn,
-                                                worker_init_fn=seed_worker if deterministic else None)
+            self.__data_loader_train = self.__get_data_loader(dataset_manager.dataset_train)
 
         # If the validation dataset is not empty, declare the validation data loader
         if len(dataset_manager.dataset_valid) > 0:
-            self.data_loader_valid = DataLoader(dataset_manager.dataset_valid,
-                                                batch_size=batch_size_ga,
-                                                shuffle=not deterministic,
-                                                num_workers=num_workers,
-                                                collate_fn=self.collate_fn,
-                                                worker_init_fn=seed_worker if deterministic else None)
+            self.__data_loader_valid = self.__get_data_loader(dataset_manager.dataset_valid)
 
         # If the testing dataset is not empty, declare the testing data loader
         if len(dataset_manager.dataset_test) > 0:
-            self.data_loader_test = DataLoader(dataset_manager.dataset_test,
-                                               batch_size=batch_size_ga,
-                                               shuffle=not deterministic,
-                                               num_workers=num_workers,
-                                               collate_fn=self.collate_fn,
-                                               worker_init_fn=seed_worker if deterministic else None)
+            self.__data_loader_test = self.__get_data_loader(dataset_manager.dataset_test)
+
+    @property
+    def data_loader_train(self):
+        return self.__data_loader_train
+
+    @property
+    def data_loader_valid(self):
+        return self.__data_loader_valid
+
+    @property
+    def data_loader_test(self):
+        return self.__data_loader_test
+
+    def __get_data_loader(self, dataset: FuseDataset) -> DataLoader:
+        return DataLoader(dataset,
+                          batch_size=self.__batch_size_ga,
+                          shuffle=not self.__deterministic,
+                          num_workers=self.__num_workers,
+                          collate_fn=self.__collate_fn,
+                          worker_init_fn=seed_worker if self.__deterministic else None)
 
     @staticmethod
-    def collate_fn(batch: list) -> tuple:
+    def __collate_fn(batch: list) -> tuple:
         """
         Custom batching collation function.
 

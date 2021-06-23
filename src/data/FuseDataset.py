@@ -4,6 +4,7 @@ File:
 
 Authors:
     - Simon Giard-Leroux
+    - Guillaume Cléroux
     - Shreyas Sunil Kulkarni
 
 Description:
@@ -24,7 +25,11 @@ class FuseDataset(Dataset):
     """
     Custom fuse dataset class
     """
-    def __init__(self, images_path: str = None, targets_path: str = None, num_workers: int = None) -> None:
+    def __init__(self,
+                 images_path: str = None,
+                 targets_path: str = None,
+                 num_workers: int = None,
+                 google_images: bool = True) -> None:
         """
         Class constructor
 
@@ -37,20 +42,25 @@ class FuseDataset(Dataset):
             # Initialize ray
             ray.init(include_dashboard=False)
 
-            # Get all images paths and ignore the .gitkeep file
-            images = [img for img in sorted(os.listdir(images_path)) if img.startswith('.') is False]
+            # Get all survey images paths and ignore the .gitkeep file
+            images = [img for img in sorted(os.listdir(images_path)) if img.startswith('S') or img.startswith('G')]
+
+            if not google_images:
+                google_imgs = [image for image in images if image.startswith('G')]
+                google_indices = [images.index(google_image) for google_image in google_imgs]
+                images = [e for i, e in enumerate(images) if i not in google_indices]
 
             # Save the image paths as an object attribute
-            self.image_paths = [os.path.join(images_path, img) for img in images]
+            self.__image_paths = [os.path.join(images_path, img) for img in images]
 
             # Get the dataset size
-            size = len(self.image_paths)
+            size = len(self.__image_paths)
 
             # Declare empty list to save all images in RAM
-            self.images = [None] * size
+            self.__images = [None] * size
 
             # Get ray workers IDs
-            ids = [ray_load_images.remote(self.image_paths, i) for i in range(num_workers)]
+            ids = [ray_load_images.remote(self.__image_paths, i) for i in range(num_workers)]
 
             # Calculate initial number of jobs left
             nb_job_left = size - num_workers
@@ -64,12 +74,12 @@ class FuseDataset(Dataset):
                 image, idx = ray.get(ready)[0]
 
                 # Save current image to the images list
-                self.images[idx] = image
+                self.__images[idx] = image
 
                 # Check if there are jobs left
                 if nb_job_left > 0:
                     # Assign workers to the remaining tasks
-                    ids.extend([ray_load_images.remote(self.image_paths, size - nb_job_left)])
+                    ids.extend([ray_load_images.remote(self.__image_paths, size - nb_job_left)])
 
                     # Decrease number of jobs left
                     nb_job_left -= 1
@@ -78,21 +88,24 @@ class FuseDataset(Dataset):
             ray.shutdown()
         else:
             # Specify blank image_paths and images lists
-            self.image_paths = []
-            self.images = []
+            self.__image_paths = []
+            self.__images = []
 
         # Check if targets_path has been specified
         if targets_path is not None:
             # Load the targets json into the targets attribute in the object
-            self.targets = json.load(open(targets_path))
+            self.__targets = json.load(open(targets_path))
+
+            if not google_images:
+                self.__targets = [e for i, e in enumerate(self.__targets) if i not in google_indices]
 
             # Convert the targets to tensors
-            for target in self.targets:
+            for target in self.__targets:
                 for key, value in target.items():
                     target[key] = torch.as_tensor(value, dtype=torch.int64)
         else:
             # Declare empty targets list
-            self.targets = []
+            self.__targets = []
 
     def __getitem__(self, index: int) -> Tuple[torch.Tensor, dict]:
         """
@@ -101,7 +114,7 @@ class FuseDataset(Dataset):
         :param index: int, actual index to get
         :return: tuple, transformed current image and current targets
         """
-        return self.transforms(self.images[index]), self.targets[index]
+        return self.transforms(self.__images[index]), self.__targets[index]
 
     def __len__(self) -> int:
         """
@@ -109,16 +122,27 @@ class FuseDataset(Dataset):
 
         :return: int, number of images in the dataset
         """
-        return len(self.images)
+        return len(self.__images)
+
+    @property
+    def images(self):
+        return self.__images
+
+    @property
+    def image_paths(self):
+        return self.__image_paths
+
+    @property
+    def targets(self):
+        return self.__targets
 
     def load_image(self, index: int) -> Image:
         """
         Load an image as a PIL Image object
-
         :param index: int, image index
         :return: PIL Image
         """
-        image_path = self.image_paths[index]
+        image_path = self.__image_paths[index]
         img = Image.open(image_path)
         return img
 
@@ -140,9 +164,9 @@ class FuseDataset(Dataset):
         # Loop through the index list
         for index in index_list:
             # Pop the elements from the object and append to the extracted elements' lists
-            image_paths.append(self.image_paths.pop(index))
-            images.append(self.images.pop(index))
-            targets.append(self.targets.pop(index))
+            image_paths.append(self.__image_paths.pop(index))
+            images.append(self.__images.pop(index))
+            targets.append(self.__targets.pop(index))
 
         # Return the extracted elements
         return image_paths, images, targets
@@ -156,9 +180,9 @@ class FuseDataset(Dataset):
         :param targets: list, targets dictionaries
         """
         # Add the data in arguments to the object attributes
-        self.image_paths.extend(image_paths)
-        self.images.extend(images)
-        self.targets.extend(targets)
+        self.__image_paths.extend(image_paths)
+        self.__images.extend(images)
+        self.__targets.extend(targets)
 
 
 @ray.remote
@@ -170,4 +194,4 @@ def ray_load_images(image_paths: List[str], index: int) -> Tuple[Image.Image, in
     :param index: int, current index
     :return: tuple, PIL Image and current index
     """
-    return Image.open(image_paths[index]).convert("RGB"), index
+    return Image.open(image_paths[index]), index

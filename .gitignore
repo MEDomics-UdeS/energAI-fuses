@@ -91,5 +91,8 @@ target/
 # Tensorboard logs
 /logdir/
 
-# Trained models
-/models/
+# Scratchpad
+# scratch.py
+
+# Trained saved_models
+/saved_models/

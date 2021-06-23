@@ -4,14 +4,16 @@ File:
 
 Authors:
     - Simon Giard-Leroux
+    - Guillaume Cléroux
     - Shreyas Sunil Kulkarni
 
 Description:
-    Allows to perform multiple src/models/experiment.py runs with different parameters
+    Allows to perform multiple src/saved_models/experiment.py runs with different parameters
 """
 
 import subprocess as sp
 from datetime import datetime
+from itertools import product
 
 from src.utils.helper_functions import env_tests
 
@@ -22,10 +24,18 @@ if __name__ == '__main__':
     # Run environment tests
     env_tests()
 
+    hparams = {
+        '-da': ['0.1', '0.25', '0.5'],
+        '-lr': ['3e-4', '3e-5', '3e-6'],
+        '-wd': ['3e-2', '3e-3', '3e-4']
+    }
+
     # Declare list of commands to be executed
-    cmds = [
-        ['python', 'src/models/experiment.py', '--epochs', '3'],
-    ]
+    cmds = list(list(cmd) for cmd in product(*hparams.values()))
+
+    [cmds[i].insert(j, list(hparams)[j // 2]) for j in range(0, len(hparams) + 2, 2) for i in range(len(cmds))]
+
+    cmds = [['python', 'experiment.py', '-mo', 'fasterrcnn_resnet50_fpn', '-b', '20'] + cmd for cmd in cmds]
 
     # Loop through each command
     for i, cmd in enumerate(cmds, start=1):

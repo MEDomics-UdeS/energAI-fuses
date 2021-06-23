@@ -4,6 +4,7 @@ File:
 
 Authors:
     - Simon Giard-Leroux
+    - Guillaume Cléroux
     - Shreyas Sunil Kulkarni
 
 Description:
@@ -52,5 +53,5 @@ def set_deterministic(deterministic: bool, seed: int) -> None:
     torch.backends.cudnn.benchmark = not deterministic
     torch.use_deterministic_algorithms(deterministic)
 
-    if deterministic:
-        set_seed(seed)
+    #if deterministic:
+    set_seed(seed)

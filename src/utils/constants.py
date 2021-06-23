@@ -4,6 +4,7 @@ File:
 
 Authors:
     - Simon Giard-Leroux
+    - Guillaume Cléroux
     - Shreyas Sunil Kulkarni
 
 Description:
@@ -23,7 +24,7 @@ TARGETS_PATH = 'data/annotations/targets_resized.json'
 ANNOTATIONS_PATH = 'data/annotations/annotations_raw.csv'
 
 # Models file path
-MODELS_PATH = 'models/'
+MODELS_PATH = 'saved_models/'
 
 # Logging file path for tensorboard
 LOG_PATH = 'logdir/'
@@ -33,11 +34,49 @@ FONT_PATH = '/usr/share/fonts/truetype/liberation/LiberationSansNarrow-Regular.t
 
 # Google Drive file ID Hashes
 IMAGES_ID = '12mZB0Or1FhzwZO_zUTYCbbuxwQ56-5PP'
-ANNOTATIONS_ID = '1y3BbSGF98Cs9eOTJF-V32JJ8s9dodSC-'
+ANNOTATIONS_ID = '1FdFLlb-RJY9IZ2zHLScTrwWlT4EPB2Oj'
 
 # Dataset mean and standard deviation per channel (R, G, B)
 MEAN = (0.6221349083958952, 0.6097851650674193, 0.592938912173587)
 STD = (0.33986575693672466, 0.3446239730624245, 0.3541046569741213)
+
+COCO_PARAMS_LIST = [
+    'AP @ [IoU=0.50:0.95 | area=all | maxDets=100]',
+    'AP @ [IoU=0.50 | area=all | maxDets=100]',
+    'AP @ [IoU=0.75 | area=all | maxDets=100]',
+    'AP @ [IoU=0.50:0.95 | area=small | maxDets=100]',
+    'AP @ [IoU=0.50:0.95 | area=medium | maxDets=100]',
+    'AP @ [IoU=0.50:0.95 | area=large | maxDets=100]',
+    'AR @ [IoU=0.50:0.95 | area=all | maxDets=1]',
+    'AR @ [IoU=0.50:0.95 | area=all | maxDets=10]',
+    'AR @ [IoU=0.50:0.95 | area=all | maxDets=100]',
+    'AR @ [IoU=0.50:0.95 | area=small | maxDets=100]',
+    'AR @ [IoU=0.50:0.95 | area=medium | maxDets=100]',
+    'AR @ [IoU=0.50:0.95 | area=large | maxDets=100]'
+]
+
+"""
+Original Console Outputs:
+
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.255
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.454
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.271
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.077
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.245
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.280
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.181
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.513
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.518
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.098
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.457
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.564
+ """
+
+# Evaluation metric for early stopping and best model saving
+EVAL_METRIC = COCO_PARAMS_LIST[0]
+
+# Image extension
+IMAGE_EXT = 'jpg'
 
 # Class dictionary
 CLASS_DICT = {
