@@ -32,9 +32,7 @@ if __name__ == '__main__':
     # Declare list of commands to be executed
     cmds = list(list(cmd) for cmd in product(*hparams.values()))
 
-    for i in range(len(cmds)):
-        for j in range(0, len(hparams) + 2, 2):
-            cmds[i].insert(j, list(hparams)[j // 2])
+    [cmds[i].insert(j, list(hparams)[j // 2]) for j in range(0, len(hparams) + 2, 2) for i in range(len(cmds))]
 
     cmds = [['python', 'experiment.py', '-mo', 'retinanet_resnet50_fpn', '-b', '20'] + cmd for cmd in cmds]
 
