@@ -23,17 +23,18 @@ if __name__ == '__main__':
     # Run environment tests
     env_tests()
 
-    da_list = ['0.1', '0.25', '0.5']
-    lr_list = ['3e-4', '3e-5', '3e-6']
-    wd_list = ['3e-2', '3e-3', '3e-4']
+    hparams = {
+        '-da': ['0.1', '0.25', '0.5'],
+        '-lr': ['3e-4', '3e-5', '3e-6'],
+        '-wd': ['3e-2', '3e-3', '3e-4']
+    }
 
     # Declare list of commands to be executed
-    cmds = list(list(cmd) for cmd in product(da_list, lr_list, wd_list))
+    cmds = list(list(cmd) for cmd in product(*hparams.values()))
 
     for i in range(len(cmds)):
-        cmds[i].insert(0, '-da')
-        cmds[i].insert(2, '-lr')
-        cmds[i].insert(4, '-wd')
+        for j in range(0, len(hparams) + 2, 2):
+            cmds[i].insert(j, list(hparams)[j // 2])
 
     cmds = [['python', 'experiment.py', '-mo', 'fasterrcnn_resnet50_fpn', '-b', '20'] + cmd for cmd in cmds]
 
