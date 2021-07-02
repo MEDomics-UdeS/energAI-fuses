@@ -199,7 +199,7 @@ class PipelineManager:
             save_state = {
                 "model": ranking_model.state_dict(),
                 "args_dict": self.__args_dict,
-                "ranked_imgs": self.__rank_images(ranking_model, metrics='coco')
+                "ranked_imgs": self.__rank_images(ranking_model)
             }
             torch.save(save_state, filename)
 
@@ -608,7 +608,6 @@ class PipelineManager:
         
         # Loop through each batch in the data loader
         for (images, targets) in data_loader:
-            
             # Send images and targets to the device
             images = list(img.to(self.__device) for img in images)
 
