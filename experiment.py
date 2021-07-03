@@ -34,7 +34,7 @@ if __name__ == '__main__':
                         help='Number of workers')
 
     # Number of epochs argument
-    parser.add_argument('-e', '--epochs', action='store', type=int, default=200,
+    parser.add_argument('-e', '--epochs', action='store', type=int, default=100,
                         help='Number of epochs')
 
     # Batch size argument
@@ -85,7 +85,7 @@ if __name__ == '__main__':
                         help='Specify which object detection model to use')
 
     # Early stopping patience argument
-    parser.add_argument('-esp', '--es_patience', action='store', type=int, default=0,
+    parser.add_argument('-esp', '--es_patience', action='store', type=int,
                         help='Early stopping patience')
 
     # Early stopping delta argument
