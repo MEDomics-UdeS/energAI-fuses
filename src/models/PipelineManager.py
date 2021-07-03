@@ -199,7 +199,7 @@ class PipelineManager:
             save_state = {
                 "model": ranking_model.state_dict(),
                 "args_dict": self.__args_dict,
-                "ranked_imgs": self.__rank_images(ranking_model, metrics='coco')
+                "ranked_imgs": self.__rank_images(ranking_model, metrics='loss')
             }
             torch.save(save_state, filename)
 

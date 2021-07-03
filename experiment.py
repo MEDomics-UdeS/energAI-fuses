@@ -85,7 +85,7 @@ if __name__ == '__main__':
                         help='Specify which object detection model to use')
 
     # Early stopping patience argument
-    parser.add_argument('-esp', '--es_patience', action='store', type=int, default=5,
+    parser.add_argument('-esp', '--es_patience', action='store', type=int, default=0,
                         help='Early stopping patience')
 
     # Early stopping delta argument
