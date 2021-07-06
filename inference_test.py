@@ -77,18 +77,17 @@ if __name__ == '__main__':
     print('\n=== Arguments & Hyperparameters ===\n')
     print_dict(vars(args), 6)
 
-    image_size = torch.load(f'{MODELS_PATH}{args.model_file_name}')["args_dict"]["image_size"]
+    image_size = torch.load(args.model_file_name)["args_dict"]["image_size"]
 
     # Declare dataset manager
     dataset_manager = DatasetManager(images_path=args.image_path,
-                                     targets_path=args.inference_path,
+                                     targets_path=TARGETS_PATH,
                                      image_size=image_size,
                                      num_workers=num_workers,
                                      data_aug=0,
                                      validation_size=0,
                                      test_size=1,
                                      norm=args.normalize,
-                                    #  google_images=not args.no_google_images,
                                      seed=0)
 
     # Declare data loader manager

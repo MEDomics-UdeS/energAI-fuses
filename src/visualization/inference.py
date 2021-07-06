@@ -18,7 +18,7 @@ from torch.utils.data import DataLoader
 from typing import Tuple
 from src.models.models import load_model
 
-from src.utils.constants import CLASS_DICT, FONT_PATH, MODELS_PATH, RESIZED_PATH, RAW_PATH, IMAGE_EXT
+from src.utils.constants import CLASS_DICT, FONT_PATH, RESIZED_PATH, RAW_PATH, IMAGE_EXT
 from src.utils.helper_functions import filter_by_nms, filter_by_score, format_detr_outputs
 
 
@@ -38,7 +38,7 @@ def save_test_images(model_file_name: str,
     :param iou_threshold: float, intersection-over-union threshold for predicted bounding boxes filtering
     :param save_path: str, save path for the inference test images
     """
-    save_state = torch.load(f'{MODELS_PATH}{model_file_name}')
+    save_state = torch.load(model_file_name)
 
     image_paths_raw = [image_path.replace(RESIZED_PATH, RAW_PATH) for image_path in data_loader.dataset.image_paths]
 
