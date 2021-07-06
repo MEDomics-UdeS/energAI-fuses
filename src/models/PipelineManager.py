@@ -440,7 +440,7 @@ class PipelineManager:
             if self.__model_name == 'detr':
                 target_sizes = torch.stack(
                     [torch.tensor([self.__image_size, self.__image_size]) for _ in targets], dim=0)
-                outputs = format_detr_outputs(outputs, target_sizes)
+                outputs = format_detr_outputs(outputs, target_sizes, self.__device)
 
             outputs = [{k: v.to(self.__device) for k, v in t.items()} for t in outputs]
 

@@ -44,7 +44,6 @@ class DatasetManager:
                  validation_size: float,
                  test_size: float,
                  norm: str,
-                #  google_images: bool,
                  seed: int) -> None:
         """
         Class constructor
@@ -97,7 +96,7 @@ class DatasetManager:
                     sys.exit(1)
 
         # Declare training, validation and testing datasets
-        self.__dataset_train = FuseDataset(images_path, targets_path, num_workers) #, google_images)
+        self.__dataset_train = FuseDataset(images_path, targets_path, num_workers)
         self.__dataset_valid = FuseDataset()
         self.__dataset_test = FuseDataset()
 

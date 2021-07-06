@@ -13,7 +13,7 @@ class Image_Loader:
         
     def __select_img_dir(self, root):
         root.filename = filedialog.askdirectory(
-            initialdir=RESIZED_PATH, title="Select a directory for inference pass")
+            initialdir='.', title="Select a directory for inference pass")
 
         if root.filename:
             self.__img_dir = root.filename

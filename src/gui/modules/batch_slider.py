@@ -3,7 +3,7 @@ from tkinter import *
 class Batch_Slider:
 
     def __init__(self, root) -> None:
-        self.__batch_size = None
+        self.__batch_size = 1
         
         Label(root, text="", padx=100).grid(row=3, column=1)
         Label(root, text="Select the batch size").grid(row=3, column=2)

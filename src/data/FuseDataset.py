@@ -28,8 +28,7 @@ class FuseDataset(Dataset):
     def __init__(self,
                  images_path: str = None,
                  targets_path: str = None,
-                 num_workers: int = None,
-                 google_images: bool = True) -> None:
+                 num_workers: int = None) -> None:
         """
         Class constructor
 
@@ -45,11 +44,6 @@ class FuseDataset(Dataset):
             # Get all survey images paths and ignore the .gitkeep file
             images = [img for img in sorted(os.listdir(images_path)) if img.startswith('S') or img.startswith('G')]
 
-            if not google_images:
-                google_imgs = [image for image in images if image.startswith('G')]
-                google_indices = [images.index(google_image) for google_image in google_imgs]
-                images = [e for i, e in enumerate(images) if i not in google_indices]
-
             # Save the image paths as an object attribute
             self.__image_paths = [os.path.join(images_path, img) for img in images]
 
@@ -61,6 +55,9 @@ class FuseDataset(Dataset):
 
             # Get ray workers IDs
             ids = [ray_load_images.remote(self.__image_paths, i) for i in range(num_workers)]
+            
+            # This is when working with only 1 image, line above breaks for small batches
+            # ids = [ray_load_images.remote(self.__image_paths, 0)]
 
             # Calculate initial number of jobs left
             nb_job_left = size - num_workers
@@ -96,9 +93,6 @@ class FuseDataset(Dataset):
             # Load the targets json into the targets attribute in the object
             self.__targets = json.load(open(targets_path))
 
-            if not google_images:
-                self.__targets = [e for i, e in enumerate(self.__targets) if i not in google_indices]
-
             # Convert the targets to tensors
             for target in self.__targets:
                 for key, value in target.items():
@@ -114,7 +108,11 @@ class FuseDataset(Dataset):
         :param index: int, actual index to get
         :return: tuple, transformed current image and current targets
         """
-        return self.transforms(self.__images[index]), self.__targets[index]
+        # When working with small batches
+        if self.targets:        
+            return self.transforms(self.__images[index]), self.__targets[index]
+        else:
+            return self.transforms(self.__images[index]), {}
 
     def __len__(self) -> int:
         """
