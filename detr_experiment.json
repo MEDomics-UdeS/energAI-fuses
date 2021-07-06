@@ -6,7 +6,7 @@
     },
 
     "variable":{
-        "--learning_rate": ["3e-5, 5e-5"],
+        "--learning_rate": ["3e-5", "5e-5"],
         "--weight_decay": ["3e-4"]
     }
 }
