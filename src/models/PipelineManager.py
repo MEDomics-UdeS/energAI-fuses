@@ -565,32 +565,26 @@ class PipelineManager:
                         loss_dict = model(image)
                         loss_dict = self.__criterion(loss_dict, target)
 
-                        # Calculate the loss
+                        # Calculate the losses
                         weight_dict = self.__criterion.weight_dict
-                        loss = sum(loss_dict[k] * weight_dict[k] for k in loss_dict.keys() if k in weight_dict)
-                        
-                        # Adding image path and associated loss to results dict
-                        performance_dict[data_type].append({
-                            "img_path": data_loader.dataset.image_paths[i],
-                            "metrics": round(loss.item(), 4)
-                        })
-                        
+                        loss_dict = {k: loss_dict[k] * weight_dict[k] for k in loss_dict.keys() if k in weight_dict}
                     else:
                         loss_dict = model(image, target)
 
-                        # Calculate the loss
-                        loss = sum(loss for loss in loss_dict.values())
+                    # Adding image path and associated loss to results dict
+                    performance_dict[data_type].append({
+                        "img_path": data_loader.dataset.image_paths[i],
+                        "metrics": loss_dict
+                    })
+                    
+                    # Calculate the total loss for the image
+                    performance_dict[data_type][-1]["metrics"]["total_loss"] = sum(loss for loss in loss_dict.values())
 
-                        # Adding image path and associated loss to results dict
-                        performance_dict[data_type].append({
-                            "img_path": data_loader.dataset.image_paths[i],
-                            "metrics": round(loss.item(), 4)
-                        })
             # Updating the progress bar
             pbar.update()
 
         # Sorting the values in the dictionnary from highest to lowest
-        performance_dict[data_type] = sorted(performance_dict[data_type], key=lambda x: x["metrics"])
+        performance_dict[data_type] = sorted(performance_dict[data_type], key=lambda x: x["metrics"]["total_loss"])
 
         # Closing the progress bar
         pbar.close()
