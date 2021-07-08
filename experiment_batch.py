@@ -36,10 +36,17 @@ if __name__ == '__main__':
         print("No valid JSON file entered for experiments. Please verify in project directory.")
     else:
         # Declare list of commands to be executed
-        cmds = list(list(cmd) for cmd in product(*variable_params.values()))
+        if variable_params:
+            cmds = list(list(cmd) for cmd in product(*variable_params.values()))
+            [cmds[i].insert(j, list(variable_params)[j // 2]) for j in range(0, len(variable_params) + 2, 2) for i in range(len(cmds))]
 
-        [cmds[i].insert(j, list(variable_params)[j // 2]) for j in range(0, len(variable_params) + 2, 2) for i in range(len(cmds))]
-        [cmd.extend((key, value)) for key, value in fixed_params.items() for cmd in cmds]
+            if fixed_params:
+                [cmd.extend((key, value)) for key, value in fixed_params.items() for cmd in cmds]
+        else:
+            cmds = [[]]
+
+            if fixed_params:
+                [cmd.extend((key, value)) for key, value in fixed_params.items() for cmd in cmds]
 
         cmds = [['python', 'experiment.py'] + cmd for cmd in cmds]
 
