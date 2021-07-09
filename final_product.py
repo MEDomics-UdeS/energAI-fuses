@@ -15,7 +15,7 @@ Description:
 import argparse
 from datetime import datetime
 from multiprocessing import cpu_count
-import io
+
 
 import torch
 from src.data.DataLoaderManager import DataLoaderManager
@@ -89,10 +89,8 @@ if __name__ == '__main__':
                                      validation_size=0,
                                      test_size=1,
                                      norm=args.normalize,
+                                     google_images=False,
                                      seed=0)
-
-    if len(dataset_manager.dataset_test) < args.batch:
-        args.batch = len(dataset_manager.dataset_test)
         
     # Declare data loader manager
     data_loader_manager = DataLoaderManager(dataset_manager=dataset_manager,
