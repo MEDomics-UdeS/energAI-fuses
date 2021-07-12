@@ -18,8 +18,10 @@ from multiprocessing import cpu_count
 
 
 import torch
-from src.data.DataLoaderManager import DataLoaderManager
-from src.data.DatasetManager import DatasetManager
+
+from src.gui.GuiDataset import GuiDataset
+from src.gui.GuiDataLoader import GuiDataLoader
+
 from src.utils.helper_functions import print_dict, env_tests
 from src.visualization.final_inference import save_test_images
 from src.utils.constants import INFERENCE_PATH, MODELS_PATH
@@ -79,29 +81,18 @@ if __name__ == '__main__':
     print_dict(vars(args), 6)
 
     image_size = torch.load(args.model_file_name)["args_dict"]["image_size"]
-    
-    # Declare dataset manager
-    dataset_manager = DatasetManager(images_path=args.image_path,
-                                     targets_path=None,
-                                     image_size=image_size,
-                                     num_workers=num_workers,
-                                     data_aug=0,
-                                     validation_size=0,
-                                     test_size=1,
-                                     norm=args.normalize,
-                                     google_images=False,
-                                     seed=0)
-        
-    # Declare data loader manager
-    data_loader_manager = DataLoaderManager(dataset_manager=dataset_manager,
-                                            batch_size=args.batch,
-                                            gradient_accumulation=1,
-                                            num_workers=num_workers,
-                                            deterministic=True)
+
+    # Loading the images dataset
+    ds = GuiDataset(args.image_path, num_workers, norm=args.normalize)
+    dl = GuiDataLoader(dataset=ds,
+                       batch_size=args.batch,
+                       gradient_accumulation=1,
+                       num_workers=num_workers,
+                       deterministic=True)
 
     # Perform an inference loop and save all images with the ground truth and predicted bounding boxes
     save_test_images(model_file_name=args.model_file_name,
-                     data_loader=data_loader_manager.data_loader_test,
+                     data_loader=dl.data_loader,
                      iou_threshold=args.iou_threshold,
                      score_threshold=args.score_threshold,
                      save_path=INFERENCE_PATH,
