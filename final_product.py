@@ -69,10 +69,6 @@ if __name__ == '__main__':
     parser.add_argument('-sc', '--score_threshold', action='store', type=float, default=0.5,
                         help='Score threshold to filter box predictions')
 
-    # Google Images argument
-    parser.add_argument('-no-gi', '--no_google_images', action='store_true',
-                        help='If specified, the Google Images photos will be excluded from the training subset')
-
     # Parse arguments
     args = parser.parse_args()
 
