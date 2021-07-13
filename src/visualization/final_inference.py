@@ -40,8 +40,9 @@ def save_test_images(model_file_name: str,
     """
     save_state = torch.load(model_file_name)
 
+    # TODO create a separate directory for resized images and source the raw from image_path
     image_paths_raw = [image_path.replace(
-        RESIZED_PATH, RAW_PATH) for image_path in data_loader.dataset.image_paths]
+        'data/gui_test/', RAW_PATH) for image_path in data_loader.dataset.image_paths]
 
     # Declare device
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
