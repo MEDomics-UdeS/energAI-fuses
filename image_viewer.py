@@ -13,7 +13,7 @@ class Image_Viewer:
         for file in os.listdir(INFERENCE_PATH):
             if file.endswith(f'.{IMAGE_EXT}'):
                 self.__img_list.append(ImageTk.PhotoImage(
-                    Image.open(f'{INFERENCE_PATH}{file}').resize((600, 480))))
+                    Image.open(f'{INFERENCE_PATH}{file}').resize((900, 900))))
 
         self.__status = Label(window, text=f'Image 1 of {len(self.__img_list)}', bd=1, relief="sunken", anchor="e")
 
