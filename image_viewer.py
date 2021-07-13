@@ -6,14 +6,22 @@ from src.utils.constants import INFERENCE_PATH, IMAGE_EXT
 class Image_Viewer:
 
     def __init__(self, window) -> None:
-
+        
+        # Declaring the maximum dimensions of the image
+        max_size = 1600, 820
+        
         # Creating all the images
         self.__img_list = []
 
         for file in os.listdir(INFERENCE_PATH):
             if file.endswith(f'.{IMAGE_EXT}'):
-                self.__img_list.append(ImageTk.PhotoImage(
-                    Image.open(f'{INFERENCE_PATH}{file}').resize((900, 900))))
+                image = Image.open(f'{INFERENCE_PATH}{file}')
+                
+                # Resizes the image and keeps aspect ratio
+                image.thumbnail(max_size, Image.ANTIALIAS)
+                
+                # Add the resized image to the list
+                self.__img_list.append(ImageTk.PhotoImage(image))
 
         self.__status = Label(window, text=f'Image 1 of {len(self.__img_list)}', bd=1, relief="sunken", anchor="e")
 

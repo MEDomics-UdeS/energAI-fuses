@@ -41,6 +41,7 @@ def start_inference(model_ld, img_dir, iou, score):
     p.wait()
 
     top = Toplevel()
+    top.geometry("1600x900")
 
     Image_Viewer(window=top)
 
