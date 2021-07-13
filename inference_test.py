@@ -38,12 +38,6 @@ if __name__ == '__main__':
     # Model file name argument
     parser.add_argument('-mfn', '--model_file_name', action='store', type=str,
                         help=f'Model file name located in {MODELS_PATH}')
-    
-    parser.add_argument('-img', '--image_path', action='store', type=str,
-                        help="Image directory to use for inference test")
-    
-    parser.add_argument('-inf', '--inference_path', action='store', type=str,
-                        help="Image directory to store images after inference")
 
     # Compute mean & std deviation on training set argument
     parser.add_argument('-norm', '--normalize', action='store', type=str,
@@ -80,7 +74,7 @@ if __name__ == '__main__':
     image_size = torch.load(args.model_file_name)["args_dict"]["image_size"]
 
     # Declare dataset manager
-    dataset_manager = DatasetManager(images_path=args.image_path,
+    dataset_manager = DatasetManager(images_path=RESIZED_PATH,
                                      targets_path=TARGETS_PATH,
                                      image_size=image_size,
                                      num_workers=num_workers,
@@ -88,6 +82,7 @@ if __name__ == '__main__':
                                      validation_size=0,
                                      test_size=1,
                                      norm=args.normalize,
+                                     google_images=not args.no_google_images,
                                      seed=0)
 
     # Declare data loader manager

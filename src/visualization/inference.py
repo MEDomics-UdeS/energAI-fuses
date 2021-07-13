@@ -72,7 +72,7 @@ def save_test_images(model_file_name: str,
         if model_name == 'detr':
             target_sizes = torch.stack(
                 [torch.tensor([image_size, image_size]) for _ in range(data_loader.batch_size)], dim=0)
-            preds = format_detr_outputs(preds, target_sizes)
+            preds = format_detr_outputs(preds, target_sizes, device)
 
         # Filter predicted bounding boxes by using non-maximum suppression
         preds = filter_by_nms(preds, iou_threshold)
