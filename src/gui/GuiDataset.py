@@ -6,8 +6,9 @@ import numpy as np
 from tqdm import trange
 from torchvision import transforms
 from src.utils.constants import MEAN, STD
+from src.data.DatasetManager import ray_get_rgb
+from src.data.FuseDataset import ray_load_images
 
-import json
 from PIL import Image
 import ray
 from typing import Tuple, List, Optional
@@ -259,36 +260,3 @@ class GuiDataset(Dataset):
 
         # Returning the mean and standard deviation per channel
         return mean, std
-
-
-@ray.remote
-def ray_load_images(image_paths: List[str], index: int) -> Tuple[Image.Image, int]:
-    """
-    Ray remote function to parallelize the loading of PIL Images to RAM
-
-    :param image_paths: list, strings of image paths
-    :param index: int, current index
-    :return: tuple, PIL Image and current index
-    """
-    return Image.open(image_paths[index]), index
-
-
-@ray.remote
-def ray_get_rgb(image_paths: List[str], idx: int) -> Tuple[np.array, np.array, np.array, int]:
-    """
-    Ray remote function to parallelize the extraction of R, G, B values from images
-
-    :param image_paths: list, contains the image paths
-    :param idx: int, current index
-    :return: tuple, r, g, b values numpy arrays for the current image and the current index
-    """
-    # Open the current image
-    image = Image.open(image_paths[idx])
-
-    # Get the values of each pixel in the R, G, B channels
-    r = np.dstack(np.array(image)[:, :, 0])
-    g = np.dstack(np.array(image)[:, :, 1])
-    b = np.dstack(np.array(image)[:, :, 2])
-
-    # Return the r, g, b values numpy arrays for the current image and the current index
-    return r, g, b, idx
