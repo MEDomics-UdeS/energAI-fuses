@@ -32,7 +32,7 @@ def start_inference(model_ld, img_dir, iou, score):
         '--iou_threshold', iou.get_iou_treshold(),
         '--score_threshold', score.get_score_treshold()
         ]
-        
+
 
     # Execute current command
     p = sp.Popen(cmd)
@@ -41,9 +41,7 @@ def start_inference(model_ld, img_dir, iou, score):
     p.wait()
 
     top = Toplevel()
-    top.geometry("1600x900")
 
     Image_Viewer(window=top)
 
-    
 root.mainloop()

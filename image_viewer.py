@@ -7,8 +7,8 @@ class Image_Viewer:
 
     def __init__(self, window) -> None:
         
-        # Declaring the maximum dimensions of the image
-        max_size = 1600, 820
+        # Declaring the maximum dimensions of the image of 16:9 aspect ratio
+        max_size = 1350, 760
         
         # Creating all the images
         self.__img_list = []
@@ -21,12 +21,22 @@ class Image_Viewer:
                 image.thumbnail(max_size, Image.ANTIALIAS)
                 
                 # Add the resized image to the list
-                self.__img_list.append(ImageTk.PhotoImage(image))
+                self.__img_list.append((file, ImageTk.PhotoImage(image)))
+        
+        # Sorts the images alphabetically by filename
+        self.__img_list.sort(key=lambda x: x[0])
 
+        # Putting a frame on screen to display images into
+        self.__frame = LabelFrame(window, text=self.__img_list[0][0], padx=20, pady=20, width=1560, height=820)
+        self.__frame.grid(row=0, column=0, columnspan=3, padx=20, pady=20)
+        self.__frame.pack_propagate(False)
+        
+        # Displaying the directory contents
         self.__status = Label(window, text=f'Image 1 of {len(self.__img_list)}', bd=1, relief="sunken", anchor="e")
 
-        self.__my_label = Label(window, image=self.__img_list[0])
-        self.__my_label.grid(row=0, column=0, columnspan=3)
+        # Displaying the image in frame
+        self.__label = Label(self.__frame, image=self.__img_list[0][1])
+        self.__label.pack()
 
         self.__previous_button = Button(window, text=" << Prev", command=lambda: self.__prev_img(window, 0), state="disabled")
         self.__next_button = Button(window, text="Next >>", command=lambda: self.__next_img(window, 0))
@@ -39,15 +49,16 @@ class Image_Viewer:
     
 
     def __prev_img(self, window, idx):
-        global my_label
-        global status
-        global previous_button
-        global next_button
 
+        self.__frame.grid_forget()
+        self.__frame = LabelFrame(window, text=self.__img_list[idx][0], padx=20, pady=20, width=1560, height=820)
+        self.__frame.grid(row=0, column=0, columnspan=3, padx=20, pady=20)
+        self.__frame.pack_propagate(False)
+        
         # Update the image
-        self.__my_label.grid_forget()
-        self.__my_label = Label(window, image=self.__img_list[idx])
-        self.__my_label.grid(row=0, column=0, columnspan=3)
+        self.__label.grid_forget()
+        self.__label = Label(self.__frame, image=self.__img_list[idx][1])
+        self.__label.pack()
 
         # Update the buttons
         self.__previous_button.destroy()
@@ -64,15 +75,16 @@ class Image_Viewer:
         self.__status.grid(row=2, column=0, columnspan=3, sticky="w"+"e")
 
     def __next_img(self, window, idx):
-        global my_label
-        global status
-        global previous_button
-        global next_button
+
+        self.__frame.grid_forget()
+        self.__frame = LabelFrame(window, text=self.__img_list[idx + 1][0], padx=20, pady=20, width=1560, height=820)
+        self.__frame.grid(row=0, column=0, columnspan=3, padx=20, pady=20)
+        self.__frame.pack_propagate(False)
 
         # Update the image
-        self.__my_label.grid_forget()
-        self.__my_label = Label(window, image=self.__img_list[idx + 1])
-        self.__my_label.grid(row=0, column=0, columnspan=3)
+        self.__label.grid_forget()
+        self.__label = Label(self.__frame, image=self.__img_list[idx + 1][1])
+        self.__label.pack()
 
         # Update the buttons
         self.__previous_button.destroy()
