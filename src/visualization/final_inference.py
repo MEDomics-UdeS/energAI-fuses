@@ -13,12 +13,11 @@ Description:
 
 import torch
 from PIL import Image, ImageDraw, ImageFont
-from torch._C import device
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 from src.models.models import load_model
 
-from src.utils.constants import CLASS_DICT, FONT_PATH, MODELS_PATH, RESIZED_PATH, RAW_PATH, IMAGE_EXT
+from src.utils.constants import CLASS_DICT, FONT_PATH, RAW_PATH, IMAGE_EXT
 from src.utils.helper_functions import filter_by_nms, filter_by_score, format_detr_outputs
 
 
