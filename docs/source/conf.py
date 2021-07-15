@@ -1,25 +1,25 @@
-# Configuration file for the Sphinx documentation builder.
-#
-# This file only contains a selection of the most common options. For a full
-# list see the documentation:
-# https://www.sphinx-doc.org/en/master/usage/configuration.html
+# -- Path setup --------------------------------------------------------------#
+import os
+import sys
 
-# -- Path setup --------------------------------------------------------------
+sys.path.insert(0, os.path.abspath('../..'))    # Project $WORKDIR
 
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
-#
-# import os
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
+# Adding every modules path for autodoc 
+sys.path.append(os.path.abspath('../../src/coco'))
+sys.path.append(os.path.abspath('../../src/data'))
+sys.path.append(os.path.abspath('../../src/detr'))
+sys.path.append(os.path.abspath('../../src/gui'))
+sys.path.append(os.path.abspath('../../src/gui/modules'))
+sys.path.append(os.path.abspath('../../src/models'))
+sys.path.append(os.path.abspath('../../src/utils'))
+sys.path.append(os.path.abspath('../../src/visualization'))
 
 
 # -- Project information -----------------------------------------------------
 
 project = 'EnergAI-fuses'
-copyright = '2021, Simon Giard-Leroux, Guillaume Cleroux, Shreyas Sunil Kulkarni, Martin Vallieres'
-author = 'Simon Giard-Leroux, Guillaume Cleroux, Shreyas Sunil Kulkarni, Martin Vallieres'
+copyright = '2021, Simon Giard-Leroux, Guillaume Cléroux, Shreyas Sunil Kulkarni, Martin Vallières'
+author = 'Simon Giard-Leroux, Guillaume Cléroux, Shreyas Sunil Kulkarni, Martin Vallières'
 
 
 # -- General configuration ---------------------------------------------------
@@ -27,8 +27,8 @@ author = 'Simon Giard-Leroux, Guillaume Cleroux, Shreyas Sunil Kulkarni, Martin 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = [
-]
+extensions = ['sphinx.ext.autodoc', 'sphinx.ext.autosummary']
+autosummary_generate = True     # Turning on auto-summary for recursive generation
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -36,7 +36,7 @@ templates_path = ['_templates']
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ['_build', '_templates']
 
 
 # -- Options for HTML output -------------------------------------------------
