@@ -35,7 +35,7 @@ if __name__ == '__main__':
 
     [cmds[i].insert(j, list(hparams)[j // 2]) for j in range(0, len(hparams) + 2, 2) for i in range(len(cmds))]
 
-    cmds = [['python', 'experiment.py', '-mo', 'fasterrcnn_resnet50_fpn', '-b', '20'] + cmd for cmd in cmds]
+    cmds = [['python', 'experiment.py', '-mo', 'fasterrcnn_resnet50_fpn', '-b', '20', '-e', '1'] + cmd for cmd in cmds]
 
     # Loop through each command
     for i, cmd in enumerate(cmds, start=1):

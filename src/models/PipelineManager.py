@@ -167,6 +167,9 @@ class PipelineManager:
             self.__best_model = None
             self.__best_epoch = 0
             self.__best_score = 0
+            self.__best_metrics_dict = None
+        else:
+            self.__last_metrics_dict = None
 
     def __call__(self, epochs: int) -> None:
         """
@@ -204,6 +207,16 @@ class PipelineManager:
             torch.save(save_state, filename)
 
             print(f'{"Last" if self.__save_last else "Best"} model saved to:\t\t\t\t{filename}\n')
+
+        # Save best or last epoch validation metrics dict to tensorboard
+        metrics_dict = self.__last_metrics_dict if self.__save_last else self.__best_metrics_dict
+
+        # Append 'hparams/' to the start of each metrics dictionary key to log in tensorboard
+        for key in metrics_dict.fromkeys(metrics_dict):
+            metrics_dict[f'hparams/{key}'] = metrics_dict.pop(key)
+
+        # Save the hyperparameters with tensorboard
+        self.__writer.add_hparams(self.__args_dict, metric_dict=metrics_dict)
 
         # Test the trained model
         self.__test_model()
@@ -387,6 +400,9 @@ class PipelineManager:
                 self.__best_model = model
                 self.__best_score = metrics_dict[EVAL_METRIC]
                 self.__best_epoch = epoch
+                self.__best_metrics_dict = metrics_dict
+        else:
+            self.__last_metrics_dict = metrics_dict
 
         # Save the validation results for the current epoch in tensorboard
         self.__save_epoch('Validation', loss, metrics_dict, epoch)
@@ -409,13 +425,6 @@ class PipelineManager:
         # Print the testing object detection metrics results
         print('=== Testing Results ===\n')
         print_dict(metrics_dict, 6, '.2%')
-
-        # Append 'hparams/' to the start of each metrics dictionary key to log in tensorboard
-        for key in metrics_dict.fromkeys(metrics_dict):
-            metrics_dict[f'hparams/{key}'] = metrics_dict.pop(key)
-
-        # Save the hyperparameters with tensorboard
-        self.__writer.add_hparams(self.__args_dict, metric_dict=metrics_dict)
 
     @torch.no_grad()
     def __coco_evaluate(self, model, data_loader: DataLoader, desc: str) -> dict:
