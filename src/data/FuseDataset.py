@@ -61,9 +61,6 @@ class FuseDataset(Dataset):
 
             # Get ray workers IDs
             ids = [ray_load_images.remote(self.__image_paths, i) for i in range(num_workers)]
-            
-            # This is when working with only 1 image, line above breaks for small batches
-            # ids = [ray_load_images.remote(self.__image_paths, 0)]
 
             # Calculate initial number of jobs left
             nb_job_left = size - num_workers
