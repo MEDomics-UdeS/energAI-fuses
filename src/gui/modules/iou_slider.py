@@ -14,5 +14,6 @@ class IoU_Slider:
     def __slide(self, value):
         self.__iou_treshold = value
 
-    def get_iou_treshold(self):
+    @property
+    def value(self):
         return str(self.__iou_treshold)

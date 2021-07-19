@@ -16,5 +16,6 @@ class Model_Loader:
         if root.filename:
             self.__model = root.filename.name
 
-    def get_model(self):
+    @property
+    def model(self):
         return self.__model

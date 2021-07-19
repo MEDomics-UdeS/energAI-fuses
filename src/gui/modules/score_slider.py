@@ -14,5 +14,6 @@ class Score_Slider:
     def __slide(self, value):
         self.__score_treshold = value
 
-    def get_score_treshold(self):
+    @property
+    def value(self):
         return str(self.__score_treshold)

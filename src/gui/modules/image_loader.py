@@ -18,5 +18,6 @@ class Image_Loader:
         if root.filename:
             self.__img_dir = root.filename
 
-    def get_img_dir(self):
+    @property
+    def img_dir(self):
         return self.__img_dir
