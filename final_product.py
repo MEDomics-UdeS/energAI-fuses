@@ -48,6 +48,9 @@ if __name__ == '__main__':
     parser.add_argument('-inf', '--inference_path', action='store', type=str,
                         help="Image directory to store images after inference")
 
+    parser.add_argument('-d', '--device', action='store', type=str, default='cpu',
+                        help="Select the device for inference")
+
     # Compute mean & std deviation on training set argument
     parser.add_argument('-norm', '--normalize', action='store', type=str,
                         choices=['precalculated',
@@ -74,7 +77,7 @@ if __name__ == '__main__':
 
     # Display arguments in console
     print('\n=== Arguments & Hyperparameters ===\n')
-    print_dict(vars(args), 6)
+    print_dict(vars(args), 8)
 
     image_size = torch.load(args.model_file_name)["args_dict"]["image_size"]
 
@@ -92,7 +95,8 @@ if __name__ == '__main__':
                      iou_threshold=args.iou_threshold,
                      score_threshold=args.score_threshold,
                      save_path=INFERENCE_PATH,
-                     image_size=image_size)
+                     image_size=image_size,
+                     device_type=args.device)
 
     # Print file save path location
     print(f'\nInference results saved to: {INFERENCE_PATH}')

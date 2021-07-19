@@ -13,7 +13,6 @@ Description:
 
 import torch
 from PIL import Image, ImageDraw, ImageFont
-from torch._C import device
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 from src.models.models import load_model
@@ -28,7 +27,8 @@ def save_test_images(model_file_name: str,
                      iou_threshold: float,
                      score_threshold: float,
                      save_path: str,
-                     image_size: int) -> None:
+                     image_size: int,
+                     device_type: str) -> None:
     """
     Main inference testing function to save images with predicted and ground truth bounding boxes
 
@@ -45,7 +45,13 @@ def save_test_images(model_file_name: str,
         'data/gui_test/', RAW_PATH) for image_path in data_loader.dataset.image_paths]
 
     # Declare device
-    device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+    if device_type == 'cuda' and torch.cuda.is_available():
+        device = torch.device(device_type)
+    else:
+        if device_type != 'cpu':
+            print('\n', '=' * 75)
+            print(f"Couldn't assign device to type {device_type}, defaulting to CPU.")
+        device = torch.device('cpu')
     
     # Declare progress bar
     pbar = tqdm(total=len(data_loader), leave=False, desc='Inference Test')
