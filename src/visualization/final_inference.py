@@ -17,8 +17,9 @@ from tqdm import tqdm
 from torch.utils.data import DataLoader
 from src.models.models import load_model
 
-from src.utils.constants import CLASS_DICT, FONT_PATH, MODELS_PATH, RESIZED_PATH, RAW_PATH, IMAGE_EXT
+from src.utils.constants import CLASS_DICT, FONT_PATH, GUI_RESIZED_PATH, INFERENCE_PATH, IMAGE_EXT
 from src.utils.helper_functions import filter_by_nms, filter_by_score, format_detr_outputs
+import os
 
 
 @torch.no_grad()
@@ -27,6 +28,7 @@ def save_test_images(model_file_name: str,
                      iou_threshold: float,
                      score_threshold: float,
                      save_path: str,
+                     img_path: str,
                      image_size: int,
                      device_type: str) -> None:
     """
@@ -40,9 +42,8 @@ def save_test_images(model_file_name: str,
     """
     save_state = torch.load(model_file_name)
 
-    # TODO create a separate directory for resized images and source the raw from image_path
     image_paths_raw = [image_path.replace(
-        'data/gui_test/', RAW_PATH) for image_path in data_loader.dataset.image_paths]
+        GUI_RESIZED_PATH, f'{img_path}/') for image_path in data_loader.dataset.image_paths]
 
     # Declare device
     if device_type == 'cuda' and torch.cuda.is_available():
@@ -65,6 +66,11 @@ def save_test_images(model_file_name: str,
 
     # Put the model into eval() mode for inference
     model.eval()
+
+    # Removes every files from the inference directory if it's not empty
+    for file in os.listdir(INFERENCE_PATH):
+        if file.startswith('.') is False:
+            os.remove(f'{INFERENCE_PATH}{file}')
 
     # Loop through each batch in the data loader
     for batch_no, (images, _) in enumerate(data_loader):

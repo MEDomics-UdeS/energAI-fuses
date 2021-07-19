@@ -5,7 +5,7 @@ import os
 import numpy as np
 from tqdm import trange
 from torchvision import transforms
-from src.utils.constants import MEAN, STD
+from src.utils.constants import MEAN, STD, IMAGE_EXT, GUI_RESIZED_PATH
 from src.data.DatasetManager import ray_get_rgb
 from src.data.FuseDataset import ray_load_images
 
@@ -18,26 +18,35 @@ class GuiDataset(Dataset):
     """
     Custom GUI dataset class
     """
-
     def __init__(self,
+                 image_size: int,
                  images_path: str = None,
                  num_workers: int = None,
                  norm: str= 'none') -> None:
-
         """
         Class constructor
 
         :param images_path: str, path to the images
         :param num_workers: int, number of workers for multiprocessing
         """
-        # Check if images_path has been specified
+        # Check if any image exists in the image_path selected
+        if any(file.endswith(f'.{IMAGE_EXT}') for file in os.listdir(images_path)):
+
+            # Removes the content of the directory
+            for file in os.listdir(GUI_RESIZED_PATH):
+                if file.startswith('.') is False:
+                    os.remove(f'{GUI_RESIZED_PATH}{file}')
+
+
+            # Resize all images
+            self.__resize_images(image_size, num_workers, images_path)
 
         if norm == 'precalculated':
             # Use precalculated mean and standard deviation
             mean, std = MEAN, STD
         elif norm == 'calculated':
             # Recalculate mean and standard deviation
-            mean, std = self.__calculate_mean_std(num_workers)
+            mean, std = self.__calculate_mean_std(num_workers) # TODO we should always calculate the mean and std since we have new images
         elif norm == 'none':
             mean, std = None, None
 
@@ -47,13 +56,11 @@ class GuiDataset(Dataset):
             # Initialize ray
             ray.init(include_dashboard=False)
 
-            # Get all survey images paths and ignore the .gitkeep file
-            images = [img for img in sorted(os.listdir(
-                images_path)) if img.startswith('S') or img.startswith('G')]
+            # Get all the images paths 
+            images = [img for img in sorted(os.listdir(GUI_RESIZED_PATH)) if img.startswith('.') is False]
 
             # Save the image paths as an object attribute
-            self.__image_paths = [os.path.join(
-                images_path, img) for img in images]
+            self.__image_paths = [os.path.join(GUI_RESIZED_PATH, img) for img in images]
 
             # Get the dataset size
             size = len(self.__image_paths)
@@ -61,8 +68,8 @@ class GuiDataset(Dataset):
             # Declare empty list to save all images in RAM
             self.__images = [None] * size
 
-            # Get ray workers IDs for varying size of dataset
-            if num_workers > size:
+            # Get ray workers IDs for varying size of dataset and num_workers
+            if size < num_workers:
                 ids = [ray_load_images.remote(self.__image_paths, i)
                        for i in range(size)]
             else:
@@ -110,6 +117,7 @@ class GuiDataset(Dataset):
 
         return self.transforms(self.__images[index]), {}
 
+
     def __len__(self) -> int:
         """
         Class __len__ method, called when len(object) is used
@@ -118,9 +126,11 @@ class GuiDataset(Dataset):
         """
         return len(self.__images)
 
+
     @property
     def images(self):
         return self.__images
+
 
     @property
     def image_paths(self):
@@ -136,6 +146,7 @@ class GuiDataset(Dataset):
         image_path = self.__image_paths[index]
         img = Image.open(image_path)
         return img
+
 
     def extract_data(self, index_list: List[int]) -> Tuple[List[str], List[Image.Image], List[dict]]:
         """
@@ -159,6 +170,7 @@ class GuiDataset(Dataset):
 
         # Return the extracted elements
         return image_paths, images
+
 
     def add_data(self, image_paths: List[str], images: List[Image.Image]) -> None:
         """
@@ -194,6 +206,7 @@ class GuiDataset(Dataset):
 
         # Return a composed transforms list
         return transforms.Compose(transforms_list)
+
 
     def __calculate_mean_std(self, num_workers: int) -> Tuple[Tuple[float, float, float], Tuple[float, float, float]]:
         """
@@ -260,3 +273,110 @@ class GuiDataset(Dataset):
 
         # Returning the mean and standard deviation per channel
         return mean, std
+
+
+    @staticmethod
+    def __resize_images(image_size: int, num_workers: int, img_path: str) -> None:
+        """
+            Method to resize all images in the data/raw folder and save them to the data/resized folder
+
+            :param image_size: int, maximum image size in pixels (will be used for height & width)
+            :param num_workers: int, number of workers for multiprocessing
+            """
+        # Initialize ray
+        ray.init(include_dashboard=False)
+
+        # Get list of image and exclude the hidden .gitkeep file
+        imgs = [img for img in sorted(os.listdir(img_path)) if img.startswith('.') is False]
+
+        # Create image paths
+        image_paths = [os.path.join(img_path, img) for img in imgs]
+
+        # Get dataset size
+        size = len(image_paths)
+
+        # Declare empty lists to save the resize ratios and targets
+        resize_ratios = [None] * size
+
+        # Get ray workers IDs
+        if size < num_workers:
+            ids = [ray_resize_images.remote(image_paths, image_size, i) for i in range(size)]
+        else:
+            ids = [ray_resize_images.remote(image_paths, image_size, i) for i in range(num_workers)]
+
+        # Calculate initial number of jobs left
+        nb_job_left = size - num_workers
+
+        # Multiprocessing loop
+        for _ in trange(size, desc='Resizing images...'):
+                # Handle ray workers ready states and IDs
+                ready, ids = ray.wait(ids, num_returns=1)
+
+                # Get resize ratios and indices
+                resize_ratio, idx = ray.get(ready)[0]
+
+                # Save the resize ratios and targets to lists
+                resize_ratios[idx] = resize_ratio
+
+                # Check if there are jobs left
+                if nb_job_left > 0:
+                    # Assign workers to the remaining tasks
+                    ids.extend([ray_resize_images.remote(image_paths, image_size, size - nb_job_left)])
+
+                    # Decreasing the number of jobs left
+                    nb_job_left -= 1
+
+        # Shutting down ray
+        ray.shutdown()
+
+        # Displaying where files have been saved to
+        print(f'\nResized images have been saved to:\t\t{GUI_RESIZED_PATH}')
+
+
+@ray.remote
+def ray_resize_images(image_paths: List[str], image_size: int, idx: int) -> Tuple[float, int]:
+    """
+    Ray remote function to parallelize the resizing of images
+
+    :param image_paths: list, contains image paths
+    :param image_size: int, image size to resize all images to (height & width)
+    :param annotations: pandas DataFrame, contains the coordinates of each ground truth bounding box for each image
+    :param idx: int, current index
+    :return: resize_ratio, idx to continue ray paralleling
+    """
+    # Get the current image name, without the file path 
+    filename = image_paths[idx].split("/")[-1]
+
+    # Open the current image
+    img = Image.open(image_paths[idx])
+
+    # Get the current image size
+    original_size = img.size
+
+    # Create a new blank white image of size (image_size, image_size)
+    img2 = Image.new('RGB', (image_size, image_size), (255, 255, 255))
+
+    # Calculate the resize ratio
+    resize_ratio = (img2.size[0] * img2.size[1]) / \
+        (original_size[0] * original_size[1])
+
+    # Check if the original size is larger than the maximum image size
+    if image_size < original_size[0] or image_size < original_size[1]:
+        # Downsize the image using the thumbnail method
+        img.thumbnail((image_size, image_size),
+                      resample=Image.BILINEAR,
+                      reducing_gap=2)
+
+    # Calculate the x and y offsets at which the downsized image needs to be pasted (to center it)
+    x_offset = int((image_size - img.size[0]) / 2)
+    y_offset = int((image_size - img.size[1]) / 2)
+
+    # Paste the downsized original image in the new (image_size, image_size) image
+    img2.paste(img, (x_offset, y_offset, x_offset +
+               img.size[0], y_offset + img.size[1]))
+
+    # Save the resized image
+    img2.save(f'{GUI_RESIZED_PATH}{filename}')
+
+    # Return the objects required for ray parallelization
+    return resize_ratio, idx

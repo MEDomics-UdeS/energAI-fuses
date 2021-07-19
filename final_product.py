@@ -82,7 +82,7 @@ if __name__ == '__main__':
     image_size = torch.load(args.model_file_name)["args_dict"]["image_size"]
 
     # Loading the images dataset
-    ds = GuiDataset(args.image_path, num_workers, norm=args.normalize)
+    ds = GuiDataset(image_size, args.image_path, num_workers, norm=args.normalize)
     dl = GuiDataLoader(dataset=ds,
                        batch_size=args.batch,
                        gradient_accumulation=1,
@@ -95,6 +95,7 @@ if __name__ == '__main__':
                      iou_threshold=args.iou_threshold,
                      score_threshold=args.score_threshold,
                      save_path=INFERENCE_PATH,
+                     img_path=args.image_path,
                      image_size=image_size,
                      device_type=args.device)
 

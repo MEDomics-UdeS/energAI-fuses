@@ -18,6 +18,7 @@ REQUIRED_PYTHON = "python3"
 RAW_PATH = 'data/raw/'
 RESIZED_PATH = 'data/resized/'
 INFERENCE_PATH = 'data/inference/'
+GUI_RESIZED_PATH = 'data/gui_resized/'
 
 # Annotations file paths
 TARGETS_PATH = 'data/annotations/targets_resized.json'
