@@ -80,8 +80,8 @@ class DatasetManager:
                 self.__resize_images(image_size, num_workers)
         else:
             # Check if any image exists in the data/raw folder
-            # if any(file.endswith(f'.{IMAGE_EXT}') for file in os.listdir(TRAINING_PATH)):
-            if os.path.isdir(TRAINING_PATH):
+            # if any(file.endswith(f'.{IMAGE_EXT}') for file in os.listdir(LEARNING_PATH)):
+            if os.path.isdir(LEARNING_PATH):
                 # Resize all images
                 self.__resize_images(image_size, num_workers)
             else:
@@ -383,10 +383,10 @@ class DatasetManager:
         ray.init(include_dashboard=False)
 
         # Get list of image and exclude the hidden .gitkeep file
-        imgs = [img for img in sorted(os.listdir(TRAINING_PATH)) if img.startswith('.') is False]
+        imgs = [img for img in sorted(os.listdir(LEARNING_PATH)) if img.startswith('.') is False]
 
         # Create image paths
-        image_paths = [os.path.join(TRAINING_PATH, img) for img in imgs]
+        image_paths = [os.path.join(LEARNING_PATH, img) for img in imgs]
 
         # Convert the annotations csv file to a pandas DataFrame
         annotations = pd.read_csv(ANNOTATIONS_PATH)
