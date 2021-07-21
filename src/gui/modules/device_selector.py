@@ -18,6 +18,8 @@ class DeviceSelector:
                         text=option,
                         variable=self.__device_option,
                         value=value).grid(row=i + 6, column=0)
+            
+        self.__device_option.set("cpu")
 
     @property
     def device(self):
