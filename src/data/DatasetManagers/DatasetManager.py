@@ -16,21 +16,22 @@ import os
 import sys
 import zipfile
 
-import numpy as np
 import pandas as pd
+import numpy as np
 import ray
 import requests
-from PIL import Image, ImageDraw
+from PIL import Image
 from torchvision import transforms
 from sklearn.model_selection import StratifiedShuffleSplit
 from tqdm import tqdm, trange
-from typing import Tuple, List, Optional
+from typing import Tuple, Optional
+from src.data.DatasetManagers.CustomDatasetManager import CustomDatasetManager, ray_resize_images_for_training, ray_get_rgb
 
 from src.utils.constants import *
-from src.data.FuseDataset import FuseDataset
+from src.data.Datasets.FuseDataset import FuseDataset
 
 
-class DatasetManager:
+class DatasetManager(CustomDatasetManager):
     """
     Dataset Manager class, handles the creation of the training, validation and testing datasets.
     """
@@ -59,8 +60,8 @@ class DatasetManager:
         :param mean_std: bool, if True, mean and std values for RGB channel normalization will be calculated
                                if False, mean and std precalculated values will be used
         """
-        self.__google_images = google_images
-        self.__seed = seed
+        self._google_images = google_images
+        self._seed = seed
 
         # Check if any image exists in the data/resized folder
         if any(file.endswith(f'.{IMAGE_EXT}') for file in os.listdir(RESIZED_PATH)):
@@ -77,12 +78,12 @@ class DatasetManager:
                 print(f'All images will be resized to {(image_size, image_size)}')
 
                 # Resize all images
-                self.__resize_images(image_size, num_workers)
+                self._resize_images(image_size, num_workers)
         else:
             # Check if any image exists in the data/raw folder
             if any(file.endswith(f'.{IMAGE_EXT}') for file in os.listdir(RAW_PATH)):
                 # Resize all images
-                self.__resize_images(image_size, num_workers)
+                self._resize_images(image_size, num_workers)
             else:
                 # Ask the user if the data should be downloaded
                 if input('Raw data folder contains no images. '
@@ -91,25 +92,25 @@ class DatasetManager:
                     self.__fetch_data(IMAGES_ID, ANNOTATIONS_ID)
 
                     # Resize all images
-                    self.__resize_images(image_size, num_workers)
+                    self._resize_images(image_size, num_workers)
                 else:
                     # Exit the program
                     sys.exit(1)
 
         # Declare training, validation and testing datasets
-        self.__dataset_train = FuseDataset(images_path, targets_path, num_workers, google_images)
-        self.__dataset_valid = FuseDataset()
-        self.__dataset_test = FuseDataset()
+        self._dataset_train = FuseDataset(images_path, targets_path, num_workers, google_images)
+        self._dataset_valid = FuseDataset()
+        self._dataset_test = FuseDataset()
 
         # Get total dataset size
-        total_size = sum(image_path.rsplit('/')[-1].startswith('S') for image_path in self.__dataset_train.image_paths)
+        total_size = sum(image_path.rsplit('/')[-1].startswith('S') for image_path in self._dataset_train.image_paths)
 
         # Split the training set into training + validation
-        self.__dataset_train, self.__dataset_valid = self.__split_dataset(self.__dataset_train, self.__dataset_valid,
+        self._dataset_train, self._dataset_valid = self.__split_dataset(self._dataset_train, self._dataset_valid,
                                                                           validation_size, total_size)
 
         # Split the training set into training + testing
-        self.__dataset_train, self.__dataset_test = self.__split_dataset(self.__dataset_train, self.__dataset_test,
+        self._dataset_train, self._dataset_test = self.__split_dataset(self._dataset_train, self._dataset_test,
                                                                          test_size, total_size)
 
         if norm == 'precalculated':
@@ -117,26 +118,26 @@ class DatasetManager:
             mean, std = MEAN, STD
         elif norm == 'calculated':
             # Recalculate mean and standard deviation
-            mean, std = self.__calculate_mean_std(num_workers)
+            mean, std = self._calculate_mean_std(num_workers)
         elif norm == 'none':
             mean, std = None, None
 
         # Apply transforms to the training, validation and testing datasets
-        self.__dataset_train.transforms = self.__transforms_train(mean, std, data_aug)
-        self.__dataset_valid.transforms = self.__transforms_base(mean, std)
-        self.__dataset_test.transforms = self.__transforms_base(mean, std)
+        self._dataset_train.transforms = self.__transforms_train(mean, std, data_aug)
+        self._dataset_valid.transforms = self._transforms_base(mean, std)
+        self._dataset_test.transforms = self._transforms_base(mean, std)
 
     @property
     def dataset_train(self):
-        return self.__dataset_train
+        return self._dataset_train
 
     @property
     def dataset_valid(self):
-        return self.__dataset_valid
+        return self._dataset_valid
 
     @property
     def dataset_test(self):
-        return self.__dataset_test
+        return self._dataset_test
 
     @staticmethod
     def __download_file_from_google_drive(file_id: str, dest: str, chunk_size: int = 32768) -> None:
@@ -234,28 +235,6 @@ class DatasetManager:
         # Return a composed transforms list
         return transforms.Compose(transforms_list)
 
-    @staticmethod
-    def __transforms_base(mean: Optional[Tuple[float, float, float]],
-                          std: Optional[Tuple[float, float, float]]) -> transforms.Compose:
-        """
-        Method to construct the validation and testing datasets transforms
-
-        :param mean: tuple of 3 floats, containing the mean (R, G, B) values
-        :param std: tuple of 3 floats, containing the standard deviation of (R, G, B) values
-        :return: transforms.Compose, custom composed transforms list
-        """
-        transforms_list = [
-            # Convert to tensor
-            transforms.ToTensor(),
-        ]
-
-        # Normalize by mean, std
-        if mean is not None:
-            transforms_list.append(transforms.Normalize(mean, std))
-
-        # Return a composed transforms list
-        return transforms.Compose(transforms_list)
-
     def __split_dataset(self, dataset_in: FuseDataset, dataset_out: FuseDataset, split_size: float, total_size: int) \
             -> Tuple[FuseDataset, FuseDataset]:
         """
@@ -269,7 +248,7 @@ class DatasetManager:
         """
 
         if 0 < split_size < 1:
-            if self.__google_images:
+            if self._google_images:
                 google_image_paths = [image_path for image_path in dataset_in.image_paths
                                       if image_path.rsplit('/')[-1].startswith('G')]
 
@@ -283,7 +262,7 @@ class DatasetManager:
 
             strat_split = StratifiedShuffleSplit(n_splits=1,
                                                  test_size=split_size * total_size / len(dataset_in),
-                                                 random_state=self.__seed)
+                                                 random_state=self._seed)
 
             # Iterate through generator object once and break
             for _, indices in strat_split.split([0] * len(dataset_in), most_freq_labels):
@@ -295,7 +274,7 @@ class DatasetManager:
             # Insert the extracted image paths, images and targets into dataset_out
             dataset_out.add_data(image_paths, images, targets)
 
-            if self.__google_images:
+            if self._google_images:
                 dataset_in.add_data(google_image_paths, google_images, google_targets)
 
         if split_size == 1:
@@ -304,7 +283,7 @@ class DatasetManager:
             # Return the split_size input and output datasets
             return dataset_in, dataset_out
 
-    def __calculate_mean_std(self, num_workers: int) -> Tuple[Tuple[float, float, float], Tuple[float, float, float]]:
+    def _calculate_mean_std(self, num_workers: int) -> Tuple[Tuple[float, float, float], Tuple[float, float, float]]:
         """
         Method to calculate the mean and standard deviation for each channel (R, G, B) for each image
 
@@ -315,7 +294,8 @@ class DatasetManager:
         ray.init(include_dashboard=False)
 
         # Get ray workers IDs
-        ids = [ray_get_rgb.remote(self.__dataset_train.image_paths, i) for i in range(num_workers)]
+        ids = [ray_get_rgb.remote(self.__dataset_train.image_paths, i)
+               for i in range(num_workers)]
 
         # Get dataset size
         size = len(self.__dataset_train.image_paths)
@@ -344,7 +324,8 @@ class DatasetManager:
             # Check if there are jobs left
             if nb_job_left > 0:
                 # Assign workers to the remaining tasks
-                ids.extend([ray_get_rgb.remote(self.__dataset_train.image_paths, size - nb_job_left)])
+                ids.extend(
+                    [ray_get_rgb.remote(self.__dataset_train.image_paths, size - nb_job_left)])
 
                 # Decreasing the number of jobs left
                 nb_job_left -= 1
@@ -369,7 +350,7 @@ class DatasetManager:
         return mean, std
 
     @staticmethod
-    def __resize_images(image_size: int, num_workers: int) -> None:
+    def _resize_images(image_size: int, num_workers: int) -> None:
         """
         Method to resize all images in the data/raw folder and save them to the data/resized folder
 
@@ -396,7 +377,7 @@ class DatasetManager:
         targets_list = [None] * size
 
         # Get ray workers IDs
-        ids = [ray_resize_images.remote(image_paths, image_size, annotations, i) for i in range(num_workers)]
+        ids = [ray_resize_images_for_training.remote(image_paths, image_size, annotations, i) for i in range(num_workers)]
 
         # Calculate initial number of jobs left
         nb_job_left = size - num_workers
@@ -416,7 +397,7 @@ class DatasetManager:
             # Check if there are jobs left
             if nb_job_left > 0:
                 # Assign workers to the remaining tasks
-                ids.extend([ray_resize_images.remote(image_paths, image_size, annotations, size - nb_job_left)])
+                ids.extend([ray_resize_images_for_training.remote(image_paths, image_size, annotations, size - nb_job_left)])
 
                 # Decreasing the number of jobs left
                 nb_job_left -= 1
@@ -436,127 +417,3 @@ class DatasetManager:
         # Displaying where files have been saved to
         print(f'\nResized images have been saved to:\t\t{RESIZED_PATH}')
         print(f'Resized targets have been saved to:\t\t{TARGETS_PATH}')
-
-
-@ray.remote
-def ray_resize_images(image_paths: List[str], image_size: int, annotations: pd.DataFrame,
-                      idx: int, show_bounding_boxes: bool = False) -> Tuple[float, int, np.array, dict]:
-    """
-    Ray remote function to parallelize the resizing of images
-
-    :param image_paths: list, contains image paths
-    :param image_size: int, image size to resize all images to (height & width)
-    :param annotations: pandas DataFrame, contains the coordinates of each ground truth bounding box for each image
-    :param idx: int, current index
-    :param show_bounding_boxes: bool, if True, ground truth bounding boxes are drawn on the resized images
-                                (used to test if bounding boxes are properly resized)
-    :return: resize_ratio, idx, box_array, targets to continue ray paralleling
-    """
-    # Get the current image name, without the file path and without the file extension
-    f = image_paths[idx].rsplit('/', 1)[-1].split(".")[0]
-
-    # Get bounding boxes coordinates for the current image
-    box_array = annotations.loc[annotations["filename"] == f][["xmin", "ymin", "xmax", "ymax"]].values
-
-    # Get class labels (str) for the current image
-    label_array = annotations.loc[annotations["filename"] == f][["label"]].values
-
-    # Declare empty label list
-    label_list = []
-
-    # Get class labels (index) for the current image
-    for label in label_array:
-        label_list.append(CLASS_DICT[str(label[0])])
-
-    # Get number of bounding boxes
-    num_boxes = len(box_array)
-
-    # Open the current image
-    img = Image.open(image_paths[idx])
-
-    # Get the current image size
-    original_size = img.size
-
-    # Create a new blank white image of size (image_size, image_size)
-    img2 = Image.new('RGB', (image_size, image_size), (255, 255, 255))
-
-    # Calculate the resize ratio
-    resize_ratio = (img2.size[0] * img2.size[1]) / (original_size[0] * original_size[1])
-
-    # Check if the original size is larger than the maximum image size
-    if image_size < original_size[0] or image_size < original_size[1]:
-        # Downsize the image using the thumbnail method
-        img.thumbnail((image_size, image_size),
-                      resample=Image.BILINEAR,
-                      reducing_gap=2)
-
-        # Calculate the downsize ratio
-        downsize_ratio = img.size[0] / original_size[0]
-    else:
-        downsize_ratio = 1
-
-    # Calculate the x and y offsets at which the downsized image needs to be pasted (to center it)
-    x_offset = int((image_size - img.size[0]) / 2)
-    y_offset = int((image_size - img.size[1]) / 2)
-
-    # Paste the downsized original image in the new (image_size, image_size) image
-    img2.paste(img, (x_offset, y_offset, x_offset + img.size[0], y_offset + img.size[1]))
-
-    # Declare an ImageDraw object if the show_bounding_boxes argument is set to True
-    if show_bounding_boxes:
-        draw = ImageDraw.Draw(img2)
-
-    # Loop through each bounding box
-    for i in range(num_boxes):
-        # Loop through each of the 4 coordinates (x_min, y_min, x_max, y_max)
-        for j in range(4):
-            # Apply a downsize ratio to the bounding boxes
-            box_array[i][j] = int(box_array[i][j] * downsize_ratio)
-
-            # Apply an offset to the bounding boxes
-            if j == 0 or j == 2:
-                box_array[i][j] += x_offset
-            else:
-                box_array[i][j] += y_offset
-
-        # Draw the current ground truth bounding box if the show_bounding_boxes argument is set to True
-        if show_bounding_boxes:
-            draw.rectangle([(box_array[i][0], box_array[i][1]), (box_array[i][2], box_array[i][3])],
-                           outline="red", width=5)
-
-    # Save the resized image
-    img2.save(f'data/resized/{image_paths[idx].split("/")[-1]}')
-
-    # Calculate the area of each bounding box
-    area = [int(a) for a in list((box_array[:, 3] - box_array[:, 1]) * (box_array[:, 2] - box_array[:, 0]))]
-
-    # Save ground truth targets to a dictionary
-    targets = {"boxes": list(box_array.tolist()),
-               "labels": label_list,
-               "image_id": idx,
-               "area": area,
-               "iscrowd": [0] * num_boxes}
-
-    # Return the objects required for ray parallelization
-    return resize_ratio, idx, box_array, targets
-
-
-@ray.remote
-def ray_get_rgb(image_paths: List[str], idx: int) -> Tuple[np.array, np.array, np.array, int]:
-    """
-    Ray remote function to parallelize the extraction of R, G, B values from images
-
-    :param image_paths: list, contains the image paths
-    :param idx: int, current index
-    :return: tuple, r, g, b values numpy arrays for the current image and the current index
-    """
-    # Open the current image
-    image = Image.open(image_paths[idx])
-
-    # Get the values of each pixel in the R, G, B channels
-    r = np.dstack(np.array(image)[:, :, 0])
-    g = np.dstack(np.array(image)[:, :, 1])
-    b = np.dstack(np.array(image)[:, :, 2])
-
-    # Return the r, g, b values numpy arrays for the current image and the current index
-    return r, g, b, idx

@@ -28,7 +28,7 @@ from torch.optim.swa_utils import AveragedModel, SWALR
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
 from src.utils.constants import CLASS_DICT, LOG_PATH, MODELS_PATH, EVAL_METRIC, COCO_PARAMS_LIST
-from src.data.DataLoaderManager import DataLoaderManager
+from src.data.DataLoaderManagers.DataLoaderManager import DataLoaderManager
 from src.models.EarlyStopper import EarlyStopper
 from src.models.models import load_model
 from src.coco.coco_utils import get_coco_api_from_dataset

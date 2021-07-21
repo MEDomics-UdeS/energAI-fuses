@@ -19,8 +19,8 @@ from multiprocessing import cpu_count
 
 import torch
 
-from src.gui.GuiDataset import GuiDataset
-from src.gui.GuiDataLoader import GuiDataLoader
+from src.data.DatasetManagers.GuiDatasetManager import GuiDatasetManager
+from src.data.DataLoaderManagers.GuiDataLoader import GuiDataLoader
 
 from src.utils.helper_functions import print_dict, env_tests
 from src.visualization.final_inference import save_test_images
@@ -82,7 +82,7 @@ if __name__ == '__main__':
     image_size = torch.load(args.model_file_name)["args_dict"]["image_size"]
 
     # Loading the images dataset
-    ds = GuiDataset(image_size, args.image_path, num_workers, norm=args.normalize)
+    ds = GuiDatasetManager(image_size, args.image_path, num_workers, norm=args.normalize)
     dl = GuiDataLoader(dataset=ds,
                        batch_size=args.batch,
                        gradient_accumulation=1,

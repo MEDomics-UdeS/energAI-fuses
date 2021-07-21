@@ -17,8 +17,8 @@ from datetime import datetime
 from multiprocessing import cpu_count
 
 import torch
-from src.data.DataLoaderManager import DataLoaderManager
-from src.data.DatasetManager import DatasetManager
+from src.data.DataLoaderManagers.DataLoaderManager import DataLoaderManager
+from src.data.DatasetManagers.DatasetManager import DatasetManager
 from src.utils.helper_functions import print_dict, env_tests
 from src.visualization.inference import save_test_images
 from src.utils.constants import RESIZED_PATH, TARGETS_PATH, INFERENCE_PATH, MODELS_PATH
