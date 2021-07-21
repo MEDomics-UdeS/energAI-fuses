@@ -1,6 +1,5 @@
 from tkinter import *
 from tkinter import filedialog
-from src.utils.constants import RESIZED_PATH
 
 class Image_Loader:
     
