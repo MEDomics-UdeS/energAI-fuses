@@ -18,6 +18,12 @@ Getting started
     manual/commands/index
     manual/troubleshooting
 
+.. toctree::
+    :maxdepth: 2
+    :hidden:
+
+    manual/api/index
+
 Getting involved
 ================
 

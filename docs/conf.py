@@ -8,6 +8,15 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath('.'))
 sys.path.insert(0, os.path.abspath('../'))
+sys.path.insert(0, os.path.abspath('../src/coco/'))
+sys.path.insert(0, os.path.abspath('../src/data/DataLoaderManagers/'))
+sys.path.insert(0, os.path.abspath('../src/data/DatasetManagers/'))
+sys.path.insert(0, os.path.abspath('../src/data/Datasets/'))
+sys.path.insert(0, os.path.abspath('../src/detr/'))
+sys.path.insert(0, os.path.abspath('../src/gui/modules/'))
+sys.path.insert(0, os.path.abspath('../src/models/'))
+sys.path.insert(0, os.path.abspath('../src/utils/'))
+sys.path.insert(0, os.path.abspath('../src/visualization/'))
 
 
 
