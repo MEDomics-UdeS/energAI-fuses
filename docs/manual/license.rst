@@ -6,6 +6,7 @@ GNU GENERAL PUBLIC LICENSE
 Version 3, 29 June 2007
 
 Copyright (C) 2007 Free Software Foundation, Inc. https://fsf.org/
+
 Everyone is permitted to copy and distribute verbatim copies
 of this license document, but changing it is not allowed.
 
@@ -642,8 +643,10 @@ an absolute waiver of all civil liability in connection with the
 Program, unless a warranty or assumption of liability accompanies a
 copy of the Program in return for a fee.
 
-END OF TERMS AND CONDITIONS
-===========================
+**END OF TERMS AND CONDITIONS**
+
+Things to delete from the license after its added to every file
+===============================================================
 
 How to Apply These Terms to Your New Programs
 
