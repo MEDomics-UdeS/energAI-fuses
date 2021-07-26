@@ -40,7 +40,8 @@ def save_test_images(model_file_name: str,
     :param iou_threshold: float, intersection-over-union threshold for predicted bounding boxes filtering
     :param save_path: str, save path for the inference test images
     """
-    save_state = torch.load(model_file_name)
+    # Load the save state on the cpu for compatibility on non-CUDA systems
+    save_state = torch.load(model_file_name, map_location=torch.device('cpu'))
 
     image_paths_raw = [image_path.replace(
         GUI_RESIZED_PATH, f'{img_path}/') for image_path in data_loader.dataset.image_paths]

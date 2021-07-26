@@ -71,7 +71,7 @@ if __name__ == '__main__':
     print('\n=== Arguments & Hyperparameters ===\n')
     print_dict(vars(args), 6)
 
-    image_size = torch.load(args.model_file_name)["args_dict"]["image_size"]
+    image_size = torch.load(args.model_file_name, map_location=torch.device('cpu'))["args_dict"]["image_size"]
 
     # Declare dataset manager
     dataset_manager = DatasetManager(images_path=RESIZED_PATH,
