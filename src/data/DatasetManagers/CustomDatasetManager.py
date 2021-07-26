@@ -30,11 +30,8 @@ class CustomDatasetManager(ABC):
 
         # Return a composed transforms list
         return transforms.Compose(transforms_list)
-    
-    @abstractmethod
-    def _calculate_mean_std(self, num_workers: int) -> Tuple[Tuple[float, float, float], Tuple[float, float, float]]: pass
 
-    
+
     @staticmethod
     @abstractmethod
     def _resize_images(image_size: int, num_workers: int) -> None: pass

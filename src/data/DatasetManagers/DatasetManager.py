@@ -35,7 +35,6 @@ class DatasetManager(CustomDatasetManager):
     """
     Dataset Manager class, handles the creation of the training, validation and testing datasets.
     """
-
     def __init__(self,
                  images_path: str,
                  targets_path: str,
