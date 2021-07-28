@@ -32,7 +32,7 @@ class CocoDataset(CustomDataset):
         :param index: int, actual index to get
         :return: tuple, transformed current image and current targets
         """
-        return self.transforms(self._images[index]), self._targets[index]
+        return self._images[index], self._targets[index]
 
     def extract_data(self, index_list: List[int]) -> Tuple[List[str], List[Image.Image], List[dict]]:
         """
