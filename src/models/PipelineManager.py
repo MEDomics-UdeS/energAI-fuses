@@ -519,7 +519,7 @@ class PipelineManager:
 
         self.__total_step += 1
 
-    def __rank_images(self, model, metrics: str = 'coco') -> dict:
+    def __rank_images(self, model, metrics: str = 'loss') -> dict:
         
         performance_dict = {
             "training": [],

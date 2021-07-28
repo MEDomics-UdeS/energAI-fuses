@@ -34,7 +34,7 @@ if __name__ == '__main__':
                         help='Number of workers')
 
     # Number of epochs argument
-    parser.add_argument('-e', '--epochs', action='store', type=int, default=100,
+    parser.add_argument('-e', '--epochs', action='store', type=int, default=200,
                         help='Number of epochs')
 
     # Batch size argument

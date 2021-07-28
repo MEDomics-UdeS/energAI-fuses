@@ -15,6 +15,7 @@ from itertools import product
 import subprocess as sp
 from datetime import datetime
 import json
+import argparse
 
 from src.utils.helper_functions import env_tests
 
@@ -26,8 +27,17 @@ if __name__ == '__main__':
     # Run environment tests
     env_tests()
 
+    # Declare argument parser
+    parser = argparse.ArgumentParser(description='Processing inputs')
+
+    # Number of workers argument
+    parser.add_argument('-p', '--path', action='store', type=str, required=True,
+                        help='Experiment settings .json file path')
+
+    args = parser.parse_args()
+
     try:
-        with open("detr_experiment.json") as f_obj:
+        with open(args.path) as f_obj:
             json_dict = json.load(f_obj)
             fixed_params = json_dict["fixed"]
             variable_params = json_dict["variable"]
