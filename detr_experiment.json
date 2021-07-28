@@ -1,0 +1,12 @@
+{
+    "fixed":{
+        "--model": "detr",
+        "--batch": "14",
+        "--data_aug": "0.1"
+    },
+
+    "variable":{
+        "--learning_rate": ["3e-5", "5e-5"],
+        "--weight_decay": ["3e-4"]
+    }
+}

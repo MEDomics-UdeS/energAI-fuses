@@ -11,13 +11,11 @@ Description:
     Generate data loaders for batch management and multiprocessing during training, validation and testing.
 """
 
-from src.data.DatasetManager import DatasetManager
-from src.data.FuseDataset import FuseDataset
-from src.utils.reproducibility import seed_worker
-from torch.utils.data import DataLoader
+from src.data.DatasetManagers.DatasetManager import DatasetManager
+from src.data.DataLoaderManagers.CustomDataLoaderManager import CustomDataLoaderManager
 
 
-class DataLoaderManager:
+class DataLoaderManager(CustomDataLoaderManager):
     """
     Data Loader Manager class, handles the creation of the training, validation and testing data loaders.
     """
@@ -41,50 +39,32 @@ class DataLoaderManager:
                                     - worker_init_fn will not be specified for the data loaders
                                     - data will be shuffled in the data loaders
         """
-        self.__num_workers = num_workers
-        self.__deterministic = deterministic
+        self._num_workers = num_workers
+        self._deterministic = deterministic
 
         # Calculate the effective batch size with regards to the gradient accumulation size
-        self.__batch_size_ga = int(batch_size / gradient_accumulation)
+        self._batch_size_ga = int(batch_size / gradient_accumulation)
 
         # If the training dataset is not empty, declare the training data loader
         if len(dataset_manager.dataset_train) > 0:
-            self.__data_loader_train = self.__get_data_loader(dataset_manager.dataset_train)
+            self._data_loader_train = self._get_data_loader(dataset_manager.dataset_train)
 
         # If the validation dataset is not empty, declare the validation data loader
         if len(dataset_manager.dataset_valid) > 0:
-            self.__data_loader_valid = self.__get_data_loader(dataset_manager.dataset_valid)
+            self._data_loader_valid = self._get_data_loader(dataset_manager.dataset_valid)
 
         # If the testing dataset is not empty, declare the testing data loader
         if len(dataset_manager.dataset_test) > 0:
-            self.__data_loader_test = self.__get_data_loader(dataset_manager.dataset_test)
+            self._data_loader_test = self._get_data_loader(dataset_manager.dataset_test)
 
     @property
     def data_loader_train(self):
-        return self.__data_loader_train
+        return self._data_loader_train
 
     @property
     def data_loader_valid(self):
-        return self.__data_loader_valid
+        return self._data_loader_valid
 
     @property
     def data_loader_test(self):
-        return self.__data_loader_test
-
-    def __get_data_loader(self, dataset: FuseDataset) -> DataLoader:
-        return DataLoader(dataset,
-                          batch_size=self.__batch_size_ga,
-                          shuffle=not self.__deterministic,
-                          num_workers=self.__num_workers,
-                          collate_fn=self.__collate_fn,
-                          worker_init_fn=seed_worker if self.__deterministic else None)
-
-    @staticmethod
-    def __collate_fn(batch: list) -> tuple:
-        """
-        Custom batching collation function.
-
-        :param batch: list, containing the current batch
-        :return: tuple
-        """
-        return tuple(zip(*batch))
+        return self._data_loader_test

@@ -15,8 +15,8 @@ import argparse
 from datetime import datetime
 from multiprocessing import cpu_count
 
-from src.data.DataLoaderManager import DataLoaderManager
-from src.data.DatasetManager import DatasetManager
+from src.data.DataLoaderManagers.DataLoaderManager import DataLoaderManager
+from src.data.DatasetManagers.DatasetManager import DatasetManager
 from src.models.PipelineManager import PipelineManager
 from src.utils.helper_functions import print_dict
 from src.utils.reproducibility import set_deterministic

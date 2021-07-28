@@ -212,7 +212,7 @@ def rename_photos(root_dir: str = 'C:/Users/simon.giard-leroux/Google Drive/'
             os.rename(subdir + os.sep + file, subdir + "-" + str(i) + f".{IMAGE_EXT}")
 
 
-def format_detr_outputs(outputs: List[dict], target_sizes: torch.Tensor) -> List[dict]:
+def format_detr_outputs(outputs: List[dict], target_sizes: torch.Tensor, device: torch.device) -> List[dict]:
 
     out_logits, out_bbox = outputs['pred_logits'], outputs['pred_boxes']
 
@@ -226,7 +226,7 @@ def format_detr_outputs(outputs: List[dict], target_sizes: torch.Tensor) -> List
     boxes = box_cxcywh_to_xyxy(out_bbox)
     # and from relative [0, 1] to absolute [0, height] coordinates
     img_h, img_w = target_sizes.unbind(1)
-    scale_fct = torch.stack([img_w, img_h, img_w, img_h], dim=1).to(boxes.get_device())
+    scale_fct = torch.stack([img_w, img_h, img_w, img_h], dim=1).to(device)
     boxes = boxes * scale_fct[:, None, :]
 
     results = [{'boxes': b, 'labels': l, 'scores': s}

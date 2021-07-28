@@ -20,6 +20,7 @@ LEARNING_PATH = 'data/raw/learning/'
 HOLDOUT_PATH = 'data/raw/holdout/'
 RESIZED_PATH = 'data/resized/'
 INFERENCE_PATH = 'data/inference/'
+GUI_RESIZED_PATH = 'data/gui_resized/'
 
 # Annotations file paths
 TARGETS_PATH = 'data/annotations/targets_resized.json'
