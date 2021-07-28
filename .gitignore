@@ -96,3 +96,7 @@ target/
 
 # Trained saved_models
 /saved_models/
+
+# ODS LibreOffice Calc Files
+*.ods
+

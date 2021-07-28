@@ -24,18 +24,16 @@ if __name__ == '__main__':
     # Run environment tests
     env_tests()
 
-    hparams = {
-        '-da': ['0.1', '0.25', '0.5'],
-        '-lr': ['3e-4', '3e-5', '3e-6'],
-        '-wd': ['3e-2', '3e-3', '3e-4']
-    }
-
-    # Declare list of commands to be executed
-    cmds = list(list(cmd) for cmd in product(*hparams.values()))
-
-    [cmds[i].insert(j, list(hparams)[j // 2]) for j in range(0, len(hparams) + 2, 2) for i in range(len(cmds))]
-
-    cmds = [['python', 'experiment.py', '-mo', 'detr', '-b', '14'] + cmd for cmd in cmds]
+    cmds = [
+        ['python', 'experiment.py', '-mo', 'detr', '-b', '14', '-da', '0.1', '-lr', '3e-4', '-wd', '3e-3'],
+        ['python', 'experiment.py', '-mo', 'detr', '-b', '14', '-da', '0.25', '-lr', '3e-4', '-wd', '3e-3'],
+        
+        ['python', 'experiment.py', '-mo', 'detr', '-b', '14', '-da', '0.25', '-lr', '3e-5', '-wd', '3e-2'],
+        ['python', 'experiment.py', '-mo', 'detr', '-b', '14', '-da', '0.25', '-lr', '3e-5', '-wd', '3e-3'],
+        ['python', 'experiment.py', '-mo', 'detr', '-b', '14', '-da', '0.25', '-lr', '3e-5', '-wd', '3e-4'],
+        
+        ['python', 'experiment.py', '-mo', 'detr', '-b', '14', '-da', '0.25', '-lr', '3e-6', '-wd', '3e-2']
+    ]
 
     # Loop through each command
     for i, cmd in enumerate(cmds, start=1):
@@ -51,4 +49,5 @@ if __name__ == '__main__':
 
     # Print time taken for all experiments
     print('-' * 100)
-    print(f'Total time for all experiments:\t\t{str(datetime.now() - start).split(".")[0]}')
+    print(
+        f'Total time for all experiments:\t\t{str(datetime.now() - start).split(".")[0]}')

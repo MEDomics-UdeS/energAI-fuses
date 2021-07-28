@@ -1,0 +1,12 @@
+{
+    "fixed":{
+        "--model": "retinanet_resnet50_fpn",
+        "--batch": "20"
+    },
+
+    "variable":{
+        "--learning_rate": ["3e-4", "3e-5", "3e-6"],
+        "--weight_decay": ["3e-3", "3e-4", "3e-5"],
+        "--data_aug": ["0.1", "0.25", "0.5"]
+    }
+}

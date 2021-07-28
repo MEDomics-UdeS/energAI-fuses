@@ -15,8 +15,8 @@ import argparse
 from datetime import datetime
 from multiprocessing import cpu_count
 
-from src.data.DataLoaderManager import DataLoaderManager
-from src.data.DatasetManager import DatasetManager
+from src.data.DataLoaderManagers.DataLoaderManager import DataLoaderManager
+from src.data.DatasetManagers.DatasetManager import DatasetManager
 from src.models.PipelineManager import PipelineManager
 from src.utils.helper_functions import print_dict
 from src.utils.reproducibility import set_deterministic
@@ -34,7 +34,7 @@ if __name__ == '__main__':
                         help='Number of workers')
 
     # Number of epochs argument
-    parser.add_argument('-e', '--epochs', action='store', type=int, default=100,
+    parser.add_argument('-e', '--epochs', action='store', type=int, default=200,
                         help='Number of epochs')
 
     # Batch size argument
