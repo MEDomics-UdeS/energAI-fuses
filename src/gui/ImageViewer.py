@@ -3,7 +3,7 @@ from PIL import Image, ImageTk
 import os
 from src.utils.constants import INFERENCE_PATH, IMAGE_EXT
 
-class Image_Viewer:
+class ImageViewer:
 
     def __init__(self, window) -> None:
 

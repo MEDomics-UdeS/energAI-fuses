@@ -26,6 +26,9 @@ GUI_RESIZED_PATH = 'data/gui_resized/'
 TARGETS_PATH = 'data/annotations/targets_resized.json'
 ANNOTATIONS_PATH = 'data/annotations/annotations_raw.csv'
 
+# GUI application settings
+GUI_SETTINGS = "src/gui/gui_settings.json"
+
 # Models file path
 MODELS_PATH = 'saved_models/'
 
