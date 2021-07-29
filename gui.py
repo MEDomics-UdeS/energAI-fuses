@@ -6,6 +6,7 @@ from src.gui.modules.ScoreSlider import ScoreSlider
 from src.gui.modules.IOUSlider import IOUSlider
 from src.gui.modules.ModelLoader import ModelLoader
 from src.gui.modules.ImageLoader import ImageLoader
+from src.gui.modules.JsonFileLoader import JsonFileLoader
 from src.gui.ImageViewer import ImageViewer
 import torch
 import json
@@ -44,6 +45,7 @@ def open_advanced_options():
     IOUSlider(advanced_options_window)
     ScoreSlider(advanced_options_window)
     DeviceSelector(advanced_options_window)
+    JsonFileLoader(advanced_options_window)
     Button(advanced_options_window, text="Exit", command=advanced_options_window.quit).grid(row=7, column=0, pady=10, padx=10)
 
 
@@ -61,6 +63,14 @@ def start_inference(model_ld, img_dir):
         '--score_threshold', settings_dict["score_treshold"],
         '--device', settings_dict["device"]
     ]
+
+    # Adding the ground truth json file if one is entered by the user
+    try:
+        settings_dict["ground_truth"]
+    except KeyError:
+        pass
+    else:
+        cmd.extend(("--ground_truth_file", settings_dict["ground_truth"]))
 
     # Execute current command
     p = sp.Popen(cmd)

@@ -51,6 +51,9 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--device', action='store', type=str, default='cpu',
                         help="Select the device for inference")
 
+    parser.add_argument("-gtf", "--ground_truth_file", action="store", type=str, default=None,
+                        help="Select a JSON file for ground truth drawing on images")
+
     # Compute mean & std deviation on training set argument
     parser.add_argument('-norm', '--normalize', action='store', type=str,
                         choices=['precalculated',
