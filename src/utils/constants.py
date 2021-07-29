@@ -16,6 +16,8 @@ REQUIRED_PYTHON = "python3"
 
 # Image file paths
 RAW_PATH = 'data/raw/'
+LEARNING_PATH = 'data/raw/learning/'
+HOLDOUT_PATH = 'data/raw/holdout/'
 RESIZED_PATH = 'data/resized/'
 INFERENCE_PATH = 'data/inference/'
 GUI_RESIZED_PATH = 'data/gui_resized/'
@@ -34,7 +36,7 @@ LOG_PATH = 'logdir/'
 FONT_PATH = '/usr/share/fonts/truetype/liberation/LiberationSansNarrow-Regular.ttf'
 
 # Google Drive file ID Hashes
-IMAGES_ID = '12mZB0Or1FhzwZO_zUTYCbbuxwQ56-5PP'
+IMAGES_ID = '1U8uE7a1tEOXpj4W0F1rV87ffeG_NfW60'
 ANNOTATIONS_ID = '1FdFLlb-RJY9IZ2zHLScTrwWlT4EPB2Oj'
 
 # Dataset mean and standard deviation per channel (R, G, B)
@@ -78,6 +80,9 @@ EVAL_METRIC = COCO_PARAMS_LIST[0]
 
 # Image extension
 IMAGE_EXT = 'jpg'
+
+# Holdout set size
+HOLDOUT_SIZE = 0.1
 
 # Class dictionary
 CLASS_DICT = {
