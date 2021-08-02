@@ -1,7 +1,7 @@
 from tkinter import *
 from PIL import Image, ImageTk
 import os
-from src.utils.constants import INFERENCE_PATH, IMAGE_EXT
+from src.utils.constants import INFERENCE_PATH, IMAGE_EXT, COLOR_PALETTE, FONT_PATH
 
 class ImageViewer:
 
@@ -27,21 +27,69 @@ class ImageViewer:
         self.__img_list.sort(key=lambda x: x[0])
 
         # Putting a frame on screen to display images into
-        self.__frame = LabelFrame(window, text=self.__img_list[0][0], padx=20, pady=20, width=1560, height=820)
+        self.__frame = LabelFrame(window,
+                                  background=COLOR_PALETTE["bg"],
+                                  foreground=COLOR_PALETTE["fg"],
+                                  highlightbackground=COLOR_PALETTE["active"],
+                                  text=self.__img_list[0][0],
+                                  font=(FONT_PATH, 14),
+                                  padx=20,
+                                  pady=20,
+                                  width=1560,
+                                  height=820)
+        
         self.__frame.grid(row=0, column=0, columnspan=3, padx=20, pady=20)
+        
+        # Keep the frame from resizing with the pictures
         self.__frame.pack_propagate(False)
 
-        # Displaying the directory contents
-        self.__status = Label(window, text=f'Image 1 of {len(self.__img_list)}', bd=1, relief="sunken", anchor="e")
-
         # Displaying the image in frame
-        self.__label = Label(self.__frame, image=self.__img_list[0][1])
-        self.__label.pack()
+        self.__image = Label(self.__frame, image=self.__img_list[0][1])
+        self.__image.pack()
 
-        self.__previous_button = Button(window, text=" << Prev", command=lambda: self.__prev_img(window, 0), state="disabled")
-        self.__next_button = Button(window, text="Next >>", command=lambda: self.__next_img(window, 0))
-        self.__exit_button = Button(window, text="Exit", command=window.quit)
+        # Creating the status bar
+        self.__status = Label(window,
+                              background=COLOR_PALETTE["bg"],
+                              foreground=COLOR_PALETTE["fg"],
+                              text=f'Image 1 of {len(self.__img_list)}',
+                              font=(FONT_PATH, 10),
+                              bd=1,
+                              relief="sunken",
+                              anchor="e")
+        
+        # Creating the navigation buttons
+        self.__previous_button = Button(window,
+                                        background=COLOR_PALETTE["widgets"],
+                                        foreground=COLOR_PALETTE["fg"],
+                                        activebackground=COLOR_PALETTE["active"],
+                                        activeforeground=COLOR_PALETTE["fg"],
+                                        highlightbackground=COLOR_PALETTE["active"],
+                                        text=" << Prev",
+                                        font=(FONT_PATH, 12),
+                                        command=lambda: self.__prev_img(window, 0),
+                                        state="disabled")
+        
+        self.__next_button = Button(window,
+                                    background=COLOR_PALETTE["widgets"],
+                                    foreground=COLOR_PALETTE["fg"],
+                                    activebackground=COLOR_PALETTE["active"],
+                                    activeforeground=COLOR_PALETTE["fg"],
+                                    highlightbackground=COLOR_PALETTE["active"],
+                                    text="Next >>",
+                                    font=(FONT_PATH, 12),
+                                    command=lambda: self.__next_img(window, 0))
+        
+        self.__exit_button = Button(window,
+                                    background=COLOR_PALETTE["widgets"],
+                                    foreground=COLOR_PALETTE["fg"],
+                                    activebackground=COLOR_PALETTE["active"],
+                                    activeforeground=COLOR_PALETTE["fg"],
+                                    highlightbackground=COLOR_PALETTE["active"],
+                                    text="Exit",
+                                    font=(FONT_PATH, 12),
+                                    command=window.quit)
 
+        # Putting the widgets on screen
         self.__previous_button.grid(row=1, column=0)
         self.__next_button.grid(row=1, column=2)
         self.__exit_button.grid(row=1, column=1, pady=10)
@@ -49,53 +97,36 @@ class ImageViewer:
 
 
     def __prev_img(self, window, idx):
-
-        self.__frame.grid_forget()
-        self.__frame = LabelFrame(window, text=self.__img_list[idx][0], padx=20, pady=20, width=1560, height=820)
-        self.__frame.grid(row=0, column=0, columnspan=3, padx=20, pady=20)
-        self.__frame.pack_propagate(False)
-
+        
+        # Update the image filename
+        self.__frame.config(text=self.__img_list[idx][0])
+        
         # Update the image
-        self.__label.grid_forget()
-        self.__label = Label(self.__frame, image=self.__img_list[idx][1])
-        self.__label.pack()
+        self.__image.config(image=self.__img_list[idx][1])
 
         # Update the buttons
-        self.__previous_button.destroy()
-        self.__previous_button = Button(window, text="<< Prev", command=lambda: self.__prev_img(window, idx - 1), state="disabled" if idx == 0 else "normal")
-        self.__previous_button.grid(row=1, column=0)
-        self.__next_button.destroy()
-        self.__next_button = Button(window, text="Next >>", command=lambda: self.__next_img(window, idx))
-        self.__next_button.grid(row=1, column=2)
+        self.__previous_button.config(command=lambda: self.__prev_img(window, idx - 1),
+                                      state="disabled" if idx == 0 else "normal")
+        self.__next_button.config(command=lambda: self.__next_img(window, idx),
+                                  state=NORMAL)
 
         # Update status bar
-        self.__status.grid_forget()
-        self.__status = Label(
-            window, text=f'Image {idx + 1} of {len(self.__img_list)}', bd=1, relief="sunken", anchor="e")
-        self.__status.grid(row=2, column=0, columnspan=3, sticky="w"+"e")
+        self.__status.config(text=f'Image {idx + 1} of {len(self.__img_list)}')
+        
 
     def __next_img(self, window, idx):
 
-        self.__frame.grid_forget()
-        self.__frame = LabelFrame(window, text=self.__img_list[idx + 1][0], padx=20, pady=20, width=1560, height=820)
-        self.__frame.grid(row=0, column=0, columnspan=3, padx=20, pady=20)
-        self.__frame.pack_propagate(False)
+        # Update the image filename
+        self.__frame.config(text=self.__img_list[idx + 1][0])
 
         # Update the image
-        self.__label.grid_forget()
-        self.__label = Label(self.__frame, image=self.__img_list[idx + 1][1])
-        self.__label.pack()
-
+        self.__image.config(image=self.__img_list[idx + 1][1])
+        
         # Update the buttons
-        self.__previous_button.destroy()
-        self.__previous_button = Button(window, text="<< Prev", command=lambda: self.__prev_img(window, idx))
-        self.__previous_button.grid(row=1, column=0)
-
-        self.__next_button.destroy()
-        self.__next_button = Button(window, text="Next >>", command=lambda: self.__next_img(window, idx + 1), state="disabled" if idx == len(self.__img_list) - 2 else "normal")
-        self.__next_button.grid(row=1, column=2)
-
+        self.__previous_button.config(command=lambda: self.__prev_img(window, idx),
+                                      state=NORMAL)
+        self.__next_button.config(command=lambda: self.__next_img(window, idx + 1),
+                                  state="disabled" if idx == len(self.__img_list) - 2 else "normal")
+        
         # Update status bar
-        self.__status.grid_forget()
-        self.__status = Label(window, text=f'Image {idx + 2} of {len(self.__img_list)}', bd=1, relief="sunken", anchor="e")
-        self.__status.grid(row=2, column=0, columnspan=3, sticky="w"+"e")
+        self.__status.config(text=f'Image {idx + 2} of {len(self.__img_list)}')

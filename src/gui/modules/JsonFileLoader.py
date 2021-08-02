@@ -1,15 +1,29 @@
 from tkinter import *
 from tkinter import filedialog
 import json
-from src.utils.constants import GUI_SETTINGS
+from src.utils.constants import COLOR_PALETTE, FONT_PATH, GUI_SETTINGS
 
 class JsonFileLoader:
 
     def __init__(self, window) -> None:
 
-        Label(window, text="Ground truth file").grid(row=0, column=1, padx=10, pady=10)
-        model_button = Button(window, text="Select", command=lambda: self.__select_file(window))
-        model_button.grid(row=1, column=1, padx=10)
+        Label(window, 
+              background=COLOR_PALETTE["bg"],
+              foreground=COLOR_PALETTE["fg"],
+              text="Ground truth file",
+              font=(FONT_PATH, 14)
+              ).grid(row=0, column=1, padx=10, pady=10)
+        
+        Button(window,
+               background=COLOR_PALETTE["widgets"],
+               foreground=COLOR_PALETTE["fg"],
+               activebackground=COLOR_PALETTE["active"],
+               activeforeground=COLOR_PALETTE["fg"],
+               highlightbackground=COLOR_PALETTE["active"],
+               text="Select",
+               font=(FONT_PATH, 12),
+               command=lambda: self.__select_file(window)
+               ).grid(row=1, column=1, padx=10)
 
     def __select_file(self, window):
         window.filename = filedialog.askopenfile(

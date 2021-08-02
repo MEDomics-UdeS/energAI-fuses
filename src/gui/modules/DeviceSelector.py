@@ -1,7 +1,6 @@
 from tkinter import *
-from tkinter.ttk import Radiobutton
 import torch
-from src.utils.constants import GUI_SETTINGS
+from src.utils.constants import COLOR_PALETTE, FONT_PATH, GUI_SETTINGS
 import json
 
 class DeviceSelector:
@@ -10,19 +9,31 @@ class DeviceSelector:
 
         self.__device_option = StringVar()
 
-        devices = [('cuda', 'cuda'),
-                    ('cpu', 'cpu')]
+        devices = [('CUDA', 'cuda'),
+                    ('CPU', 'cpu')]
 
-
-        Label(window, text="Select device for inference").grid(row=4, column=0, padx=10, pady=10)
+        Label(window,
+              background=COLOR_PALETTE["bg"],
+              foreground=COLOR_PALETTE["fg"],
+              text="Select device for inference",
+              font=(FONT_PATH, 14)
+              ).grid(row=4, column=0, padx=10, pady=10)
 
         for i, (option, value) in enumerate(devices):
             Radiobutton(window,
+                        bg=COLOR_PALETTE["bg"],
+                        foreground=COLOR_PALETTE["fg"],
+                        highlightbackground=COLOR_PALETTE["bg"],
+                        activebackground=COLOR_PALETTE["active"],
+                        activeforeground=COLOR_PALETTE["fg"],
+                        selectcolor=COLOR_PALETTE["bg"],
                         text=option,
+                        font=(FONT_PATH, 12),
                         variable=self.__device_option,
                         state=DISABLED if torch.cuda.is_available() is False else NORMAL,
                         command=self.__select,
-                        value=value).grid(row=i + 5, column=0)
+                        value=value
+                        ).grid(row=i + 5, column=0)
 
         with open(GUI_SETTINGS, "r") as f_obj:
             self.__device_option.set(json.load(f_obj)["device"])

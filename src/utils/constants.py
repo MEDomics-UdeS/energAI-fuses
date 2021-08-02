@@ -46,6 +46,21 @@ ANNOTATIONS_ID = '1FdFLlb-RJY9IZ2zHLScTrwWlT4EPB2Oj'
 MEAN = (0.6221349083958952, 0.6097851650674193, 0.592938912173587)
 STD = (0.33986575693672466, 0.3446239730624245, 0.3541046569741213)
 
+# Colot palette of the GUI. Uses the Dracula color palette https://draculatheme.com/
+COLOR_PALETTE = {
+    "bg": "#282a36",
+    "fg": "#f8f8f2",
+    "active": "#6272a4",
+    "widgets": "#44475a",
+    "cyan": "#8be9fd",
+    "green": "#50fa7b",
+    "orange": "#ffb86c",
+    "pink": "#ff79c6",
+    "purple": "#bd93f9",
+    "red": "#ff5555",
+    "yellow": "#f1fa8c"
+}
+
 COCO_PARAMS_LIST = [
     'AP @ [IoU=0.50:0.95 | area=all | maxDets=100]',
     'AP @ [IoU=0.50 | area=all | maxDets=100]',
