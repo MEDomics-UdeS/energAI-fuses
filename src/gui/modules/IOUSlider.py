@@ -13,7 +13,8 @@ class IOUSlider:
               background=COLOR_PALETTE["bg"],
               foreground=COLOR_PALETTE["fg"],
               text="Select the IoU treshold",
-              font=(FONT_PATH, 14)
+              font=(FONT_PATH, 14),
+              width=30
               ).grid(row=0, column=0, padx=10, pady=10)
         
         slider = Scale(window,

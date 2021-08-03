@@ -11,7 +11,8 @@ class JsonFileLoader:
               background=COLOR_PALETTE["bg"],
               foreground=COLOR_PALETTE["fg"],
               text="Ground truth file",
-              font=(FONT_PATH, 14)
+              font=(FONT_PATH, 14),
+              width=30
               ).grid(row=0, column=1, padx=10, pady=10)
         
         Button(window,
