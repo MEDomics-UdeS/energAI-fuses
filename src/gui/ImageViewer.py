@@ -87,7 +87,7 @@ class ImageViewer:
                                     highlightbackground=COLOR_PALETTE["active"],
                                     text="Exit",
                                     font=(FONT_PATH, 12),
-                                    command=window.quit)
+                                    command=window.destroy)
 
         # Putting the widgets on screen
         self.__previous_button.grid(row=1, column=0)
