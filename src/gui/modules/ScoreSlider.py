@@ -15,7 +15,7 @@ class ScoreSlider:
               ).grid(row=2, column=0, padx=10, pady=10)
 
         # Creating the sliding button widget
-        slider = Scale(window, 
+        self.__slider = Scale(window, 
                        background=COLOR_PALETTE["widgets"],
                        foreground=COLOR_PALETTE["fg"],
                        activebackground=COLOR_PALETTE["active"],
@@ -27,10 +27,10 @@ class ScoreSlider:
 
         # Loading the current saved value for score treshold
         with open(GUI_SETTINGS, "r") as f_obj:
-            slider.set(json.load(f_obj)["score_treshold"])
+            self.__slider.set(json.load(f_obj)["score_treshold"])
 
         # Putting the widget on screen
-        slider.grid(row=3, column=0, pady=10)
+        self.__slider.grid(row=3, column=0, pady=10)
 
     def __slide(self, value):
         # Overwriting the settings json file
@@ -41,3 +41,7 @@ class ScoreSlider:
             
             settings_dict["score_treshold"] = value
             json.dump(settings_dict, f_obj)
+
+    @property
+    def slider(self):
+        return self.__slider

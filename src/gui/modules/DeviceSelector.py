@@ -47,3 +47,7 @@ class DeviceSelector:
 
             settings_dict["device"] = self.__device_option.get()
             json.dump(settings_dict, f_obj)
+
+    @property
+    def device_option(self):
+        return self.__device_option

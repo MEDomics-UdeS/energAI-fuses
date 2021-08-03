@@ -17,7 +17,7 @@ class IOUSlider:
               width=30
               ).grid(row=0, column=0, padx=10, pady=10)
         
-        slider = Scale(window,
+        self.__slider = Scale(window,
                        background=COLOR_PALETTE["widgets"],
                        foreground=COLOR_PALETTE["fg"],
                        activebackground=COLOR_PALETTE["active"],
@@ -32,10 +32,10 @@ class IOUSlider:
 
         # Loading the current saved value for score treshold
         with open(GUI_SETTINGS, "r") as f_obj:
-            slider.set(json.load(f_obj)["iou_treshold"])
+            self.__slider.set(json.load(f_obj)["iou_treshold"])
 
         # Putting the widget on screen
-        slider.grid(row=1, column=0)
+        self.__slider.grid(row=1, column=0)
 
     def __slide(self, value):
         # Overwriting the settings json file
@@ -46,3 +46,7 @@ class IOUSlider:
 
             settings_dict["iou_treshold"] = value
             json.dump(settings_dict, f_obj)
+
+    @property
+    def slider(self):
+        return self.__slider

@@ -1,7 +1,8 @@
 from tkinter import *
 from tkinter import filedialog
+import json
 
-from src.utils.constants import COLOR_PALETTE, FONT_PATH
+from src.utils.constants import COLOR_PALETTE, FONT_PATH, GUI_SETTINGS
 
 class ImageLoader:
     
@@ -11,7 +12,8 @@ class ImageLoader:
               background=COLOR_PALETTE["bg"],
               foreground=COLOR_PALETTE["fg"],
               text="Select your image directory",
-              font=(FONT_PATH, 14)
+              font=(FONT_PATH, 14),
+              width=50
               ).grid(row=0, column=2, padx=10, pady=10)
         
         Button(root,
@@ -24,14 +26,51 @@ class ImageLoader:
                font=(FONT_PATH, 12),
                command=lambda: self.__select_img_dir(root)
                ).grid(row=1, column=2, padx=10)
+
+        with open(GUI_SETTINGS, "r") as f_obj:
+
+            try:
+                img_dir = json.load(f_obj)["imgdir"].split(sep="/")
+
+                #TODO verify imgdir lenght for fstring
+                self.__img_dir_label = Label(root,
+                                             background=COLOR_PALETTE["bg"],
+                                             foreground=COLOR_PALETTE["purple"],
+                                             text=f'{".../" if len(img_dir) > 3 else ""}{"/".join(img_dir[-2:])} selected',
+                                             font=(FONT_PATH, 14),
+                                             height=2,
+                                             width=50,
+                                             justify=CENTER)
+
+            except KeyError:
+                self.__img_dir_label = Label(root,
+                                             background=COLOR_PALETTE["bg"],
+                                             foreground=COLOR_PALETTE["red"],
+                                             text="No image directory selected",
+                                             font=(FONT_PATH, 14),
+                                             height=2,
+                                             width=50,
+                                             justify=CENTER)
+            # Putting the label on screen
+            self.__img_dir_label.grid(row=2, column=2)
         
     def __select_img_dir(self, root):
         root.filename = filedialog.askdirectory(
             initialdir='.', title="Select a directory for inference pass")
 
         if root.filename:
-            self.__img_dir = root.filename
+            img_dir = root.filename.split(sep="/")
+            self.__img_dir_label.config(foreground=COLOR_PALETTE["purple"],
+                                        text=f'{".../" if len(img_dir) > 3 else ""}{"/".join(img_dir[-2:])} selected')
+
+            with open(GUI_SETTINGS, "r+") as f_obj:
+                settings_dict = json.load(f_obj)
+                f_obj.seek(0)
+                f_obj.truncate()
+
+                settings_dict["imgdir"] = root.filename
+                json.dump(settings_dict, f_obj)
 
     @property
-    def img_dir(self):
-        return self.__img_dir
+    def img_dir_label(self):
+        return self.__img_dir_label

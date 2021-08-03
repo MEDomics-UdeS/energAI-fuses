@@ -1,5 +1,7 @@
 from tkinter import *
 import subprocess as sp
+import os
+import json
 
 from src.gui.modules.DeviceSelector import DeviceSelector
 from src.gui.modules.ScoreSlider import ScoreSlider
@@ -7,12 +9,12 @@ from src.gui.modules.IOUSlider import IOUSlider
 from src.gui.modules.ModelLoader import ModelLoader
 from src.gui.modules.ImageLoader import ImageLoader
 from src.gui.modules.JsonFileLoader import JsonFileLoader
+from src.gui.modules.ResetButton import ResetButton
 from src.gui.ImageViewer import ImageViewer
-import torch
-import json
-from src.utils.constants import GUI_SETTINGS
 
+from src.utils.constants import GUI_SETTINGS
 from src.utils.constants import INFERENCE_PATH, COLOR_PALETTE, FONT_PATH
+from src.utils.helper_functions import enter_default_json
 
 
 class GUI(Tk):
@@ -21,25 +23,28 @@ class GUI(Tk):
 
         # Initializing the root window
         super().__init__()
-        self.geometry("630x400+0+0")
+        self.geometry("900x400+0+0")
+        # Without the text frame, the window is 900x160
         self.configure(background=COLOR_PALETTE["bg"])
 
         # Setting the title
         self.title("Inference test")
         
-        # Loading the defaults settings
-        self.load_settings_json()
+        # Looking for user settings
+        if os.path.isfile(GUI_SETTINGS) is False:
+            self.create_json_file()
 
         # Putting the widgets on screen
-        model_ld = ModelLoader(self)
-        img_dir = ImageLoader(self)
+        self.__model_ld = ModelLoader(self)
+        self.__img_dir = ImageLoader(self)
 
         Label(self,
               bg=COLOR_PALETTE["bg"],
               fg=COLOR_PALETTE["fg"],
               text="Start inference test",
-              font=(FONT_PATH, 14)
-              ).grid(row=2, column=1)
+              font=(FONT_PATH, 14),
+              width=40
+              ).grid(row=3, column=1)
 
         Button(self,
                background=COLOR_PALETTE["widgets"],
@@ -49,8 +54,8 @@ class GUI(Tk):
                highlightbackground=COLOR_PALETTE["active"],
                text="Start",
                font=(FONT_PATH, 14),
-               command=lambda: self.__start_inference(model_ld, img_dir)
-               ).grid(row=3, column=1)
+               command=lambda: self.__start_inference()
+               ).grid(row=4, column=1)
 
         Button(self,
                background=COLOR_PALETTE["widgets"],
@@ -61,59 +66,79 @@ class GUI(Tk):
                text="Advanced options",
                font=(FONT_PATH, 12),
                command=self.open_advanced_options
-               ).grid(row=3, column=2, pady=10)
+               ).grid(row=4, column=2, pady=10)
+
+        frame = LabelFrame(self,
+                   background=COLOR_PALETTE["bg"],
+                   foreground=COLOR_PALETTE["fg"],
+                   text="Application output",
+                   font=(FONT_PATH, 14),
+                   width=860,
+                   height=200
+        )
+        frame.grid(row=5, column=0, columnspan=3, padx=20, pady=20)
+        frame.grid_propagate(False)
+        
+        scroll = Scrollbar(frame,
+                           activebackground=COLOR_PALETTE["purple"],
+                           background=COLOR_PALETTE["widgets"],
+                           highlightbackground=COLOR_PALETTE["bg"],
+                           troughcolor=COLOR_PALETTE["active"],
+                           orient=VERTICAL)
+        scroll.pack(side=RIGHT, fill=Y)
+        
+        t = Text(frame,
+             background=COLOR_PALETTE["widgets"],
+             foreground=COLOR_PALETTE["green"],
+             highlightbackground=COLOR_PALETTE["bg"],
+             insertbackground=COLOR_PALETTE["fg"],
+             selectbackground=COLOR_PALETTE["purple"],
+             width=115,
+             height=12,
+             wrap=WORD,
+             yscrollcommand=scroll.set
+        )
+        t.pack(side=LEFT, fill=BOTH)
+        
+        scroll.config(command=t.yview)
 
 
-    def load_settings_json(self):
-        # Automatically set advanced options to default values
-        with open(GUI_SETTINGS, "r+") as f_obj:
-            # Replacing the file pointer at the start
-            f_obj.seek(0)
-            f_obj.truncate()
-
-            # Loading in the default values for inference
-            iou_treshold = "0.5"
-            score_treshold = "0.5"
-            device = "cuda" if torch.cuda.is_available() else "cpu"
-
-            # Creating the settings dictionnary
-            settings_dict = {"iou_treshold": iou_treshold,
-                             "score_treshold": score_treshold,
-                             "device": device}
-
-            # Saving the settings in json file
-            json.dump(settings_dict, f_obj)
+    def create_json_file(self):
+        with open(GUI_SETTINGS, "a+") as f_obj:
+            enter_default_json(f_obj)
 
 
     def open_advanced_options(self):
         # Declaring the advanced options window
         advanced_options_window = Toplevel()
         advanced_options_window.title("Advanced options")
-        advanced_options_window.geometry("450x400+630+0")
+        advanced_options_window.geometry("400x400+900+0")
         advanced_options_window.config(background=COLOR_PALETTE["bg"])
 
         # Putting the options widgets on screen
-        IOUSlider(advanced_options_window)
-        ScoreSlider(advanced_options_window)
-        DeviceSelector(advanced_options_window)
-        JsonFileLoader(advanced_options_window)
+        self.__iou = IOUSlider(advanced_options_window)
+        self.__score = ScoreSlider(advanced_options_window)
+        self.__device = DeviceSelector(advanced_options_window)
+        self.__gt_json = JsonFileLoader(advanced_options_window)
+        self.reset = ResetButton(advanced_options_window,
+                                 model=self.__model_ld,
+                                 imgdir=self.__img_dir,
+                                 iou=self.__iou,
+                                 score=self.__score,
+                                 device=self.__device,
+                                 gt_json=self.__gt_json)
 
 
-    def click_exit_button(self, window):
-        window.destroy()
-        window.update()
-
-
-    def __start_inference(self, model_ld, img_dir):
+    def __start_inference(self):
 
         with open(GUI_SETTINGS, "r") as f_obj:
             settings_dict = json.load(f_obj)
 
         cmd = [
             'python', 'final_product.py',
-            '--image_path', img_dir.img_dir,
+            '--image_path', settings_dict["imgdir"],
             '--inference_path', INFERENCE_PATH,
-            '--model_file_name', model_ld.model,
+            '--model_file_name', settings_dict["model"],
             '--iou_threshold', settings_dict["iou_treshold"],
             '--score_threshold', settings_dict["score_treshold"],
             '--device', settings_dict["device"]
@@ -134,6 +159,7 @@ class GUI(Tk):
         p.wait()
 
         image_viewer_window = Toplevel()
+        image_viewer_window.geometry("1600x926")
         image_viewer_window.config(background=COLOR_PALETTE["bg"])
         image_viewer_window.resizable(False, False)
 
