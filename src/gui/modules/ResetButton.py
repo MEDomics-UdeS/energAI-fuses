@@ -1,5 +1,6 @@
 import json
 from tkinter import *
+from tkinter.messagebox import WARNING, askokcancel
 from src.utils.constants import GUI_SETTINGS, COLOR_PALETTE, FONT_PATH
 from src.utils.helper_functions import enter_default_json
 
@@ -19,24 +20,31 @@ class ResetButton:
 
     def restore_defaults(self, model, imgdir, iou, score, device, gt_json):
 
-        with open(GUI_SETTINGS, "r+") as f_obj:
-            f_obj.seek(0)
-            f_obj.truncate()
-            enter_default_json(f_obj)
-            f_obj.seek(0)
+        #TODO add a check before restoring
+        answer = askokcancel(title="Confirm reset",
+                             message="Are you sure you want to reset the settings?",
+                             icon=WARNING)
+        
+        if answer:
+            
+            with open(GUI_SETTINGS, "r+") as f_obj:
+                f_obj.seek(0)
+                f_obj.truncate()
+                enter_default_json(f_obj)
+                f_obj.seek(0)
 
-            # Loading the settings dictionnary
-            settings_dict = json.load(f_obj)
+                # Loading the settings dictionnary
+                settings_dict = json.load(f_obj)
 
-        # Resetting the widgets to defaults value
-        model.model_label.config(foreground=COLOR_PALETTE["red"],
-                                 text="No model selected")
-        imgdir.img_dir_label.config(foreground=COLOR_PALETTE["red"],
-                                    text="No image directory selected")
+            # Resetting the widgets to defaults value
+            model.model_label.config(foreground=COLOR_PALETTE["red"],
+                                    text="No model selected")
+            imgdir.img_dir_label.config(foreground=COLOR_PALETTE["red"],
+                                        text="No image directory selected")
 
-        # Restoring the defaults advanced options
-        iou.slider.set(settings_dict["iou_treshold"])
-        score.slider.set(settings_dict["score_treshold"])
-        device.device_option.set(settings_dict["device"])
+            # Restoring the defaults advanced options
+            iou.slider.set(settings_dict["iou_treshold"])
+            score.slider.set(settings_dict["score_treshold"])
+            device.device_option.set(settings_dict["device"])
         #TODO add gtjson file to defaults
         

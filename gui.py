@@ -2,6 +2,7 @@ from tkinter import *
 import subprocess as sp
 import os
 import json
+from tkinter.messagebox import showerror
 
 from src.gui.modules.DeviceSelector import DeviceSelector
 from src.gui.modules.ScoreSlider import ScoreSlider
@@ -23,7 +24,7 @@ class GUI(Tk):
 
         # Initializing the root window
         super().__init__()
-        self.geometry("1300x400+0+0")
+        self.geometry("+0+0")
         # Without the text frame, the window is 900x160
         self.configure(background=COLOR_PALETTE["bg"])
 
@@ -112,7 +113,7 @@ class GUI(Tk):
         # Declaring the advanced options window
         advanced_options_window = Toplevel()
         advanced_options_window.title("Advanced options")
-        advanced_options_window.geometry("600x400+1300+0")
+        advanced_options_window.geometry(f"+{self.winfo_screenwidth()}+0")
         advanced_options_window.config(background=COLOR_PALETTE["bg"])
 
         # Putting the options widgets on screen
@@ -129,41 +130,64 @@ class GUI(Tk):
                                  gt_json=self.__gt_json)
 
 
+    def __check_for_errors(self, settings):
+        error_message = ""
+        
+        if "model" not in settings:
+            error_message += "No model selected.\n"
+        if "imgdir" not in settings:
+            error_message += "No image directory selected.\n"
+        if "iou_treshold" not in settings:
+            error_message += "No IoU treshold selected. Please see advanced options.\n"
+        if "score_treshold" not in settings:
+            error_message += "No score treshold selected. Please see advanced options.\n"
+        if "device" not in settings:
+            error_message += "No device selected. Please see advanced options.\n"
+        
+        return error_message
+    
+
     def __start_inference(self):
 
         with open(GUI_SETTINGS, "r") as f_obj:
             settings_dict = json.load(f_obj)
-
-        cmd = [
-            'python', 'final_product.py',
-            '--image_path', settings_dict["imgdir"],
-            '--inference_path', INFERENCE_PATH,
-            '--model_file_name', settings_dict["model"],
-            '--iou_threshold', settings_dict["iou_treshold"],
-            '--score_threshold', settings_dict["score_treshold"],
-            '--device', settings_dict["device"]
-        ]
-
-        # Adding the ground truth json file if one is entered by the user
-        try:
-            settings_dict["ground_truth"]
-        except KeyError:
-            pass
+        
+        
+        if self.__check_for_errors(settings_dict):
+            showerror(title="Error",
+                      message=self.__check_for_errors(settings_dict))
         else:
-            cmd.extend(("--ground_truth_file", settings_dict["ground_truth"]))
 
-        # Execute current command
-        p = sp.Popen(cmd)
+            cmd = [
+                'python', 'final_product.py',
+                '--image_path', settings_dict["imgdir"],
+                '--inference_path', INFERENCE_PATH,
+                '--model_file_name', settings_dict["model"],
+                '--iou_threshold', settings_dict["iou_treshold"],
+                '--score_threshold', settings_dict["score_treshold"],
+                '--device', settings_dict["device"]
+            ]
 
-        # Wait until the command finishes before continuing
-        p.wait()
+            # Adding the ground truth json file if one is entered by the user
+            try:
+                settings_dict["ground_truth"]
+            except KeyError:
+                pass
+            else:
+                cmd.extend(("--ground_truth_file", settings_dict["ground_truth"]))
 
-        image_viewer_window = Toplevel()
-        image_viewer_window.geometry("1600x926")
-        image_viewer_window.config(background=COLOR_PALETTE["bg"])
-        image_viewer_window.resizable(False, False)
+            # Execute current command
+            p = sp.Popen(cmd)
 
-        ImageViewer(window=image_viewer_window)
+            # Wait until the command finishes before continuing
+            p.wait()
+
+            image_viewer_window = Toplevel()
+            image_viewer_window.geometry("1600x926")
+            image_viewer_window.config(background=COLOR_PALETTE["bg"])
+            image_viewer_window.resizable(False, False)
+
+            ImageViewer(window=image_viewer_window)
 
 
 if __name__ == '__main__':
