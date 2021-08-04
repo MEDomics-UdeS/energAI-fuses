@@ -1,5 +1,4 @@
 from tkinter import *
-import subprocess as sp
 import os
 import json
 from tkinter.messagebox import showerror
@@ -12,6 +11,7 @@ from src.gui.modules.ImageLoader import ImageLoader
 from src.gui.modules.JsonFileLoader import JsonFileLoader
 from src.gui.modules.ResetButton import ResetButton
 from src.gui.ImageViewer import ImageViewer
+from src.gui.modules.OuputRedirector import OutputRedirector
 
 from src.utils.constants import GUI_SETTINGS
 from src.utils.constants import INFERENCE_PATH, COLOR_PALETTE, FONT_PATH
@@ -25,11 +25,10 @@ class GUI(Tk):
         # Initializing the root window
         super().__init__()
         self.geometry("+0+0")
-        # Without the text frame, the window is 900x160
         self.configure(background=COLOR_PALETTE["bg"])
 
         # Setting the title
-        self.title("Inference test")
+        self.title("EnergAI-fuses GUI")
         
         # Looking for user settings
         if os.path.isfile(GUI_SETTINGS) is False:
@@ -88,20 +87,19 @@ class GUI(Tk):
                            orient=VERTICAL)
         scroll.pack(side=RIGHT, fill=Y)
         
-        t = Text(frame,
-             background=COLOR_PALETTE["widgets"],
-             foreground=COLOR_PALETTE["green"],
-             highlightbackground=COLOR_PALETTE["bg"],
-             insertbackground=COLOR_PALETTE["fg"],
-             selectbackground=COLOR_PALETTE["purple"],
-             width=115,
-             height=12,
-             wrap=WORD,
-             yscrollcommand=scroll.set
-        )
-        t.pack(side=LEFT, fill=BOTH)
+        self.__text = Text(frame,
+                           background=COLOR_PALETTE["widgets"],
+                           foreground=COLOR_PALETTE["green"],
+                           highlightbackground=COLOR_PALETTE["bg"],
+                           insertbackground=COLOR_PALETTE["fg"],
+                           selectbackground=COLOR_PALETTE["purple"],
+                           width=115,
+                           height=12,
+                           wrap=WORD,
+                           yscrollcommand=scroll.set)
+        self.__text.pack(side=LEFT, fill=BOTH)
         
-        scroll.config(command=t.yview)
+        scroll.config(command=self.__text.yview)
 
 
     def create_json_file(self):
@@ -146,7 +144,7 @@ class GUI(Tk):
         
         return error_message
     
-
+    
     def __start_inference(self):
 
         with open(GUI_SETTINGS, "r") as f_obj:
@@ -171,16 +169,17 @@ class GUI(Tk):
             # Adding the ground truth json file if one is entered by the user
             try:
                 settings_dict["ground_truth"]
+                cmd.extend(("--ground_truth_file", settings_dict["ground_truth"]))
             except KeyError:
                 pass
-            else:
-                cmd.extend(("--ground_truth_file", settings_dict["ground_truth"]))
 
             # Execute current command
-            p = sp.Popen(cmd)
+            OutputRedirector(self, self.__text, cmd)
+            
+            # p = Popen(cmd)
 
-            # Wait until the command finishes before continuing
-            p.wait()
+            # # # Wait until the command finishes before continuing
+            # p.wait()
 
             image_viewer_window = Toplevel()
             image_viewer_window.geometry("1600x926")
@@ -192,4 +191,6 @@ class GUI(Tk):
 
 if __name__ == '__main__':
     app = GUI()
+    
+    app.protocol("WM_DELETE_WINDOW", app.quit)
     app.mainloop()
