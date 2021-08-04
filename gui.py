@@ -23,7 +23,7 @@ class GUI(Tk):
 
         # Initializing the root window
         super().__init__()
-        self.geometry("900x400+0+0")
+        self.geometry("1300x400+0+0")
         # Without the text frame, the window is 900x160
         self.configure(background=COLOR_PALETTE["bg"])
 
@@ -112,7 +112,7 @@ class GUI(Tk):
         # Declaring the advanced options window
         advanced_options_window = Toplevel()
         advanced_options_window.title("Advanced options")
-        advanced_options_window.geometry("400x400+900+0")
+        advanced_options_window.geometry("600x400+1300+0")
         advanced_options_window.config(background=COLOR_PALETTE["bg"])
 
         # Putting the options widgets on screen
