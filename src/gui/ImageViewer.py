@@ -1,37 +1,42 @@
 from tkinter import *
-from PIL import Image, ImageTk
+from PIL import Image
 import os
 from src.utils.constants import INFERENCE_PATH, IMAGE_EXT, COLOR_PALETTE, FONT_PATH
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+from matplotlib.figure import Figure
+
 
 class ImageViewer:
 
     def __init__(self, window) -> None:
 
-        # Declaring the maximum dimensions of the image of 16:9 aspect ratio
-        max_size = 1350, 760
-
         # Creating all the images
-        self.__img_list = []
+        self.__fig_list = []
+        self.__canvas = None
+        self.__toolbar = None
 
         for file in os.listdir(INFERENCE_PATH):
             if file.endswith(f'.{IMAGE_EXT}'):
                 image = Image.open(f'{INFERENCE_PATH}{file}')
-
-                # Resizes the image and keeps aspect ratio
-                image.thumbnail(max_size, Image.ANTIALIAS)
+                
+                # Create the figure
+                fig = Figure(dpi=100,
+                             facecolor=COLOR_PALETTE["widgets"],
+                             edgecolor=COLOR_PALETTE["fg"])
+                fig.add_subplot(111).imshow(image)
 
                 # Add the resized image to the list
-                self.__img_list.append((file, ImageTk.PhotoImage(image)))
+                self.__fig_list.append((file, fig))
 
         # Sorts the images alphabetically by filename
-        self.__img_list.sort(key=lambda x: x[0])
+        self.__fig_list.sort(key=lambda x: x[0])
 
         # Putting a frame on screen to display images into
         self.__frame = LabelFrame(window,
                                   background=COLOR_PALETTE["bg"],
                                   foreground=COLOR_PALETTE["fg"],
                                   highlightbackground=COLOR_PALETTE["active"],
-                                  text=self.__img_list[0][0],
+                                  text=self.__fig_list[0][0],
                                   font=(FONT_PATH, 14),
                                   padx=20,
                                   pady=20,
@@ -44,14 +49,13 @@ class ImageViewer:
         self.__frame.pack_propagate(False)
 
         # Displaying the image in frame
-        self.__image = Label(self.__frame, image=self.__img_list[0][1])
-        self.__image.pack()
+        self.__create_mpl_canvas(self.__fig_list[0][1], self.__frame)
 
         # Creating the status bar
         self.__status = Label(window,
                               background=COLOR_PALETTE["bg"],
                               foreground=COLOR_PALETTE["fg"],
-                              text=f'Image 1 of {len(self.__img_list)}',
+                              text=f'Image 1 of {len(self.__fig_list)}',
                               font=(FONT_PATH, 10),
                               bd=1,
                               relief="sunken",
@@ -94,15 +98,33 @@ class ImageViewer:
         self.__next_button.grid(row=1, column=2)
         self.__exit_button.grid(row=1, column=1, pady=10)
         self.__status.grid(row=2, column=0, columnspan=3, sticky="w"+"e")
+    
+    
+    def __create_mpl_canvas(self, fig, frame):
+        
+        # Deleting the widgets from the screen
+        if self.__canvas is not None:
+            self.__canvas.get_tk_widget().destroy()
+        if self.__toolbar is not None:
+            self.__toolbar.destroy()
+        
+        # Creating the new image canvas
+        self.__canvas = FigureCanvasTkAgg(fig, master=frame)
+        self.__canvas.draw()
+        self.__canvas.get_tk_widget().pack(side=TOP, fill=BOTH, expand=1)
 
+        # Creating the new toolbar
+        self.__toolbar = NavigationToolbar2Tk(self.__canvas, frame)
+        self.__toolbar.update()
+    
 
     def __prev_img(self, window, idx):
         
         # Update the image filename
-        self.__frame.config(text=self.__img_list[idx][0])
+        self.__frame.config(text=self.__fig_list[idx][0])
         
         # Update the image
-        self.__image.config(image=self.__img_list[idx][1])
+        self.__create_mpl_canvas(self.__fig_list[idx][1], self.__frame)
 
         # Update the buttons
         self.__previous_button.config(command=lambda: self.__prev_img(window, idx - 1),
@@ -111,22 +133,22 @@ class ImageViewer:
                                   state=NORMAL)
 
         # Update status bar
-        self.__status.config(text=f'Image {idx + 1} of {len(self.__img_list)}')
+        self.__status.config(text=f'Image {idx + 1} of {len(self.__fig_list)}')
         
 
     def __next_img(self, window, idx):
 
         # Update the image filename
-        self.__frame.config(text=self.__img_list[idx + 1][0])
+        self.__frame.config(text=self.__fig_list[idx + 1][0])
 
         # Update the image
-        self.__image.config(image=self.__img_list[idx + 1][1])
+        self.__create_mpl_canvas(self.__fig_list[idx + 1][1], self.__frame)
         
         # Update the buttons
         self.__previous_button.config(command=lambda: self.__prev_img(window, idx),
                                       state=NORMAL)
         self.__next_button.config(command=lambda: self.__next_img(window, idx + 1),
-                                  state="disabled" if idx == len(self.__img_list) - 2 else "normal")
+                                  state="disabled" if idx == len(self.__fig_list) - 2 else "normal")
         
         # Update status bar
-        self.__status.config(text=f'Image {idx + 2} of {len(self.__img_list)}')
+        self.__status.config(text=f'Image {idx + 2} of {len(self.__fig_list)}')
