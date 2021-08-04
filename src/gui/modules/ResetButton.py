@@ -20,7 +20,6 @@ class ResetButton:
 
     def restore_defaults(self, model, imgdir, iou, score, device, gt_json):
 
-        #TODO add a check before restoring
         answer = askokcancel(title="Confirm reset",
                              message="Are you sure you want to reset the settings?",
                              icon=WARNING)
@@ -46,5 +45,5 @@ class ResetButton:
             iou.slider.set(settings_dict["iou_treshold"])
             score.slider.set(settings_dict["score_treshold"])
             device.device_option.set(settings_dict["device"])
-        #TODO add gtjson file to defaults
+            #TODO add gtjson file to defaults
         
