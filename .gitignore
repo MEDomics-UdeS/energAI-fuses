@@ -94,6 +94,10 @@ target/
 # Scratchpad
 # scratch.py
 
+# GUI related files
+/src/gui/*.json
+/src/gui/*.log
+
 # Trained saved_models
 /saved_models/
 
