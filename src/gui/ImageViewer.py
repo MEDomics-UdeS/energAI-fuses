@@ -8,7 +8,7 @@ from matplotlib.figure import Figure
 
 class ImageViewer:
 
-    def __init__(self, window) -> None:
+    def __init__(self, window, textbox) -> None:
 
         # Creating all the images
         self.__fig_list = []
@@ -91,7 +91,7 @@ class ImageViewer:
                                     highlightbackground=COLOR_PALETTE["active"],
                                     text="Exit",
                                     font=(FONT_PATH, 12),
-                                    command=window.destroy)
+                                    command=lambda: self.close_window(window, textbox))
 
         # Putting the widgets on screen
         self.__previous_button.grid(row=1, column=0)
@@ -99,6 +99,10 @@ class ImageViewer:
         self.__exit_button.grid(row=1, column=1, pady=10)
         self.__status.grid(row=2, column=0, columnspan=3, sticky="w"+"e")
     
+    
+    def close_window(self, window, textbox):
+        textbox.insert("Closing the Image Viewer app.\n\n")
+        window.destroy()
     
     def __create_mpl_canvas(self, fig, frame):
         

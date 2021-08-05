@@ -1,10 +1,9 @@
 from tkinter import *
-import sys
-from itertools import islice
 from subprocess import Popen, PIPE
-from textwrap import dedent
 from threading import Thread
 from queue import Queue, Empty
+from src.utils.constants import COLOR_PALETTE
+from src.gui.ImageViewer import ImageViewer
 
 
 def iter_except(function, exception):
@@ -19,30 +18,31 @@ def iter_except(function, exception):
 class OutputRedirector:
     
     def __init__(self, window, target, cmd):
-        self.window = window
-        self.target = target
+        # Declare the parent window of the OutputRedirector
+        self.__window = window
+        
+        # Declare the target text widget that gets the updates
+        self.__target = target
+        
+        # Displaying the process to the user
+        self.__target.insert(f'{"-" * 100}\nStarting Inference and resizing images\n{"-" * 100}\n\n')
 
-        # start dummy subprocess to generate some output
-        self.process = Popen(cmd, stdout=PIPE)
+        # Starts the inference process
+        self.__process = Popen(cmd, stdout=PIPE)
 
-        # launch thread to read the subprocess output
-        #   (put the subprocess output into the queue in a background thread,
-        #    get output from the queue in the GUI thread.
-        #    Output chain: process.readline -> queue -> label)
-        # limit output buffering (may stall subprocess)
-        q = Queue(maxsize=1024)
+        # Launch thread to read the subprocess output
+        q = Queue()
         t = Thread(target=self.reader_thread, args=[q])
-        t.daemon = True  # close pipe if GUI process exits
+        t.daemon = True
         t.start()
 
-        # show subprocess' stdout in GUI
-        self.update(q)  # start update loop
-        t.join()
-
+        # Start the update loop
+        self.update(q)
+    
     def reader_thread(self, q):
         """Read subprocess output and put it into the queue."""
         try:
-            with self.process.stdout as pipe:
+            with self.__process.stdout as pipe:
                 for line in iter(pipe.readline, b''):
                     q.put(line)
         finally:
@@ -50,15 +50,25 @@ class OutputRedirector:
 
     def update(self, q):
         """Update GUI with items from the queue."""
-        for line in iter_except(q.get_nowait, Empty):  # display all content
+
+        for line in iter_except(q.get_nowait, Empty):
             if line is None:
+                
+                self.__target.insert(f'\n{"-" * 100}\nInference completed, now opening the Image Viewer app...\n')
+                
+                # When the process is done open the image viewer app
+                image_viewer_window = Toplevel()
+                image_viewer_window.geometry("1600x926")
+                image_viewer_window.config(background=COLOR_PALETTE["bg"])
+                image_viewer_window.resizable(False, False)
+                ImageViewer(window=image_viewer_window, textbox=self.__target)
+
+                self.__process.kill()
                 return
             else:
-                self.target.insert(INSERT, line)  # update GUI
-                self.window.update()
+                # Update the target widget
+                self.__target.insert(line)
                 break
-        self.window.after(5, self.update, q)  # schedule next update
-
-    def quit(self):
-        self.process.kill()  # exit subprocess if GUI is closed (zombie!)
-        self.window.destroy()
+            
+        # Schedule the next update
+        self.__window.after(25, self.update, q)

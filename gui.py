@@ -10,7 +10,7 @@ from src.gui.modules.ModelLoader import ModelLoader
 from src.gui.modules.ImageLoader import ImageLoader
 from src.gui.modules.JsonFileLoader import JsonFileLoader
 from src.gui.modules.ResetButton import ResetButton
-from src.gui.ImageViewer import ImageViewer
+from src.gui.modules.ReadOnlyTextBox import ReadOnlyTextBox
 from src.gui.modules.OuputRedirector import OutputRedirector
 
 from src.utils.constants import GUI_SETTINGS
@@ -54,7 +54,7 @@ class GUI(Tk):
                highlightbackground=COLOR_PALETTE["active"],
                text="Start",
                font=(FONT_PATH, 14),
-               command=lambda: self.__start_inference()
+               command=self.__start_inference
                ).grid(row=4, column=1)
 
         Button(self,
@@ -68,7 +68,7 @@ class GUI(Tk):
                command=self.open_advanced_options
                ).grid(row=4, column=2, pady=10)
 
-        frame = LabelFrame(self,
+        self.__frame = LabelFrame(self,
                    background=COLOR_PALETTE["bg"],
                    foreground=COLOR_PALETTE["fg"],
                    text="Application output",
@@ -76,30 +76,10 @@ class GUI(Tk):
                    width=860,
                    height=200
         )
-        frame.grid(row=5, column=0, columnspan=3, padx=20, pady=20)
-        frame.grid_propagate(False)
+        self.__frame.grid(row=5, column=0, columnspan=3, padx=20, pady=20)
+        self.__frame.grid_propagate(False)
         
-        scroll = Scrollbar(frame,
-                           activebackground=COLOR_PALETTE["purple"],
-                           background=COLOR_PALETTE["widgets"],
-                           highlightbackground=COLOR_PALETTE["bg"],
-                           troughcolor=COLOR_PALETTE["active"],
-                           orient=VERTICAL)
-        scroll.pack(side=RIGHT, fill=Y)
-        
-        self.__text = Text(frame,
-                           background=COLOR_PALETTE["widgets"],
-                           foreground=COLOR_PALETTE["green"],
-                           highlightbackground=COLOR_PALETTE["bg"],
-                           insertbackground=COLOR_PALETTE["fg"],
-                           selectbackground=COLOR_PALETTE["purple"],
-                           width=115,
-                           height=12,
-                           wrap=WORD,
-                           yscrollcommand=scroll.set)
-        self.__text.pack(side=LEFT, fill=BOTH)
-        
-        scroll.config(command=self.__text.yview)
+        self.__textbox = ReadOnlyTextBox(self.__frame)
 
 
     def create_json_file(self):
@@ -146,16 +126,16 @@ class GUI(Tk):
     
     
     def __start_inference(self):
-
+        # Load the user settings
         with open(GUI_SETTINGS, "r") as f_obj:
             settings_dict = json.load(f_obj)
         
-        
+        # Look for missing elements in the user settings
         if self.__check_for_errors(settings_dict):
             showerror(title="Error",
                       message=self.__check_for_errors(settings_dict))
         else:
-
+            # Create the subprocess command
             cmd = [
                 'python', 'final_product.py',
                 '--image_path', settings_dict["imgdir"],
@@ -173,24 +153,12 @@ class GUI(Tk):
             except KeyError:
                 pass
 
-            # Execute current command
-            OutputRedirector(self, self.__text, cmd)
-            
-            # p = Popen(cmd)
-
-            # # # Wait until the command finishes before continuing
-            # p.wait()
-
-            image_viewer_window = Toplevel()
-            image_viewer_window.geometry("1600x926")
-            image_viewer_window.config(background=COLOR_PALETTE["bg"])
-            image_viewer_window.resizable(False, False)
-
-            ImageViewer(window=image_viewer_window)
+            # Execute the current command in an output redirector
+            OutputRedirector(self, self.__textbox, cmd)
 
 
 if __name__ == '__main__':
+    # Starts the GUI application
     app = GUI()
-    
     app.protocol("WM_DELETE_WINDOW", app.quit)
     app.mainloop()
