@@ -130,6 +130,10 @@ class GUI(Tk):
 
 
 if __name__ == '__main__':
+
+    # This fixes a multithreading error with torch
+    os.environ["MKL_THREADING_LAYER"] = "GNU"
+
     # Starts the GUI application
     app = GUI()
     app.protocol("WM_DELETE_WINDOW", app.quit)
