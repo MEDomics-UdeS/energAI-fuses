@@ -25,7 +25,8 @@ class OutputRedirector:
         self.__target = target
         
         # Displaying the process to the user
-        self.__target.insert(f'{"-" * 100}\nStarting Inference and resizing images\n{"-" * 100}\n\n')
+        self.__target.insert(
+            f'{"-" * 100}\nStarting Inference and resizing images\n{"-" * 100}\nThis process can take a few minutes depending on the size of the directory.\n')
 
         # Starts the inference process
         self.__process = Popen(cmd, stdout=PIPE)

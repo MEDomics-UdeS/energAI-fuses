@@ -3,18 +3,13 @@ import os
 import json
 from tkinter.messagebox import showerror
 
-from src.gui.modules.DeviceSelector import DeviceSelector
-from src.gui.modules.ScoreSlider import ScoreSlider
-from src.gui.modules.IOUSlider import IOUSlider
 from src.gui.modules.ModelLoader import ModelLoader
 from src.gui.modules.ImageLoader import ImageLoader
-from src.gui.modules.JsonFileLoader import JsonFileLoader
-from src.gui.modules.ResetButton import ResetButton
 from src.gui.modules.ReadOnlyTextBox import ReadOnlyTextBox
 from src.gui.modules.OuputRedirector import OutputRedirector
+from src.gui.modules.AdvancedOptionsWindow import AdvancedOptionsWindow
 
-from src.utils.constants import GUI_SETTINGS
-from src.utils.constants import INFERENCE_PATH, COLOR_PALETTE, FONT_PATH
+from src.utils.constants import INFERENCE_PATH, COLOR_PALETTE, FONT_PATH, GUI_SETTINGS
 from src.utils.helper_functions import enter_default_json
 
 
@@ -24,7 +19,6 @@ class GUI(Tk):
 
         # Initializing the root window
         super().__init__()
-        self.geometry("+0+0")
         self.configure(background=COLOR_PALETTE["bg"])
 
         # Setting the title
@@ -65,8 +59,7 @@ class GUI(Tk):
                highlightbackground=COLOR_PALETTE["active"],
                text="Advanced options",
                font=(FONT_PATH, 12),
-               command=self.open_advanced_options
-               ).grid(row=4, column=2, pady=10)
+               command=lambda: AdvancedOptionsWindow(self, self.__model_ld, self.__img_dir)).grid(row=4, column=2, pady=10)
 
         self.__frame = LabelFrame(self,
                    background=COLOR_PALETTE["bg"],
@@ -85,27 +78,6 @@ class GUI(Tk):
     def create_json_file(self):
         with open(GUI_SETTINGS, "a+") as f_obj:
             enter_default_json(f_obj)
-
-
-    def open_advanced_options(self):
-        # Declaring the advanced options window
-        advanced_options_window = Toplevel()
-        advanced_options_window.title("Advanced options")
-        advanced_options_window.geometry(f"+{self.winfo_screenwidth()}+0")
-        advanced_options_window.config(background=COLOR_PALETTE["bg"])
-
-        # Putting the options widgets on screen
-        self.__iou = IOUSlider(advanced_options_window)
-        self.__score = ScoreSlider(advanced_options_window)
-        self.__device = DeviceSelector(advanced_options_window)
-        self.__gt_json = JsonFileLoader(advanced_options_window)
-        self.reset = ResetButton(advanced_options_window,
-                                 model=self.__model_ld,
-                                 imgdir=self.__img_dir,
-                                 iou=self.__iou,
-                                 score=self.__score,
-                                 device=self.__device,
-                                 gt_json=self.__gt_json)
 
 
     def __check_for_errors(self, settings):
