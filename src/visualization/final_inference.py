@@ -17,7 +17,7 @@ from tqdm import tqdm
 from torch.utils.data import DataLoader
 from src.models.models import load_model
 
-from src.utils.constants import CLASS_DICT, FONT_PATH, GUI_RESIZED_PATH, INFERENCE_PATH, IMAGE_EXT
+from src.utils.constants import CLASS_DICT, FONT_PATH, GUI_RESIZED_PATH, INFERENCE_PATH, IMAGE_EXT, COLOR_PALETTE
 from src.utils.helper_functions import filter_by_nms, filter_by_score, format_detr_outputs
 import os
 
@@ -164,13 +164,13 @@ def draw_annotations(draw: ImageDraw.ImageDraw, pred_box_dict: dict, pred_annota
 
     # Drawing predicted bounding boxes on the image
     for pred_box, (box_width, font) in zip(pred_boxes, pred_annotations):
-        draw.rectangle(pred_box, outline="red", width=box_width)
+        draw.rectangle(pred_box, outline=COLOR_PALETTE["yellow"], width=box_width)
         
     # Drawing predicted labels over the bounding boxes on the image
     for pred_box, pred_label, pred_score, (box_width, font)\
             in zip(pred_boxes, pred_labels, pred_scores, pred_annotations):
         draw.text(
-            (pred_box[0], pred_box[1] + font.size), text=f'{pred_label} {pred_score:.4f}', font=font, fill=(255, 255, 255, 0))
+            (pred_box[0], pred_box[1]), text=f'{pred_label} {pred_score:.4f}', font=font, fill=(255, 255, 255, 0))
 
 
 def resize_box_coord(box_dict: dict, downsize_ratio: float, x_offset: float, y_offset: float) -> dict:
@@ -194,9 +194,12 @@ def resize_box_coord(box_dict: dict, downsize_ratio: float, x_offset: float, y_o
 def scale_annotation_sizes(img: Image, pred_boxes: list, box_scaler: float = 0.006, text_scaler: float = 0.015) -> list:
     """
     Function to scale the annotations drawn on an image during inference
+
+    The function uses a power function of from y=Ax^B to scale the bounding boxes
     """
-    MAX_BBOX_SIZE = 32
-    MAX_FONT_SIZE = 64
+    A = 55.25
+    B = 0.19
+    MAX_FONT_SIZE = 30
     img_area = img.size[0] * img.size[1]
 
     pred_annotations = []
@@ -204,9 +207,8 @@ def scale_annotation_sizes(img: Image, pred_boxes: list, box_scaler: float = 0.0
     for box in pred_boxes:
         box_area = (box[0] - box[2]) * (box[1] - box[3])
 
-        box_width = min(
-            int(img_area / box_area * box_scaler) + 8, MAX_BBOX_SIZE)
-        font_size = min(int(max(img.size) * text_scaler) + 6, MAX_FONT_SIZE)
+        box_width = int(pow(img_area / box_area * A, B))
+        font_size = min(int(max(img.size) * text_scaler) + 10, MAX_FONT_SIZE)
 
         pred_annotations.append(
             (box_width, ImageFont.truetype(FONT_PATH, font_size)))
