@@ -29,7 +29,7 @@ class ResetButton:
                highlightbackground=COLOR_PALETTE["active"],
                text="Restore defaults",
                font=(FONT_PATH, 12),
-               command=lambda: self.restore_defaults(model, imgdir, iou, score, device, gt_json)).grid(row=3, column=1)
+               command=lambda: self.restore_defaults(model, imgdir, iou, score, device, gt_json)).grid(row=6, column=1)
 
     def restore_defaults(self,
                          model: ModelLoader,
@@ -64,5 +64,5 @@ class ResetButton:
             iou.slider.set(settings_dict["iou_treshold"])
             score.slider.set(settings_dict["score_treshold"])
             device.device_option.set(settings_dict["device"])
-            #TODO add gtjson file to defaults
+            gt_json.reset()
         
