@@ -59,7 +59,10 @@ class GUI(Tk):
                highlightbackground=COLOR_PALETTE["active"],
                text="Advanced options",
                font=(FONT_PATH, 12),
-               command=lambda: AdvancedOptionsWindow(self, self.__model_ld, self.__img_dir)).grid(row=4, column=2, pady=10)
+               command=lambda: AdvancedOptionsWindow(window=self, 
+                                                     model=self.__model_ld, 
+                                                     img_dir=self.__img_dir)
+               ).grid(row=4, column=2, pady=10)
 
         self.__frame = LabelFrame(self,
                    background=COLOR_PALETTE["bg"],
@@ -72,15 +75,15 @@ class GUI(Tk):
         self.__frame.grid(row=5, column=0, columnspan=3, padx=20, pady=20)
         self.__frame.grid_propagate(False)
         
-        self.__textbox = ReadOnlyTextBox(self.__frame)
+        self.__textbox = ReadOnlyTextBox(window=self.__frame)
 
 
-    def create_json_file(self):
+    def create_json_file(self) -> None:
         with open(GUI_SETTINGS, "a+") as f_obj:
             enter_default_json(f_obj)
 
 
-    def __check_for_errors(self, settings):
+    def __check_for_errors(self, settings: dict) -> str:
         error_message = ""
         
         if "model" not in settings:
@@ -97,7 +100,7 @@ class GUI(Tk):
         return error_message
     
     
-    def __start_inference(self):
+    def __start_inference(self) -> None:
         # Load the user settings
         with open(GUI_SETTINGS, "r") as f_obj:
             settings_dict = json.load(f_obj)

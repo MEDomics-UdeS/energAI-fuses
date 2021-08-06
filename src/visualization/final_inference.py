@@ -142,7 +142,7 @@ def save_test_images(model_file_name: str,
     pbar.close()
 
 
-def draw_annotations(draw: ImageDraw.ImageDraw, pred_box_dict: dict, pred_annotations: list):
+def draw_annotations(draw: ImageDraw.ImageDraw, pred_box_dict: dict, pred_annotations: list) -> None:
     """
     Function to draw bounding boxes on an image
 

@@ -5,7 +5,7 @@ import json
 
 class DeviceSelector:
 
-    def __init__(self, window) -> None:
+    def __init__(self, window: Toplevel) -> None:
 
         self.__device_option = StringVar()
 
@@ -38,7 +38,7 @@ class DeviceSelector:
         with open(GUI_SETTINGS, "r") as f_obj:
             self.__device_option.set(json.load(f_obj)["device"])
 
-    def __select(self):
+    def __select(self) -> None:
         # Overwriting the settings json file
         with open(GUI_SETTINGS, "r+") as f_obj:
             settings_dict = json.load(f_obj)

@@ -2,6 +2,8 @@ from tkinter import *
 from subprocess import Popen, PIPE
 from threading import Thread
 from queue import Queue, Empty
+from typing import List
+from src.gui.modules.ReadOnlyTextBox import ReadOnlyTextBox
 from src.utils.constants import COLOR_PALETTE
 from src.gui.ImageViewer import ImageViewer
 
@@ -17,7 +19,7 @@ def iter_except(function, exception):
 
 class OutputRedirector:
     
-    def __init__(self, window, target, cmd):
+    def __init__(self, window: Tk, target: ReadOnlyTextBox, cmd: List[str]) -> None:
         # Declare the parent window of the OutputRedirector
         self.__window = window
         
@@ -40,7 +42,7 @@ class OutputRedirector:
         # Start the update loop
         self.update(q)
     
-    def reader_thread(self, q):
+    def reader_thread(self, q: Queue) -> None:
         """Read subprocess output and put it into the queue."""
         try:
             with self.__process.stdout as pipe:
@@ -49,7 +51,7 @@ class OutputRedirector:
         finally:
             q.put(None)
 
-    def update(self, q):
+    def update(self, q: Queue) -> None:
         """Update GUI with items from the queue."""
 
         for line in iter_except(q.get_nowait, Empty):
@@ -65,7 +67,6 @@ class OutputRedirector:
                 ImageViewer(window=image_viewer_window, textbox=self.__target)
 
                 self.__process.kill()
-                return
             else:
                 # Update the target widget
                 self.__target.insert(line)

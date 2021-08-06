@@ -5,10 +5,12 @@ from src.gui.modules.IOUSlider import IOUSlider
 from src.gui.modules.ScoreSlider import ScoreSlider
 from src.gui.modules.DeviceSelector import DeviceSelector
 from src.gui.modules.JsonFileLoader import JsonFileLoader
+from src.gui.modules.ModelLoader import ModelLoader
+from src.gui.modules.ImageLoader import ImageLoader
 
 class AdvancedOptionsWindow:
     
-    def __init__(self, window, model, img_dir) -> None:
+    def __init__(self, window: Tk, model: ModelLoader, img_dir: ImageLoader) -> None:
 
         # Declaring the advanced options window
         advanced_options_window = Toplevel()

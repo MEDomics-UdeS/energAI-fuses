@@ -5,7 +5,7 @@ from src.utils.constants import GUI_SETTINGS, FONT_PATH, COLOR_PALETTE
 
 class ScoreSlider:
 
-    def __init__(self, window) -> None:
+    def __init__(self, window: Toplevel) -> None:
         
         Label(window, 
               background=COLOR_PALETTE["bg"],
@@ -32,7 +32,7 @@ class ScoreSlider:
         # Putting the widget on screen
         self.__slider.grid(row=3, column=0, pady=10)
 
-    def __slide(self, value):
+    def __slide(self, value: DoubleVar) -> None:
         # Overwriting the settings json file
         with open(GUI_SETTINGS, "r+") as f_obj:
             settings_dict = json.load(f_obj)

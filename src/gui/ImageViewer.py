@@ -4,17 +4,18 @@ import os
 from src.utils.constants import INFERENCE_PATH, IMAGE_EXT, COLOR_PALETTE, FONT_PATH
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
+from src.gui.modules.ReadOnlyTextBox import ReadOnlyTextBox
 
 
 class ImageViewer:
 
-    def __init__(self, window, textbox) -> None:
+    def __init__(self, window: Toplevel, textbox: ReadOnlyTextBox) -> None:
 
-        # Creating all the images
         self.__fig_list = []
         self.__canvas = None
         self.__toolbar = None
 
+        # Creating all the images
         for file in os.listdir(INFERENCE_PATH):
             if file.endswith(f'.{IMAGE_EXT}'):
                 image = Image.open(f'{INFERENCE_PATH}{file}')
@@ -100,11 +101,11 @@ class ImageViewer:
         self.__status.grid(row=2, column=0, columnspan=3, sticky="w"+"e")
     
     
-    def close_window(self, window, textbox):
+    def close_window(self, window: Toplevel, textbox: ReadOnlyTextBox) -> None:
         textbox.insert("Closing the Image Viewer app.\n\n")
         window.destroy()
     
-    def __create_mpl_canvas(self, fig, frame):
+    def __create_mpl_canvas(self, fig: Figure, frame: LabelFrame) -> None:
         
         # Deleting the widgets from the screen
         if self.__canvas is not None:
@@ -122,7 +123,7 @@ class ImageViewer:
         self.__toolbar.update()
     
 
-    def __prev_img(self, window, idx):
+    def __prev_img(self, window: Toplevel, idx: int) -> None:
         
         # Update the image filename
         self.__frame.config(text=self.__fig_list[idx][0])
@@ -140,7 +141,7 @@ class ImageViewer:
         self.__status.config(text=f'Image {idx + 1} of {len(self.__fig_list)}')
         
 
-    def __next_img(self, window, idx):
+    def __next_img(self, window: Toplevel, idx: int) -> None:
 
         # Update the image filename
         self.__frame.config(text=self.__fig_list[idx + 1][0])

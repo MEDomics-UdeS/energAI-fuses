@@ -5,7 +5,7 @@ from src.utils.constants import FONT_PATH, MODELS_PATH, COLOR_PALETTE, GUI_SETTI
 
 class ModelLoader:
 
-    def __init__(self, root) -> None:
+    def __init__(self, root: Tk) -> None:
         
         Label(root,
               background=COLOR_PALETTE["bg"],
@@ -50,7 +50,7 @@ class ModelLoader:
             self.__model_label.grid(row=2, column=0)
 
         
-    def __select_model(self, root):
+    def __select_model(self, root: Tk) -> None:
         root.filename = filedialog.askopenfile(
             initialdir=MODELS_PATH, title="Select a model")
 

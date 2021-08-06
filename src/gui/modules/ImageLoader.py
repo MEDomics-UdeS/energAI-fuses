@@ -6,7 +6,7 @@ from src.utils.constants import COLOR_PALETTE, FONT_PATH, GUI_SETTINGS
 
 class ImageLoader:
     
-    def __init__(self, root) -> None:
+    def __init__(self, root: Tk) -> None:
         
         Label(root,
               background=COLOR_PALETTE["bg"],
@@ -54,7 +54,7 @@ class ImageLoader:
             # Putting the label on screen
             self.__img_dir_label.grid(row=2, column=2)
         
-    def __select_img_dir(self, root):
+    def __select_img_dir(self, root: Tk) -> None:
         root.filename = filedialog.askdirectory(
             initialdir='.', title="Select a directory for inference pass")
 

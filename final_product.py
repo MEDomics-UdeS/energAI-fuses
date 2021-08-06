@@ -15,8 +15,6 @@ Description:
 import argparse
 from datetime import datetime
 from multiprocessing import cpu_count
-import sys
-
 
 import torch
 
@@ -30,9 +28,6 @@ from src.utils.constants import INFERENCE_PATH, MODELS_PATH
 if __name__ == '__main__':
     
     env_tests()
-
-    #TODO with this line, you can redirect the output of a sp. Find a way to send the output to the gui
-    # sys.stdout = open("/home/guillaume/test.txt", "a+")
 
     # Record start time
     start = datetime.now()

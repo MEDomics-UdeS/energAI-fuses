@@ -5,7 +5,7 @@ from src.utils.constants import COLOR_PALETTE, FONT_PATH, GUI_SETTINGS
 
 class JsonFileLoader:
 
-    def __init__(self, window) -> None:
+    def __init__(self, window: Toplevel) -> None:
 
         Label(window, 
               background=COLOR_PALETTE["bg"],
@@ -26,7 +26,7 @@ class JsonFileLoader:
                command=lambda: self.__select_file(window)
                ).grid(row=1, column=1, padx=10)
 
-    def __select_file(self, window):
+    def __select_file(self, window: Toplevel) -> None:
         window.filename = filedialog.askopenfile(
             initialdir=".", title="Select a ground truth JSON file")
 

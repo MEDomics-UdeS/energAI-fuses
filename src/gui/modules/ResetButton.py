@@ -3,10 +3,23 @@ from tkinter import *
 from tkinter.messagebox import WARNING, askokcancel
 from src.utils.constants import GUI_SETTINGS, COLOR_PALETTE, FONT_PATH
 from src.utils.helper_functions import enter_default_json
+from src.gui.modules.ModelLoader import ModelLoader
+from src.gui.modules.ImageLoader import ImageLoader
+from src.gui.modules.IOUSlider import IOUSlider
+from src.gui.modules.ScoreSlider import ScoreSlider
+from src.gui.modules.DeviceSelector import DeviceSelector
+from src.gui.modules.JsonFileLoader import JsonFileLoader
 
 class ResetButton:
 
-    def __init__(self, window, model, imgdir, iou, score, device, gt_json) -> None:
+    def __init__(self, 
+                 window: Toplevel, 
+                 model: ModelLoader, 
+                 imgdir: ImageLoader, 
+                 iou: IOUSlider, 
+                 score: ScoreSlider, 
+                 device: DeviceSelector, 
+                 gt_json: JsonFileLoader) -> None:
 
         Button(window,
                background=COLOR_PALETTE["widgets"],
@@ -18,7 +31,13 @@ class ResetButton:
                font=(FONT_PATH, 12),
                command=lambda: self.restore_defaults(model, imgdir, iou, score, device, gt_json)).grid(row=3, column=1)
 
-    def restore_defaults(self, model, imgdir, iou, score, device, gt_json):
+    def restore_defaults(self,
+                         model: ModelLoader,
+                         imgdir: ImageLoader,
+                         iou: IOUSlider,
+                         score: ScoreSlider,
+                         device: DeviceSelector,
+                         gt_json: JsonFileLoader) -> None:
 
         answer = askokcancel(title="Confirm reset",
                              message="Are you sure you want to reset the settings?",

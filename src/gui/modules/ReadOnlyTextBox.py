@@ -3,7 +3,7 @@ from src.utils.constants import COLOR_PALETTE
 
 class ReadOnlyTextBox:
     
-    def __init__(self, window) -> None:
+    def __init__(self, window: Tk) -> None:
         
         # Create the scrollbar
         self.__scroll = Scrollbar(window,
@@ -31,7 +31,7 @@ class ReadOnlyTextBox:
         self.__scroll.config(command=self.__textbox.yview)
 
 
-    def insert(self, text):
+    def insert(self, text: str) -> None:
         # Modify the state to allow insertion
         self.__textbox.config(state=NORMAL)
         
