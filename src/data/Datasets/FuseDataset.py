@@ -116,7 +116,7 @@ class FuseDataset(CustomDataset):
         :return: tuple, transformed current image and current targets
         """
         # When working with small batches
-        if self.targets:        
+        if self._targets:        
             return self.transforms(self._images[index]), self._targets[index]
         else:
             return self.transforms(self._images[index]), {}
