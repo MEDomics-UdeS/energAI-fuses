@@ -63,11 +63,11 @@ class DatasetManager(CustomDatasetManager):
         self._seed = seed
 
         # Check if any image exists in the data/resized folder
-        if any(file.endswith(f'.{IMAGE_EXT}') for file in os.listdir(RESIZED_PATH)):
+        if any(file.endswith(f'.{IMAGE_EXT}') for file in os.listdir(RESIZED_LEARNING_PATH)):
             # Get the first found image's size
-            for file in os.listdir(RESIZED_PATH):
+            for file in os.listdir(RESIZED_LEARNING_PATH):
                 if file.endswith(f'.{IMAGE_EXT}'):
-                    img_size = Image.open(f'{RESIZED_PATH}{file}').size
+                    img_size = Image.open(f'{RESIZED_LEARNING_PATH}{file}').size
                     break
 
             # Check if the first image's size is not equal to the image_size parameter
@@ -80,8 +80,8 @@ class DatasetManager(CustomDatasetManager):
                 self._resize_images(image_size, num_workers)
         else:
             # Check if any image exists in the data/raw folder
-            # if any(file.endswith(f'.{IMAGE_EXT}') for file in os.listdir(LEARNING_PATH)):
-            if os.path.isdir(LEARNING_PATH):
+            # if any(file.endswith(f'.{IMAGE_EXT}') for file in os.listdir(RAW_LEARNING_PATH)):
+            if os.path.isdir(RAW_LEARNING_PATH):
                 # Resize all images
                 self._resize_images(image_size, num_workers)
             else:
@@ -363,10 +363,10 @@ class DatasetManager(CustomDatasetManager):
         ray.init(include_dashboard=False)
 
         # Get list of image and exclude the hidden .gitkeep file
-        imgs = [img for img in sorted(os.listdir(LEARNING_PATH)) if img.startswith('.') is False]
+        imgs = [img for img in sorted(os.listdir(RAW_LEARNING_PATH)) if img.startswith('.') is False]
 
         # Create image paths
-        image_paths = [os.path.join(LEARNING_PATH, img) for img in imgs]
+        image_paths = [os.path.join(RAW_LEARNING_PATH, img) for img in imgs]
 
         # Convert the annotations csv file to a pandas DataFrame
         annotations = pd.read_csv(ANNOTATIONS_PATH)
@@ -414,8 +414,8 @@ class DatasetManager(CustomDatasetManager):
         print(f'Minimum resize ratio: {min(resize_ratios):.2%}')
 
         # Saving the targets to a json file
-        json.dump(targets_list, open(TARGETS_PATH, 'w'), ensure_ascii=False)
+        json.dump(targets_list, open(TARGETS_LEARNING_PATH, 'w'), ensure_ascii=False)
 
         # Displaying where files have been saved to
-        print(f'\nResized images have been saved to:\t\t{RESIZED_PATH}')
-        print(f'Resized targets have been saved to:\t\t{TARGETS_PATH}')
+        print(f'\nResized images have been saved to:\t\t{RESIZED_LEARNING_PATH}')
+        print(f'Resized targets have been saved to:\t\t{TARGETS_LEARNING_PATH}')

@@ -21,7 +21,7 @@ from src.data.DataLoaderManagers.DataLoaderManager import DataLoaderManager
 from src.data.DatasetManagers.DatasetManager import DatasetManager
 from src.utils.helper_functions import print_dict, env_tests
 from src.visualization.inference import save_test_images
-from src.utils.constants import RESIZED_PATH, TARGETS_PATH, INFERENCE_PATH, MODELS_PATH
+from src.utils.constants import RESIZED_LEARNING_PATH, TARGETS_LEARNING_PATH, INFERENCE_PATH, MODELS_PATH
 
 if __name__ == '__main__':
     env_tests()
@@ -74,8 +74,8 @@ if __name__ == '__main__':
     image_size = torch.load(args.model_file_name, map_location=torch.device('cpu'))["args_dict"]["image_size"]
 
     # Declare dataset manager
-    dataset_manager = DatasetManager(images_path=RESIZED_PATH,
-                                     targets_path=TARGETS_PATH,
+    dataset_manager = DatasetManager(images_path=RESIZED_LEARNING_PATH,
+                                     targets_path=TARGETS_LEARNING_PATH,
                                      image_size=image_size,
                                      num_workers=num_workers,
                                      data_aug=0,

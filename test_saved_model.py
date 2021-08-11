@@ -57,8 +57,8 @@ if __name__ == '__main__':
     print_dict(args_dict, 6)
 
     # Declare dataset manager
-    dataset_manager = DatasetManager(images_path=RESIZED_PATH,
-                                     targets_path=TARGETS_PATH,
+    dataset_manager = DatasetManager(images_path=RESIZED_LEARNING_PATH,
+                                     targets_path=TARGETS_LEARNING_PATH,
                                      image_size=args_dict['image_size'],
                                      num_workers=args_dict['num_workers'],
                                      data_aug=args_dict['data_aug'],

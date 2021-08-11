@@ -16,14 +16,14 @@ REQUIRED_PYTHON = "python3"
 
 # Image file paths
 RAW_PATH = 'data/raw/'
-LEARNING_PATH = 'data/raw/learning/'
-HOLDOUT_PATH = 'data/raw/holdout/'
-RESIZED_PATH = 'data/resized/'
+RAW_LEARNING_PATH = 'data/raw/learning/'
+RAW_HOLDOUT_PATH = 'data/raw/holdout/'
+RESIZED_LEARNING_PATH = 'data/resized/learning/'
 INFERENCE_PATH = 'data/inference/'
 GUI_RESIZED_PATH = 'data/gui_resized/'
 
 # Annotations file paths
-TARGETS_PATH = 'data/annotations/targets_resized.json'
+TARGETS_LEARNING_PATH = 'data/annotations/targets_learning_resized.json'
 ANNOTATIONS_PATH = 'data/annotations/annotations_raw.csv'
 
 # Models file path

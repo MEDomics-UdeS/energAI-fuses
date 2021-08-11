@@ -43,7 +43,7 @@ def save_test_images(model_file_name: str,
     # Load the save state on the cpu for compatibility on non-CUDA systems
     save_state = torch.load(model_file_name, map_location=torch.device('cpu'))
 
-    image_paths_raw = [image_path.replace(RESIZED_PATH, RAW_PATH) for image_path in data_loader.dataset.image_paths]
+    image_paths_raw = [image_path.replace(RESIZED_LEARNING_PATH, RAW_PATH) for image_path in data_loader.dataset.image_paths]
 
     # Declare device
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')

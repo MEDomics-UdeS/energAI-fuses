@@ -20,7 +20,7 @@ from src.data.DatasetManagers.DatasetManager import DatasetManager
 from src.models.PipelineManager import PipelineManager
 from src.utils.helper_functions import print_dict
 from src.utils.reproducibility import set_deterministic
-from src.utils.constants import RESIZED_PATH, TARGETS_PATH
+from src.utils.constants import RESIZED_LEARNING_PATH, TARGETS_LEARNING_PATH
 
 if __name__ == '__main__':
     # Record start time
@@ -164,8 +164,8 @@ if __name__ == '__main__':
     print_dict(vars(args), 6)
 
     # Declare dataset manager
-    dataset_manager = DatasetManager(images_path=RESIZED_PATH,
-                                     targets_path=TARGETS_PATH,
+    dataset_manager = DatasetManager(images_path=RESIZED_LEARNING_PATH,
+                                     targets_path=TARGETS_LEARNING_PATH,
                                      image_size=args.image_size,
                                      num_workers=args.num_workers,
                                      data_aug=args.data_aug,
