@@ -16,9 +16,13 @@ REQUIRED_PYTHON = "python3"
 
 # Image file paths
 RAW_PATH = 'data/raw/'
-RAW_LEARNING_PATH = 'data/raw/learning/'
-RAW_HOLDOUT_PATH = 'data/raw/holdout/'
-RESIZED_LEARNING_PATH = 'data/resized/learning/'
+RAW_LEARNING_PATH = RAW_PATH + 'learning/'
+RAW_HOLDOUT_PATH = RAW_PATH + 'holdout/'
+
+RESIZED_PATH = 'data/resized/'
+RESIZED_LEARNING_PATH = RESIZED_PATH + 'learning/'
+RESIZED_HOLDOUT_PATH = RESIZED_PATH + 'holdout/'
+
 INFERENCE_PATH = 'data/inference/'
 GUI_RESIZED_PATH = 'data/gui_resized/'
 

@@ -96,16 +96,11 @@ if __name__ == '__main__':
     print('=== Testing Results ===\n')
     print_dict(metrics_dict, 6, '.2%')
 
-    # # Perform an inference loop and save all images with the ground truth and predicted bounding boxes
-    # save_test_images(model_file_name=args.model_file_name,
-    #                  data_loader=data_loader_manager.data_loader_test,
-    #                  iou_threshold=args.iou_threshold,
-    #                  score_threshold=args.score_threshold,
-    #                  save_path=INFERENCE_PATH,
-    #                  image_size=image_size)
-    #
-    # # Print file save path location
-    # print(f'\nInference results saved to: {INFERENCE_PATH}')
+    """
+    TODO : 
+    - Implement holdout test set
+    - Save results to json for parsing for paper tables
+    """
 
     # Print total time for inference testing
     print(f'\nTotal time for inference testing: {str(datetime.now() - start).split(".")[0]}')
