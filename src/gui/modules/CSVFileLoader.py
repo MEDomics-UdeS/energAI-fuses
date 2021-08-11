@@ -3,7 +3,7 @@ from tkinter import filedialog
 import json
 from src.utils.constants import COLOR_PALETTE, FONT_PATH, GUI_SETTINGS
 
-class JsonFileLoader:
+class CSVFileLoader:
 
     def __init__(self, window: Toplevel) -> None:
 
@@ -54,7 +54,7 @@ class JsonFileLoader:
                                             activebackground=COLOR_PALETTE["active"],
                                             activeforeground=COLOR_PALETTE["fg"],
                                             highlightbackground=COLOR_PALETTE["active"],
-                                            text="Remove JSON",
+                                            text="Remove CSV",
                                             font=(FONT_PATH, 12),
                                             command=self.__remove_file)
 
@@ -67,7 +67,7 @@ class JsonFileLoader:
 
     def __select_file(self, window: Toplevel) -> None:
         window.filename = filedialog.askopenfile(
-            initialdir=".", title="Select a ground truth JSON file", filetypes=[("JSON files", "*.json")])
+            initialdir=".", title="Select a ground truth CSV file", filetypes=[("CSV files", "*.csv")])
 
         if window.filename:
             self.__json_label.config(text=f'{window.filename.name.split(sep="/")[-1]} selected')

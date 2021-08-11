@@ -8,7 +8,7 @@ from src.gui.modules.ImageLoader import ImageLoader
 from src.gui.modules.IOUSlider import IOUSlider
 from src.gui.modules.ScoreSlider import ScoreSlider
 from src.gui.modules.DeviceSelector import DeviceSelector
-from src.gui.modules.JsonFileLoader import JsonFileLoader
+from src.gui.modules.CSVFileLoader import CSVFileLoader
 
 class ResetButton:
 
@@ -19,7 +19,7 @@ class ResetButton:
                  iou: IOUSlider, 
                  score: ScoreSlider, 
                  device: DeviceSelector, 
-                 gt_json: JsonFileLoader) -> None:
+                 gt_json: CSVFileLoader) -> None:
 
         Button(window,
                background=COLOR_PALETTE["widgets"],
@@ -29,7 +29,8 @@ class ResetButton:
                highlightbackground=COLOR_PALETTE["active"],
                text="Restore defaults",
                font=(FONT_PATH, 12),
-               command=lambda: self.restore_defaults(model, imgdir, iou, score, device, gt_json)).grid(row=6, column=1)
+               command=lambda: self.restore_defaults(model, imgdir, iou, score, device, gt_json)
+               ).grid(row=6, column=1, pady=10)
 
     def restore_defaults(self,
                          model: ModelLoader,
@@ -37,7 +38,7 @@ class ResetButton:
                          iou: IOUSlider,
                          score: ScoreSlider,
                          device: DeviceSelector,
-                         gt_json: JsonFileLoader) -> None:
+                         gt_json: CSVFileLoader) -> None:
 
         answer = askokcancel(title="Confirm reset",
                              message="Are you sure you want to reset the settings?",

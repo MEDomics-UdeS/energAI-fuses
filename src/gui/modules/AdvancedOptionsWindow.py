@@ -4,7 +4,7 @@ from src.gui.modules.ResetButton import ResetButton
 from src.gui.modules.IOUSlider import IOUSlider
 from src.gui.modules.ScoreSlider import ScoreSlider
 from src.gui.modules.DeviceSelector import DeviceSelector
-from src.gui.modules.JsonFileLoader import JsonFileLoader
+from src.gui.modules.CSVFileLoader import CSVFileLoader
 from src.gui.modules.ModelLoader import ModelLoader
 from src.gui.modules.ImageLoader import ImageLoader
 
@@ -26,4 +26,4 @@ class AdvancedOptionsWindow:
                     iou=IOUSlider(advanced_options_window),
                     score=ScoreSlider(advanced_options_window),
                     device=DeviceSelector(advanced_options_window),
-                    gt_json=JsonFileLoader(advanced_options_window))
+                    gt_json=CSVFileLoader(advanced_options_window))
