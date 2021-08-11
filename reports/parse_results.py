@@ -32,7 +32,8 @@ def generate_figure(metric: str, curves_dict: dict, save: bool = False, show: bo
         if y_val_min < y_min:
             y_min = y_val_min
 
-    plt.legend()
+    plt.subplots_adjust(right=0.7)
+    plt.legend(bbox_to_anchor=(1.04, 1), loc='upper left')
     plt.grid()
     plt.xlabel('Epoch')
     plt.ylabel(metric)
