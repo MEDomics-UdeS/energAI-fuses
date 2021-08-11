@@ -52,7 +52,7 @@ if __name__ == '__main__':
                         help="Select the device for inference")
 
     parser.add_argument("-gtf", "--ground_truth_file", action="store", type=str, default=None,
-                        help="Select a JSON file for ground truth drawing on images")
+                        help="Select a CSV file for ground truth drawing on images")
 
     # Compute mean & std deviation on training set argument
     parser.add_argument('-norm', '--normalize', action='store', type=str,
@@ -85,7 +85,7 @@ if __name__ == '__main__':
     image_size = torch.load(args.model_file_name, map_location=torch.device('cpu'))["args_dict"]["image_size"]
 
     # Loading the images dataset
-    ds = GuiDatasetManager(image_size, args.image_path, num_workers, norm=args.normalize)
+    ds = GuiDatasetManager(image_size, args.image_path, num_workers, args.ground_truth_file)
     dl = GuiDataLoader(dataset=ds,
                        batch_size=args.batch,
                        gradient_accumulation=1,

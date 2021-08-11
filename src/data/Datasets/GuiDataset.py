@@ -3,12 +3,13 @@ import os
 
 from tqdm import trange
 from src.utils.constants import GUI_RESIZED_PATH
-from src.data.Datasets.FuseDataset import ray_load_images
+from src.data.Datasets.CustomDataset import ray_load_images
 
 from PIL import Image
 import ray
 from typing import Tuple, List
 from src.data.Datasets.CustomDataset import CustomDataset
+import json
 
 class GuiDataset(CustomDataset):
     """
@@ -16,6 +17,7 @@ class GuiDataset(CustomDataset):
     """
     def __init__(self,
                  images_path: str = None,
+                 targets_path: str = None,
                  num_workers: int = None) -> None:
         """
         Class constructor
@@ -41,11 +43,9 @@ class GuiDataset(CustomDataset):
 
             # Get ray workers IDs for varying size of dataset and num_workers
             if size < num_workers:
-                ids = [ray_load_images.remote(self._image_paths, i)
-                       for i in range(size)]
+                ids = [ray_load_images.remote(self._image_paths, i) for i in range(size)]
             else:
-                ids = [ray_load_images.remote(self._image_paths, i)
-                       for i in range(num_workers)]
+                ids = [ray_load_images.remote(self._image_paths, i) for i in range(num_workers)]
 
             # Calculate initial number of jobs left
             nb_job_left = size - num_workers
@@ -76,6 +76,19 @@ class GuiDataset(CustomDataset):
             # Specify blank image_paths and images lists
             self._image_paths = []
             self._images = []
+        
+        # Check if targets_path has been specified
+        if targets_path is not None:
+            # Load the targets json into the targets attribute in the object
+            self._targets = json.load(open(targets_path))
+
+            # Convert the targets to tensors
+            for target in self._targets:
+                for key, value in target.items():
+                    target[key] = torch.as_tensor(value, dtype=torch.int64)
+        else:
+            # Declare empty targets list
+            self._targets = []
 
 
     def __getitem__(self, index: int) -> Tuple[torch.Tensor, dict]:
@@ -85,9 +98,15 @@ class GuiDataset(CustomDataset):
         :param index: int, actual index to get
         :return: tuple, transformed current image and current targets
         """
+        # When working with small batches
+        if self._targets:
+            return self.transforms(self._images[index]), self._targets[index]
+        else:
+            return self.transforms(self._images[index]), {}
 
-        return self.transforms(self._images[index]), {}
-
+    @property
+    def targets(self):
+        return self._targets
 
     def extract_data(self, index_list: List[int]) -> Tuple[List[str], List[Image.Image], List[dict]]:
         """
@@ -102,18 +121,19 @@ class GuiDataset(CustomDataset):
         # Declare empty lists for the extracted elements
         image_paths = []
         images = []
+        targets = []
 
         # Loop through the index list
         for index in index_list:
             # Pop the elements from the object and append to the extracted elements' lists
             image_paths.append(self._image_paths.pop(index))
             images.append(self._images.pop(index))
+            targets.append(self._targets.pop(index))
 
         # Return the extracted elements
-        return image_paths, images
+        return image_paths, images, targets
 
-
-    def add_data(self, image_paths: List[str], images: List[Image.Image]) -> None:
+    def add_data(self, image_paths: List[str], images: List[Image.Image], targets: List[dict]) -> None:
         """
         Add data to the object
 
@@ -124,3 +144,4 @@ class GuiDataset(CustomDataset):
         # Add the data in arguments to the object attributes
         self._image_paths.extend(image_paths)
         self._images.extend(images)
+        self._targets.extend(targets)

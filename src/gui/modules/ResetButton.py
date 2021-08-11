@@ -19,7 +19,7 @@ class ResetButton:
                  iou: IOUSlider, 
                  score: ScoreSlider, 
                  device: DeviceSelector, 
-                 gt_json: CSVFileLoader) -> None:
+                 gt_csv: CSVFileLoader) -> None:
 
         Button(window,
                background=COLOR_PALETTE["widgets"],
@@ -29,7 +29,7 @@ class ResetButton:
                highlightbackground=COLOR_PALETTE["active"],
                text="Restore defaults",
                font=(FONT_PATH, 12),
-               command=lambda: self.restore_defaults(model, imgdir, iou, score, device, gt_json)
+               command=lambda: self.restore_defaults(model, imgdir, iou, score, device, gt_csv)
                ).grid(row=6, column=1, pady=10)
 
     def restore_defaults(self,
@@ -38,7 +38,7 @@ class ResetButton:
                          iou: IOUSlider,
                          score: ScoreSlider,
                          device: DeviceSelector,
-                         gt_json: CSVFileLoader) -> None:
+                         gt_csv: CSVFileLoader) -> None:
 
         answer = askokcancel(title="Confirm reset",
                              message="Are you sure you want to reset the settings?",
@@ -65,5 +65,5 @@ class ResetButton:
             iou.slider.set(settings_dict["iou_treshold"])
             score.slider.set(settings_dict["score_treshold"])
             device.device_option.set(settings_dict["device"])
-            gt_json.reset()
+            gt_csv.reset()
         

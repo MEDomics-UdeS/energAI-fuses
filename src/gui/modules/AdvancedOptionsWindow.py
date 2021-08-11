@@ -26,4 +26,4 @@ class AdvancedOptionsWindow:
                     iou=IOUSlider(advanced_options_window),
                     score=ScoreSlider(advanced_options_window),
                     device=DeviceSelector(advanced_options_window),
-                    gt_json=CSVFileLoader(advanced_options_window))
+                    gt_csv=CSVFileLoader(advanced_options_window))
