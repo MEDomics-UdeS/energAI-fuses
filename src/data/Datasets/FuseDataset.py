@@ -30,7 +30,8 @@ class FuseDataset(CustomDataset):
                  images_path: str = None,
                  targets_path: str = None,
                  num_workers: int = None,
-                 google_images: bool = True) -> None:
+                 google_images: bool = True,
+                 load_to_ram: bool = True) -> None:
         """
         Class constructor
 
@@ -57,36 +58,37 @@ class FuseDataset(CustomDataset):
             # Get the dataset size
             size = len(self._image_paths)
 
-            # Declare empty list to save all images in RAM
-            self._images = [None] * size
+            if load_to_ram:
+                # Declare empty list to save all images in RAM
+                self._images = [None] * size
 
-            # Get ray workers IDs
-            ids = [ray_load_images.remote(self._image_paths, i) for i in range(num_workers)]
+                # Get ray workers IDs
+                ids = [ray_load_images.remote(self._image_paths, i) for i in range(num_workers)]
 
-            # Calculate initial number of jobs left
-            nb_job_left = size - num_workers
+                # Calculate initial number of jobs left
+                nb_job_left = size - num_workers
 
-            # Ray multiprocessing loop
-            for _ in trange(size, desc='Loading images to RAM', leave=False):
-                # Get ready status and IDs of ray workers
-                ready, ids = ray.wait(ids, num_returns=1)
+                # Ray multiprocessing loop
+                for _ in trange(size, desc='Loading images to RAM', leave=False):
+                    # Get ready status and IDs of ray workers
+                    ready, ids = ray.wait(ids, num_returns=1)
 
-                # Get current image and index
-                image, idx = ray.get(ready)[0]
+                    # Get current image and index
+                    image, idx = ray.get(ready)[0]
 
-                # Save current image to the images list
-                self._images[idx] = image
+                    # Save current image to the images list
+                    self._images[idx] = image
 
-                # Check if there are jobs left
-                if nb_job_left > 0:
-                    # Assign workers to the remaining tasks
-                    ids.extend([ray_load_images.remote(self._image_paths, size - nb_job_left)])
+                    # Check if there are jobs left
+                    if nb_job_left > 0:
+                        # Assign workers to the remaining tasks
+                        ids.extend([ray_load_images.remote(self._image_paths, size - nb_job_left)])
 
-                    # Decrease number of jobs left
-                    nb_job_left -= 1
+                        # Decrease number of jobs left
+                        nb_job_left -= 1
 
-            # Shutdown ray
-            ray.shutdown()
+                # Shutdown ray
+                ray.shutdown()
         else:
             # Specify blank image_paths and images lists
             self._image_paths = []
@@ -124,7 +126,6 @@ class FuseDataset(CustomDataset):
     @property
     def targets(self):
         return self._targets
-
 
     def extract_data(self, index_list: List[int]) -> Tuple[List[str], List[Image.Image], List[dict]]:
         """

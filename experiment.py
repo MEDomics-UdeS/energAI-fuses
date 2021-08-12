@@ -15,6 +15,7 @@ import argparse
 from datetime import datetime
 from multiprocessing import cpu_count
 
+from src.data.SplittingManager import SplittingManager
 from src.data.DataLoaderManagers.DataLoaderManager import DataLoaderManager
 from src.data.DatasetManagers.DatasetManager import DatasetManager
 from src.models.PipelineManager import PipelineManager
@@ -165,6 +166,14 @@ if __name__ == '__main__':
     # Display arguments in console
     print('\n=== Arguments & Hyperparameters ===\n')
     print_dict(vars(args), 6)
+
+    # Declare splitting manager
+    splitting_manager = SplittingManager(validation_size=args.validation_size,
+                                         test_size=args.test_size,
+                                         k_cross_valid=args.k_cross_valid,
+                                         seed=args.random_seed,
+                                         num_workers=args.num_workers,
+                                         google_images=not args.no_google_images)
 
     # Declare dataset manager
     dataset_manager = DatasetManager(images_path=RESIZED_LEARNING_PATH,

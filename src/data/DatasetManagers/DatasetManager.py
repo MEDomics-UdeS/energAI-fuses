@@ -61,7 +61,6 @@ class DatasetManager(CustomDatasetManager):
         """
         self._google_images = google_images
         self._seed = seed
-        self._k_cross_valid = k_cross_valid
 
         # Check if any image exists in the data/resized folder
         if any(file.endswith(f'.{IMAGE_EXT}') for file in os.listdir(RESIZED_LEARNING_PATH)):
