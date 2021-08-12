@@ -61,6 +61,7 @@ class DatasetManager(CustomDatasetManager):
         """
         self._google_images = google_images
         self._seed = seed
+        self._k_cross_valid = k_cross_valid
 
         # Check if any image exists in the data/resized folder
         if any(file.endswith(f'.{IMAGE_EXT}') for file in os.listdir(RESIZED_LEARNING_PATH)):
@@ -107,11 +108,11 @@ class DatasetManager(CustomDatasetManager):
 
         # Split the training set into training + validation
         self._dataset_train, self._dataset_valid = self.__split_dataset(self._dataset_train, self._dataset_valid,
-                                                                          validation_size, total_size)
+                                                                        validation_size, total_size)
 
         # Split the training set into training + testing
         self._dataset_train, self._dataset_test = self.__split_dataset(self._dataset_train, self._dataset_test,
-                                                                         test_size, total_size)
+                                                                       test_size, total_size)
 
         if norm == 'precalculated':
             # Use precalculated mean and standard deviation

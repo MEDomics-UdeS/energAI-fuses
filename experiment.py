@@ -136,6 +136,9 @@ if __name__ == '__main__':
                         help='Specify whether to save/use for inference testing the last model, otherwise'
                              'the best model will be used')
 
+    # Argument to enable k-fold cross-validation
+    parser.add_argument('-kcv', '--k_cross_valid', action='store', type=int, default=1,
+                        help='Number of folds for k-fold cross validation (1 = no k-fold cross validation)')
     # Parsing arguments
     args = parser.parse_args()
 
@@ -183,30 +186,30 @@ if __name__ == '__main__':
                                             deterministic=args.deterministic)
 
     # Declare training, validation and testing manager
-    train_valid_test_manager = PipelineManager(data_loader_manager=data_loader_manager,
-                                               file_name=file_name,
-                                               model_name=args.model,
-                                               learning_rate=args.learning_rate,
-                                               weight_decay=args.weight_decay,
-                                               es_patience=args.es_patience,
-                                               es_delta=args.es_delta,
-                                               mixed_precision=args.mixed_precision,
-                                               gradient_accumulation=args.gradient_accumulation,
-                                               pretrained=not args.no_pretrained,
-                                               gradient_clip=args.gradient_clip,
-                                               args_dict=vars(args),
-                                               save_model=not args.no_save_model,
-                                               image_size=args.image_size,
-                                               save_last=args.save_last,
-                                               log_training_metrics=args.log_training_metrics,
-                                               log_memory=args.log_memory,
-                                               class_loss_ceof=args.set_cost_class if args.model == 'detr' else None,
-                                               bbox_loss_coef=args.set_cost_bbox if args.model == 'detr' else None,
-                                               giou_loss_coef=args.set_cost_giou if args.model == 'detr' else None,
-                                               eos_coef=args.eos_coef if args.model == 'detr' else None)
+    pipeline_manager = PipelineManager(data_loader_manager=data_loader_manager,
+                                       file_name=file_name,
+                                       model_name=args.model,
+                                       learning_rate=args.learning_rate,
+                                       weight_decay=args.weight_decay,
+                                       es_patience=args.es_patience,
+                                       es_delta=args.es_delta,
+                                       mixed_precision=args.mixed_precision,
+                                       gradient_accumulation=args.gradient_accumulation,
+                                       pretrained=not args.no_pretrained,
+                                       gradient_clip=args.gradient_clip,
+                                       args_dict=vars(args),
+                                       save_model=not args.no_save_model,
+                                       image_size=args.image_size,
+                                       save_last=args.save_last,
+                                       log_training_metrics=args.log_training_metrics,
+                                       log_memory=args.log_memory,
+                                       class_loss_ceof=args.set_cost_class if args.model == 'detr' else None,
+                                       bbox_loss_coef=args.set_cost_bbox if args.model == 'detr' else None,
+                                       giou_loss_coef=args.set_cost_giou if args.model == 'detr' else None,
+                                       eos_coef=args.eos_coef if args.model == 'detr' else None)
 
     # Call the training, validation and testing manager to run the pipeline
-    train_valid_test_manager(args.epochs)
+    pipeline_manager(args.epochs)
 
     # Print the run time of the current experiment
     print(f'\nTotal time for current experiment:\t{str(datetime.now() - start).split(".")[0]}')
