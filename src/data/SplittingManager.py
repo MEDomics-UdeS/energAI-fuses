@@ -27,6 +27,9 @@ class SplittingManager:
         self.__valid_indices_list = []
         self.__test_indices_list = []
 
+        self.__most_freq_labels = [max(set(target['labels'].tolist()), key=target['labels'].tolist().count)
+                                   for target in self.__dataset.targets]
+
         # if k_cross_valid == 1:
         #
         # else:
