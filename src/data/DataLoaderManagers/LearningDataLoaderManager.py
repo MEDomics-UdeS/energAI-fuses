@@ -11,16 +11,16 @@ Description:
     Generate data loaders for batch management and multiprocessing during training, validation and testing.
 """
 
-from src.data.DatasetManagers.DatasetManager import DatasetManager
+from src.data.DatasetManagers.LearningDatasetManager import LearningDatasetManager
 from src.data.DataLoaderManagers.CustomDataLoaderManager import CustomDataLoaderManager
 
 
-class DataLoaderManager(CustomDataLoaderManager):
+class LearningDataLoaderManager(CustomDataLoaderManager):
     """
     Data Loader Manager class, handles the creation of the training, validation and testing data loaders.
     """
     def __init__(self,
-                 dataset_manager: DatasetManager,
+                 dataset_manager: LearningDatasetManager,
                  batch_size: int,
                  gradient_accumulation: int,
                  num_workers: int,

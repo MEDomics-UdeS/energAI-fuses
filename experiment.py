@@ -16,8 +16,8 @@ from datetime import datetime
 from multiprocessing import cpu_count
 
 from src.data.SplittingManager import SplittingManager
-from src.data.DataLoaderManagers.DataLoaderManager import DataLoaderManager
-from src.data.DatasetManagers.DatasetManager import DatasetManager
+from src.data.DataLoaderManagers.LearningDataLoaderManager import LearningDataLoaderManager
+from src.data.DatasetManagers.LearningDatasetManager import LearningDatasetManager
 from src.models.PipelineManager import PipelineManager
 from src.utils.helper_functions import print_dict
 from src.utils.reproducibility import set_deterministic
@@ -176,19 +176,20 @@ if __name__ == '__main__':
                                          google_images=not args.no_google_images)
 
     # Declare dataset manager
-    dataset_manager = DatasetManager(images_path=RESIZED_LEARNING_PATH,
-                                     targets_path=TARGETS_LEARNING_PATH,
-                                     image_size=args.image_size,
-                                     num_workers=args.num_workers,
-                                     data_aug=args.data_aug,
-                                     validation_size=args.validation_size,
-                                     test_size=args.test_size,
-                                     norm=args.normalize,
-                                     google_images=not args.no_google_images,
-                                     seed=args.random_seed)
+
+    dataset_manager = LearningDatasetManager(images_path=RESIZED_LEARNING_PATH,
+                                             targets_path=TARGETS_LEARNING_PATH,
+                                             image_size=args.image_size,
+                                             num_workers=args.num_workers,
+                                             data_aug=args.data_aug,
+                                             validation_size=args.validation_size,
+                                             test_size=args.test_size,
+                                             norm=args.normalize,
+                                             google_images=not args.no_google_images,
+                                             seed=args.random_seed)
 
     # Declare data loader manager
-    data_loader_manager = DataLoaderManager(dataset_manager=dataset_manager,
+    data_loader_manager = LearningDataLoaderManager(dataset_manager=dataset_manager,
                                             batch_size=args.batch,
                                             gradient_accumulation=args.gradient_accumulation,
                                             num_workers=args.num_workers,

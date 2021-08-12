@@ -1,51 +1,143 @@
 from tkinter import *
-import subprocess as sp
+import os
+import json
+from tkinter.messagebox import showerror
 
-from src.gui.modules.device_selector import DeviceSelector
-from src.gui.modules.score_slider import Score_Slider
-from src.gui.modules.iou_slider import IoU_Slider
-from src.gui.modules.model_loader import Model_Loader
-from src.gui.modules.image_loader import Image_Loader
-from image_viewer import Image_Viewer
+from src.gui.modules.ModelLoader import ModelLoader
+from src.gui.modules.ImageLoader import ImageLoader
+from src.gui.modules.ReadOnlyTextBox import ReadOnlyTextBox
+from src.gui.modules.OuputRedirector import OutputRedirector
+from src.gui.modules.AdvancedOptionsWindow import AdvancedOptionsWindow
 
-from src.utils.constants import INFERENCE_PATH
+from src.utils.constants import INFERENCE_PATH, COLOR_PALETTE, FONT_PATH, GUI_SETTINGS
+from src.utils.helper_functions import enter_default_json
+
+
+class GUI(Tk):
+
+    def __init__(self) -> None:
+
+        # Initializing the root window
+        super().__init__()
+        self.configure(background=COLOR_PALETTE["bg"])
+
+        # Setting the title
+        self.title("EnergAI-fuses GUI")
+        
+        # Looking for user settings
+        if os.path.isfile(GUI_SETTINGS) is False:
+            self.create_json_file()
+
+        # Putting the widgets on screen
+        self.__model_ld = ModelLoader(self)
+        self.__img_dir = ImageLoader(self)
+
+        Label(self,
+              bg=COLOR_PALETTE["bg"],
+              fg=COLOR_PALETTE["fg"],
+              text="Start inference test",
+              font=(FONT_PATH, 14),
+              width=40
+              ).grid(row=3, column=1)
+
+        Button(self,
+               background=COLOR_PALETTE["widgets"],
+               foreground=COLOR_PALETTE["fg"],
+               activebackground=COLOR_PALETTE["active"],
+               activeforeground=COLOR_PALETTE["fg"],
+               highlightbackground=COLOR_PALETTE["active"],
+               text="Start",
+               font=(FONT_PATH, 14),
+               command=self.__start_inference
+               ).grid(row=4, column=1)
+
+        Button(self,
+               background=COLOR_PALETTE["widgets"],
+               foreground=COLOR_PALETTE["fg"],
+               activebackground=COLOR_PALETTE["active"],
+               activeforeground=COLOR_PALETTE["fg"],
+               highlightbackground=COLOR_PALETTE["active"],
+               text="Advanced options",
+               font=(FONT_PATH, 12),
+               command=lambda: AdvancedOptionsWindow(window=self, 
+                                                     model=self.__model_ld, 
+                                                     img_dir=self.__img_dir)
+               ).grid(row=4, column=2, pady=10)
+
+        self.__frame = LabelFrame(self,
+                   background=COLOR_PALETTE["bg"],
+                   foreground=COLOR_PALETTE["fg"],
+                   text="Application output",
+                   font=(FONT_PATH, 14),
+                   width=860,
+                   height=200
+        )
+        self.__frame.grid(row=5, column=0, columnspan=3, padx=20, pady=20)
+        self.__frame.grid_propagate(False)
+        
+        self.__textbox = ReadOnlyTextBox(window=self.__frame)
+
+
+    def create_json_file(self) -> None:
+        with open(GUI_SETTINGS, "a+") as f_obj:
+            enter_default_json(f_obj)
+
+
+    def __check_for_errors(self, settings: dict) -> str:
+        error_message = ""
+        
+        if "model" not in settings:
+            error_message += "No model selected.\n"
+        if "imgdir" not in settings:
+            error_message += "No image directory selected.\n"
+        if "iou_treshold" not in settings:
+            error_message += "No IoU treshold selected. Please see advanced options.\n"
+        if "score_treshold" not in settings:
+            error_message += "No score treshold selected. Please see advanced options.\n"
+        if "device" not in settings:
+            error_message += "No device selected. Please see advanced options.\n"
+        
+        return error_message
+    
+    
+    def __start_inference(self) -> None:
+        # Load the user settings
+        with open(GUI_SETTINGS, "r") as f_obj:
+            settings_dict = json.load(f_obj)
+        
+        # Look for missing elements in the user settings
+        if self.__check_for_errors(settings_dict):
+            showerror(title="Error",
+                      message=self.__check_for_errors(settings_dict))
+        else:
+            # Create the subprocess command
+            cmd = [
+                'python', 'final_product.py',
+                '--image_path', settings_dict["imgdir"],
+                '--inference_path', INFERENCE_PATH,
+                '--model_file_name', settings_dict["model"],
+                '--iou_threshold', settings_dict["iou_treshold"],
+                '--score_threshold', settings_dict["score_treshold"],
+                '--device', settings_dict["device"]
+            ]
+
+            # Adding the ground truth json file if one is entered by the user
+            try:
+                settings_dict["ground_truth"]
+                cmd.extend(("--ground_truth_file", settings_dict["ground_truth"]))
+            except KeyError:
+                pass
+
+            # Execute the current command in an output redirector
+            OutputRedirector(self, self.__textbox, cmd)
+
 
 if __name__ == '__main__':
-        
-    root = Tk()
-    root.title("Inference test")
 
-    model_ld = Model_Loader(root)
-    img_dir = Image_Loader(root)
-    iou = IoU_Slider(root)
-    score = Score_Slider(root)
-    device_select = DeviceSelector(root)
+    # This fixes a multithreading error with torch
+    os.environ["MKL_THREADING_LAYER"] = "GNU"
 
-    Label(root, text="").grid(row=9, column=2, pady=25)
-    Label(root, text="Start inference test").grid(row=5, column=2, pady=5)
-    Button(root, text="Start", command=lambda: start_inference(model_ld, img_dir, iou, score)).grid(row=6, column=2)
-
-
-    def start_inference(model_ld, img_dir, iou, score):
-
-        cmd = [
-            'python', 'final_product.py',
-            '--image_path', img_dir.img_dir,
-            '--inference_path', INFERENCE_PATH,
-            '--model_file_name', model_ld.model,
-            '--iou_threshold', iou.value,
-            '--score_threshold', score.value,
-            '--device', device_select.device
-            ]
-        
-        # Execute current command
-        p = sp.Popen(cmd)
-
-        # Wait until the command finishes before continuing
-        p.wait()
-
-        top = Toplevel()
-
-        Image_Viewer(window=top)
-
-    root.mainloop()
+    # Starts the GUI application
+    app = GUI()
+    app.protocol("WM_DELETE_WINDOW", app.quit)
+    app.mainloop()
