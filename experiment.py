@@ -15,8 +15,8 @@ import argparse
 from datetime import datetime
 from multiprocessing import cpu_count
 
-from src.data.DataLoaderManagers.DataLoaderManager import DataLoaderManager
-from src.data.DatasetManagers.DatasetManager import DatasetManager
+from src.data.DataLoaderManagers.LearningDataLoaderManager import LearningDataLoaderManager
+from src.data.DatasetManagers.LearningDatasetManager import LearningDatasetManager
 from src.models.PipelineManager import PipelineManager
 from src.utils.helper_functions import print_dict
 from src.utils.reproducibility import set_deterministic
@@ -164,7 +164,7 @@ if __name__ == '__main__':
     print_dict(vars(args), 6)
 
     # Declare dataset manager
-    dataset_manager = DatasetManager(images_path=RESIZED_PATH,
+    dataset_manager = LearningDatasetManager(images_path=RESIZED_PATH,
                                      targets_path=TARGETS_PATH,
                                      image_size=args.image_size,
                                      num_workers=args.num_workers,
@@ -176,7 +176,7 @@ if __name__ == '__main__':
                                      seed=args.random_seed)
 
     # Declare data loader manager
-    data_loader_manager = DataLoaderManager(dataset_manager=dataset_manager,
+    data_loader_manager = LearningDataLoaderManager(dataset_manager=dataset_manager,
                                             batch_size=args.batch,
                                             gradient_accumulation=args.gradient_accumulation,
                                             num_workers=args.num_workers,

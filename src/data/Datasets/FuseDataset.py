@@ -44,7 +44,7 @@ class FuseDataset(CustomDataset):
             ray.init(include_dashboard=False)
 
             # Get all survey images paths and ignore the .gitkeep file
-            images = [img for img in sorted(os.listdir(images_path)) if img.startswith('S') or img.startswith('G')]
+            images = [img for img in sorted(os.listdir(images_path)) if img.startswith('.') is False]
 
             if not google_images:
                 google_imgs = [image for image in images if image.startswith('G')]
@@ -60,8 +60,13 @@ class FuseDataset(CustomDataset):
             # Declare empty list to save all images in RAM
             self._images = [None] * size
 
-            # Get ray workers IDs
-            ids = [ray_load_images.remote(self._image_paths, i) for i in range(num_workers)]
+            # Get ray workers IDs for varying size of dataset and num_workers
+            if size < num_workers:
+                ids = [ray_load_images.remote(
+                    self._image_paths, i) for i in range(size)]
+            else:
+                ids = [ray_load_images.remote(
+                    self._image_paths, i) for i in range(num_workers)]
 
             # Calculate initial number of jobs left
             nb_job_left = size - num_workers

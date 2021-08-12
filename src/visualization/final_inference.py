@@ -166,13 +166,7 @@ def draw_annotations(draw: ImageDraw.ImageDraw, pred_box_dict: dict, target_box_
     # Drawing predicted bounding boxes on the image
     for pred_box, (box_width, font) in zip(pred_boxes, pred_annotations):
         draw.rectangle(pred_box, outline=COLOR_PALETTE["yellow"], width=box_width)
-        
-    # Drawing predicted labels over the bounding boxes on the image
-    for pred_box, pred_label, pred_score, (box_width, font)\
-            in zip(pred_boxes, pred_labels, pred_scores, pred_annotations):
-        draw.text(
-            (pred_box[0], pred_box[1]), text=f'{pred_label} {pred_score:.4f}', font=font, fill=COLOR_PALETTE["fg"], stroke_width=int(font.size / 10), stroke_fill=COLOR_PALETTE["bg"])
-    
+
     if target_box_dict:
         target_boxes = target_box_dict['boxes'].tolist()
         target_labels = [list(CLASS_DICT.keys())[list(CLASS_DICT.values()).index(label)]
@@ -190,6 +184,12 @@ def draw_annotations(draw: ImageDraw.ImageDraw, pred_box_dict: dict, target_box_
                 in zip(target_boxes, target_labels, target_scores, target_annotations):
             draw.text(
                 (target_box[0], target_box[1] + font.size), text=f'{target_label} {target_score:.4f}', font=font, fill=COLOR_PALETTE["green"], stroke_width=int(font.size / 10), stroke_fill=COLOR_PALETTE["bg"])
+
+    # Drawing predicted labels over the bounding boxes on the image
+    for pred_box, pred_label, pred_score, (box_width, font)\
+            in zip(pred_boxes, pred_labels, pred_scores, pred_annotations):
+        draw.text(
+            (pred_box[0], pred_box[1]), text=f'{pred_label} {pred_score:.4f}', font=font, fill=COLOR_PALETTE["yellow"], stroke_width=int(font.size / 10), stroke_fill=COLOR_PALETTE["bg"])
 
 
 def resize_box_coord(box_dict: dict, downsize_ratio: float, x_offset: float, y_offset: float) -> dict:

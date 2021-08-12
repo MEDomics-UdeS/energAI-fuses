@@ -1,11 +1,9 @@
 from src.data.Datasets.FuseDataset import FuseDataset
-from src.data.Datasets.GuiDataset import GuiDataset
 from src.data.DatasetManagers.CustomDatasetManager import CustomDatasetManager, ray_resize_images
 import os
 from src.utils.constants import IMAGE_EXT, GUI_RESIZED_PATH, MEAN, STD, GUI_TARGETS_PATH
 import ray
 from tqdm import trange
-import pandas as pd
 import json
 
 class GuiDatasetManager(CustomDatasetManager):
@@ -26,7 +24,7 @@ class GuiDatasetManager(CustomDatasetManager):
             # Resize all images
             self._resize_images(image_size, num_workers, images_path, gt_file)
 
-        self._dataset = GuiDataset(images_path, targets_path=GUI_TARGETS_PATH if gt_file is not None else None, num_workers=num_workers)
+        self._dataset = FuseDataset(GUI_RESIZED_PATH, targets_path=GUI_TARGETS_PATH if gt_file else None, num_workers=num_workers, google_images=True)
         
         self._dataset.transforms = self._transforms_base(MEAN, STD)
     

@@ -16,7 +16,6 @@ import os
 import sys
 import zipfile
 
-import pandas as pd
 import numpy as np
 import ray
 import requests
@@ -31,7 +30,7 @@ from src.utils.constants import *
 from src.data.Datasets.FuseDataset import FuseDataset
 
 
-class DatasetManager(CustomDatasetManager):
+class LearningDatasetManager(CustomDatasetManager):
     """
     Dataset Manager class, handles the creation of the training, validation and testing datasets.
     """
