@@ -16,7 +16,6 @@ import os
 import sys
 import zipfile
 
-import pandas as pd
 import numpy as np
 import ray
 import requests
@@ -25,13 +24,13 @@ from torchvision import transforms
 from sklearn.model_selection import StratifiedShuffleSplit
 from tqdm import tqdm, trange
 from typing import Tuple, Optional
-from src.data.DatasetManagers.CustomDatasetManager import CustomDatasetManager, ray_resize_images_for_training, ray_get_rgb
+from src.data.DatasetManagers.CustomDatasetManager import CustomDatasetManager, ray_resize_images, ray_get_rgb
 
 from src.utils.constants import *
 from src.data.Datasets.FuseDataset import FuseDataset
 
 
-class DatasetManager(CustomDatasetManager):
+class LearningDatasetManager(CustomDatasetManager):
     """
     Dataset Manager class, handles the creation of the training, validation and testing datasets.
     """
@@ -368,9 +367,6 @@ class DatasetManager(CustomDatasetManager):
         # Create image paths
         image_paths = [os.path.join(RAW_LEARNING_PATH, img) for img in imgs]
 
-        # Convert the annotations csv file to a pandas DataFrame
-        annotations = pd.read_csv(ANNOTATIONS_PATH)
-
         # Get dataset size
         size = len(image_paths)
 
@@ -379,7 +375,7 @@ class DatasetManager(CustomDatasetManager):
         targets_list = [None] * size
 
         # Get ray workers IDs
-        ids = [ray_resize_images_for_training.remote(image_paths, image_size, annotations, i) for i in range(num_workers)]
+        ids = [ray_resize_images.remote(image_paths, RESIZED_PATH, image_size, ANNOTATIONS_PATH, i) for i in range(num_workers)]
 
         # Calculate initial number of jobs left
         nb_job_left = size - num_workers
@@ -399,7 +395,7 @@ class DatasetManager(CustomDatasetManager):
             # Check if there are jobs left
             if nb_job_left > 0:
                 # Assign workers to the remaining tasks
-                ids.extend([ray_resize_images_for_training.remote(image_paths, image_size, annotations, size - nb_job_left)])
+                ids.extend([ray_resize_images.remote(image_paths, RESIZED_PATH, image_size, ANNOTATIONS_PATH, size - nb_job_left)])
 
                 # Decreasing the number of jobs left
                 nb_job_left -= 1

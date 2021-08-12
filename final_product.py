@@ -16,7 +16,6 @@ import argparse
 from datetime import datetime
 from multiprocessing import cpu_count
 
-
 import torch
 
 from src.data.DatasetManagers.GuiDatasetManager import GuiDatasetManager
@@ -27,6 +26,7 @@ from src.visualization.final_inference import save_test_images
 from src.utils.constants import INFERENCE_PATH, MODELS_PATH
 
 if __name__ == '__main__':
+    
     env_tests()
 
     # Record start time
@@ -50,6 +50,9 @@ if __name__ == '__main__':
 
     parser.add_argument('-d', '--device', action='store', type=str, default='cpu',
                         help="Select the device for inference")
+
+    parser.add_argument("-gtf", "--ground_truth_file", action="store", type=str, default=None,
+                        help="Select a CSV file for ground truth drawing on images")
 
     # Compute mean & std deviation on training set argument
     parser.add_argument('-norm', '--normalize', action='store', type=str,
@@ -82,7 +85,7 @@ if __name__ == '__main__':
     image_size = torch.load(args.model_file_name, map_location=torch.device('cpu'))["args_dict"]["image_size"]
 
     # Loading the images dataset
-    ds = GuiDatasetManager(image_size, args.image_path, num_workers, norm=args.normalize)
+    ds = GuiDatasetManager(image_size, args.image_path, num_workers, args.ground_truth_file)
     dl = GuiDataLoader(dataset=ds,
                        batch_size=args.batch,
                        gradient_accumulation=1,

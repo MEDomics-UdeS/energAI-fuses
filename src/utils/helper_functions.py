@@ -233,3 +233,18 @@ def format_detr_outputs(outputs: List[dict], target_sizes: torch.Tensor, device:
                 for b, l, s in zip(boxes, labels, scores)]
 
     return results
+
+
+def enter_default_json(file):
+    # Loading in the default values for inference
+    iou_treshold = "0.5"
+    score_treshold = "0.5"
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+
+    # Creating the settings dictionnary
+    settings_dict = {"iou_treshold": iou_treshold,
+                     "score_treshold": score_treshold,
+                     "device": device}
+
+    # Saving the settings in json file
+    json.dump(settings_dict, file)

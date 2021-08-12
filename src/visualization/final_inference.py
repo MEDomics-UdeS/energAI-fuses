@@ -17,7 +17,7 @@ from tqdm import tqdm
 from torch.utils.data import DataLoader
 from src.models.models import load_model
 
-from src.utils.constants import CLASS_DICT, FONT_PATH, GUI_RESIZED_PATH, INFERENCE_PATH, IMAGE_EXT
+from src.utils.constants import CLASS_DICT, FONT_PATH, GUI_RESIZED_PATH, INFERENCE_PATH, IMAGE_EXT, COLOR_PALETTE
 from src.utils.helper_functions import filter_by_nms, filter_by_score, format_detr_outputs
 import os
 
@@ -74,7 +74,7 @@ def save_test_images(model_file_name: str,
             os.remove(f'{INFERENCE_PATH}{file}')
 
     # Loop through each batch in the data loader
-    for batch_no, (images, _) in enumerate(data_loader):
+    for batch_no, (images, targets) in enumerate(data_loader):
         # Get current batch indices
         indices = range(data_loader.batch_size * batch_no,
                         min(data_loader.batch_size * (batch_no + 1), len(data_loader.dataset)))
@@ -98,9 +98,8 @@ def save_test_images(model_file_name: str,
 
         # Load images in the current batch
         images_raw = [Image.open(image_paths_raw[index]) for index in indices]
-
-        # Loop through each image in the current batch
-        for index, image, image_raw, pred in zip(indices, images, images_raw, preds):
+        
+        for index, image, image_raw, target, pred in zip(indices, images, images_raw, targets, preds):
             image_resized = image_raw.copy()
 
             # Check if the original size is larger than the maximum image size
@@ -119,21 +118,23 @@ def save_test_images(model_file_name: str,
             x_offset = int((image_size - image_resized.size[0]) / 2)
             y_offset = int((image_size - image_resized.size[1]) / 2)
 
+            if target:
+                target = resize_box_coord(target, downsize_ratio, x_offset, y_offset)
             pred = resize_box_coord(pred, downsize_ratio, x_offset, y_offset)
 
             # Declare an ImageDraw object
             draw = ImageDraw.Draw(image_raw)
 
             # Defines bbox outlines width and font for image drawing
-            pred_annotations = scale_annotation_sizes(image_raw, pred["boxes"])
+            pred_annotations, target_annotations = scale_annotation_sizes(image_raw, pred, target)
 
             # Drawing the annotations on the image
-            draw_annotations(draw, pred, pred_annotations)
+            draw_annotations(draw, pred, target, pred_annotations, target_annotations)
 
             # Save the image
             image_raw.save(f'{save_path}'
-                           f'{data_loader.dataset.image_paths[index].rsplit("/", 1)[-1].split(".", 1)[0]}'
-                           f'.{IMAGE_EXT}')
+                            f'{data_loader.dataset.image_paths[index].rsplit("/", 1)[-1].split(".", 1)[0]}'
+                            f'.{IMAGE_EXT}')
 
         # Update the progress bar
         pbar.update()
@@ -142,7 +143,7 @@ def save_test_images(model_file_name: str,
     pbar.close()
 
 
-def draw_annotations(draw: ImageDraw.ImageDraw, pred_box_dict: dict, pred_annotations: list):
+def draw_annotations(draw: ImageDraw.ImageDraw, pred_box_dict: dict, target_box_dict: dict, pred_annotations: list, target_annotations: list) -> None:
     """
     Function to draw bounding boxes on an image
 
@@ -164,13 +165,31 @@ def draw_annotations(draw: ImageDraw.ImageDraw, pred_box_dict: dict, pred_annota
 
     # Drawing predicted bounding boxes on the image
     for pred_box, (box_width, font) in zip(pred_boxes, pred_annotations):
-        draw.rectangle(pred_box, outline="red", width=box_width)
+        draw.rectangle(pred_box, outline=COLOR_PALETTE["yellow"], width=box_width)
+
+    if target_box_dict:
+        target_boxes = target_box_dict['boxes'].tolist()
+        target_labels = [list(CLASS_DICT.keys())[list(CLASS_DICT.values()).index(label)]
+                         for label in target_box_dict['labels'].tolist()]
+        # Declare list of confidence scores as 100% confidence score for each box
+        target_scores = [1] * len(target_labels)
         
+        # Drawing predicted bounding boxes on the image
+        for target_box, (box_width, font) in zip(target_boxes, target_annotations):
+            draw.rectangle(
+                target_box, outline=COLOR_PALETTE["green"], width=box_width)
+
+        # Drawing predicted labels over the bounding boxes on the image
+        for target_box, target_label, target_score, (box_width, font)\
+                in zip(target_boxes, target_labels, target_scores, target_annotations):
+            draw.text(
+                (target_box[0], target_box[1] + font.size), text=f'{target_label} {target_score:.4f}', font=font, fill=COLOR_PALETTE["green"], stroke_width=int(font.size / 10), stroke_fill=COLOR_PALETTE["bg"])
+
     # Drawing predicted labels over the bounding boxes on the image
     for pred_box, pred_label, pred_score, (box_width, font)\
             in zip(pred_boxes, pred_labels, pred_scores, pred_annotations):
         draw.text(
-            (pred_box[0], pred_box[1] + font.size), text=f'{pred_label} {pred_score:.4f}', font=font, fill=(255, 255, 255, 0))
+            (pred_box[0], pred_box[1]), text=f'{pred_label} {pred_score:.4f}', font=font, fill=COLOR_PALETTE["yellow"], stroke_width=int(font.size / 10), stroke_fill=COLOR_PALETTE["bg"])
 
 
 def resize_box_coord(box_dict: dict, downsize_ratio: float, x_offset: float, y_offset: float) -> dict:
@@ -191,26 +210,38 @@ def resize_box_coord(box_dict: dict, downsize_ratio: float, x_offset: float, y_o
     return box_dict
 
 
-def scale_annotation_sizes(img: Image, pred_boxes: list, box_scaler: float = 0.006, text_scaler: float = 0.015) -> list:
+def scale_annotation_sizes(img: Image, pred: dict, target: dict) -> list:
     """
     Function to scale the annotations drawn on an image during inference
+
+    Bounding boxes are scaled with a power function in relation to the area of the box over the area of the picture.
+    Font sizes are scaled with a power function in relation to the area of the box alone
     """
-    MAX_BBOX_SIZE = 32
-    MAX_FONT_SIZE = 64
     img_area = img.size[0] * img.size[1]
 
     pred_annotations = []
+    target_annotations = []
 
-    for box in pred_boxes:
+    for box in pred["boxes"]:
         box_area = (box[0] - box[2]) * (box[1] - box[3])
 
-        box_width = min(
-            int(img_area / box_area * box_scaler) + 8, MAX_BBOX_SIZE)
-        font_size = min(int(max(img.size) * text_scaler) + 6, MAX_FONT_SIZE)
+        box_width = int(pow(img_area / box_area * 60, 0.25))
+        font_size = int(pow(box_area * 1.2, 0.3))
 
         pred_annotations.append(
             (box_width, ImageFont.truetype(FONT_PATH, font_size)))
+        
+    try:
+        for box in target["boxes"]:
+            box_area = (box[0] - box[2]) * (box[1] - box[3])
 
+            box_width = int(pow(img_area / box_area * 60, 0.25))
+            font_size = int(pow(box_area * 1.2, 0.3))
+
+            target_annotations.append(
+                (box_width, ImageFont.truetype(FONT_PATH, font_size)))
+    except KeyError:
+        pass
 
     # Declare the font object to write the confidence scores on the images
-    return pred_annotations
+    return pred_annotations, target_annotations

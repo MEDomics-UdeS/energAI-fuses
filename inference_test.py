@@ -17,8 +17,8 @@ from datetime import datetime
 from multiprocessing import cpu_count
 
 import torch
-from src.data.DataLoaderManagers.DataLoaderManager import DataLoaderManager
-from src.data.DatasetManagers.DatasetManager import DatasetManager
+from src.data.DataLoaderManagers.LearningDataLoaderManager import LearningDataLoaderManager
+from src.data.DatasetManagers.LearningDatasetManager import LearningDatasetManager
 from src.utils.helper_functions import print_dict, env_tests
 from src.visualization.inference import save_test_images
 from src.utils.constants import RESIZED_LEARNING_PATH, TARGETS_LEARNING_PATH, INFERENCE_PATH, MODELS_PATH
@@ -74,19 +74,20 @@ if __name__ == '__main__':
     image_size = torch.load(args.model_file_name, map_location=torch.device('cpu'))["args_dict"]["image_size"]
 
     # Declare dataset manager
-    dataset_manager = DatasetManager(images_path=RESIZED_LEARNING_PATH,
-                                     targets_path=TARGETS_LEARNING_PATH,
-                                     image_size=image_size,
-                                     num_workers=num_workers,
-                                     data_aug=0,
-                                     validation_size=0,
-                                     test_size=1,
-                                     norm=args.normalize,
-                                     google_images=not args.no_google_images,
-                                     seed=0)
+
+    dataset_manager = LearningDatasetManager(images_path=RESIZED_LEARNING_PATH,
+                                             targets_path=TARGETS_LEARNING_PATH,
+                                             image_size=image_size,
+                                             num_workers=num_workers,
+                                             data_aug=0,
+                                             validation_size=0,
+                                             test_size=1,
+                                             norm=args.normalize,
+                                             google_images=not args.no_google_images,
+                                             seed=0)
 
     # Declare data loader manager
-    data_loader_manager = DataLoaderManager(dataset_manager=dataset_manager,
+    data_loader_manager = LearningDataLoaderManager(dataset_manager=dataset_manager,
                                             batch_size=args.batch,
                                             gradient_accumulation=1,
                                             num_workers=num_workers,
