@@ -41,8 +41,6 @@ class FuseDataset(CustomDataset):
         """
         # Check if images_path has been specified
         if images_path is not None:
-            # Initialize ray
-            ray.init(include_dashboard=False)
 
             # Get all survey images paths and ignore the .gitkeep file
             images = [img for img in sorted(os.listdir(images_path)) if img.startswith('.') is False]
@@ -59,19 +57,22 @@ class FuseDataset(CustomDataset):
             size = len(self._image_paths)
 
             if load_to_ram:
+                # Initialize ray
+                ray.init(include_dashboard=False)
+
                 # Declare empty list to save all images in RAM
                 self._images = [None] * size
 
-            # Get ray workers IDs for varying size of dataset and num_workers
-            if size < num_workers:
-                ids = [ray_load_images.remote(
-                    self._image_paths, i) for i in range(size)]
-            else:
-                ids = [ray_load_images.remote(
-                    self._image_paths, i) for i in range(num_workers)]
+                # Get ray workers IDs for varying size of dataset and num_workers
+                if size < num_workers:
+                    ids = [ray_load_images.remote(
+                        self._image_paths, i) for i in range(size)]
+                else:
+                    ids = [ray_load_images.remote(
+                        self._image_paths, i) for i in range(num_workers)]
 
-                # Calculate initial number of jobs left
-                nb_job_left = size - num_workers
+                    # Calculate initial number of jobs left
+                    nb_job_left = size - num_workers
 
                 # Ray multiprocessing loop
                 for _ in trange(size, desc='Loading images to RAM', leave=False):
