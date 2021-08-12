@@ -27,12 +27,8 @@ INFERENCE_PATH = 'data/inference/'
 GUI_RESIZED_PATH = 'data/gui_resized/'
 
 # Annotations file paths
-<<<<<<< HEAD
 TARGETS_LEARNING_PATH = 'data/annotations/targets_learning_resized.json'
-=======
-TARGETS_PATH = 'data/annotations/targets_resized.json'
 GUI_TARGETS_PATH = 'data/annotations/gui_resized.json'
->>>>>>> 138fda0d1c9d17ba947d0a28da93a49c44e316e6
 ANNOTATIONS_PATH = 'data/annotations/annotations_raw.csv'
 
 # GUI application settings
