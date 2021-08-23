@@ -1,11 +1,36 @@
+"""
+File:
+    src/gui/modules/DeviceSelector.py
+
+Authors:
+    - Simon Giard-Leroux
+    - Guillaume Cléroux
+    - Shreyas Sunil Kulkarni
+
+Description:
+    Class responsible of handling the device for inference
+"""
+
 from tkinter import *
 import torch
 from src.utils.constants import COLOR_PALETTE, FONT_PATH, GUI_SETTINGS
 import json
 
 class DeviceSelector:
+    """Class responsible of handling the device for inference"""
 
     def __init__(self, window: Toplevel) -> None:
+        """Class constructor
+
+        Args:
+            window (Toplevel): Root window
+
+        Notes:
+            If available, CUDA will always be the default option for the PyTorch device and the user
+            will be able to switch for the CPU if desired
+
+            When CUDA is not available, the buttons will be disabled with CPU as the only device option
+        """
 
         self.__device_option = StringVar()
 
@@ -35,10 +60,13 @@ class DeviceSelector:
                         value=value
                         ).grid(row=i + 5, column=0)
 
+        # Reading the settings JSON file
         with open(GUI_SETTINGS, "r") as f_obj:
             self.__device_option.set(json.load(f_obj)["device"])
 
     def __select(self) -> None:
+        """Selects a device option"""
+        
         # Overwriting the settings json file
         with open(GUI_SETTINGS, "r+") as f_obj:
             settings_dict = json.load(f_obj)
@@ -50,4 +78,6 @@ class DeviceSelector:
 
     @property
     def device_option(self):
+        """Get the device option widget"""
+        
         return self.__device_option

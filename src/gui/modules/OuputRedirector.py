@@ -1,25 +1,40 @@
+"""
+File:
+    src/gui/modules/OutputRedirector.py
+
+Authors:
+    - Simon Giard-Leroux
+    - Guillaume Cléroux
+    - Shreyas Sunil Kulkarni
+
+Description:
+    Class that creates a thread that reads a subprocess' output and dumps it in a text box
+    
+    Strongly inspired from: https://stackoverflow.com/questions/665566/redirect-command-line-results-to-a-tkinter-gui
+"""
+
 from tkinter import *
 from subprocess import Popen, PIPE
 from threading import Thread
 from queue import Queue, Empty
-from typing import List
+from typing import Callable, List
 from src.gui.modules.ReadOnlyTextBox import ReadOnlyTextBox
 from src.utils.constants import COLOR_PALETTE
 from src.gui.ImageViewer import ImageViewer
 
 
-def iter_except(function, exception):
-    """Works like builtin 2-argument `iter()`, but stops on `exception`."""
-    try:
-        while True:
-            yield function()
-    except exception:
-        return
-
-
 class OutputRedirector:
+    """Class that creates a thread that reads a subprocess' output and dumps it in a read-only text box"""
     
     def __init__(self, window: Tk, target: ReadOnlyTextBox, cmd: List[str]) -> None:
+        """Class constructor
+
+        Args:
+            window (Tk): Root window
+            target (ReadOnlyTextBox): Output's target destination
+            cmd (List[str]): List of every flags used for the subprocess
+        """
+        
         # Declare the parent window of the OutputRedirector
         self.__window = window
         
@@ -43,7 +58,12 @@ class OutputRedirector:
         self.update(q)
     
     def reader_thread(self, q: Queue) -> None:
-        """Read subprocess output and put it into the queue."""
+        """Read subprocess output and put it into the queue
+
+        Args:
+            q (Queue): Queue that stores the subprocess' output
+        """
+        
         try:
             with self.__process.stdout as pipe:
                 for line in iter(pipe.readline, b''):
@@ -52,7 +72,11 @@ class OutputRedirector:
             q.put(None)
 
     def update(self, q: Queue) -> None:
-        """Update GUI with items from the queue."""
+        """Update GUI with items from the queue
+
+        Args:
+            q (Queue): Queue that stores the subprocess' output
+        """
 
         for line in iter_except(q.get_nowait, Empty):
             if line is None:
@@ -74,3 +98,21 @@ class OutputRedirector:
             
         # Schedule the next update
         self.__window.after(25, self.update, q)
+
+
+def iter_except(function: Callable, exception: Exception) -> None:
+    """Works like builtin 2-argument `iter()`, but stops on `exception`
+
+    Args:
+        function (Callable): Function called until the exception is raised
+        exception (Exception): Stopping condition exception
+
+    Yields:
+        Callable: Function called until the exception is raised
+    """
+
+    try:
+        while True:
+            yield function()
+    except exception:
+        return

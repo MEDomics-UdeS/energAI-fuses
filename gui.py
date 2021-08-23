@@ -1,3 +1,16 @@
+"""
+File:
+    gui.py
+
+Authors:
+    - Simon Giard-Leroux
+    - Guillaume Cléroux
+    - Shreyas Sunil Kulkarni
+
+Description:
+    Small cross platform GUI application to visualize a model's inference results
+"""
+
 from tkinter import *
 import os
 import json
@@ -14,8 +27,15 @@ from src.utils.helper_functions import enter_default_json
 
 
 class GUI(Tk):
+    """Small cross platform GUI application to visualize a model's inference results
+
+    Notes:
+        Since the settings are stored in src/gui/gui_settings.json, they will be kept 
+        across reruns of this script
+    """
 
     def __init__(self) -> None:
+        """Class constructor"""
 
         # Initializing the root window
         super().__init__()
@@ -77,13 +97,22 @@ class GUI(Tk):
         
         self.__textbox = ReadOnlyTextBox(window=self.__frame)
 
-
     def create_json_file(self) -> None:
+        """Creates the default GUI settings JSON file"""
+        
         with open(GUI_SETTINGS, "a+") as f_obj:
             enter_default_json(f_obj)
 
-
     def __check_for_errors(self, settings: dict) -> str:
+        """Checks if every mandatory settings are initialized by the user
+
+        Args:
+            settings (dict): The current state of the GUI settings JSON dictionnary
+
+        Returns:
+            str: An error message to be displayed if some settings are missing
+        """
+        
         error_message = ""
         
         if "model" not in settings:
@@ -99,8 +128,9 @@ class GUI(Tk):
         
         return error_message
     
-    
     def __start_inference(self) -> None:
+        """Starts the inference"""
+        
         # Load the user settings
         with open(GUI_SETTINGS, "r") as f_obj:
             settings_dict = json.load(f_obj)
@@ -133,7 +163,6 @@ class GUI(Tk):
 
 
 if __name__ == '__main__':
-
     # This fixes a multithreading error with torch
     os.environ["MKL_THREADING_LAYER"] = "GNU"
 

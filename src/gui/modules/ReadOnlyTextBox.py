@@ -1,9 +1,29 @@
+"""
+File:
+    src/gui/modules/ReadOnlyTextBox.py
+
+Authors:
+    - Simon Giard-Leroux
+    - Guillaume Cléroux
+    - Shreyas Sunil Kulkarni
+
+Description:
+    Custom read-only tkinter text box
+"""
+
 from tkinter import *
 from src.utils.constants import COLOR_PALETTE
 
+
 class ReadOnlyTextBox:
+    """Custom read-only tkinter text box"""
     
     def __init__(self, window: Tk) -> None:
+        """Class constructor
+
+        Args:
+            window (Tk): Root window
+        """
         
         # Create the scrollbar
         self.__scroll = Scrollbar(window,
@@ -30,8 +50,13 @@ class ReadOnlyTextBox:
 
         self.__scroll.config(command=self.__textbox.yview)
 
-
     def insert(self, text: str) -> None:
+        """Inserts text in the text box
+
+        Args:
+            text (str): Text to be inserted
+        """
+        
         # Modify the state to allow insertion
         self.__textbox.config(state=NORMAL)
         
