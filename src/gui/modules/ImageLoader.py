@@ -3,6 +3,7 @@ from tkinter import filedialog
 import json
 
 from src.utils.constants import COLOR_PALETTE, FONT_PATH, GUI_SETTINGS
+from src.utils.helper_functions import cross_platform_path_split
 
 class ImageLoader:
     
@@ -30,9 +31,8 @@ class ImageLoader:
         with open(GUI_SETTINGS, "r") as f_obj:
 
             try:
-                img_dir = json.load(f_obj)["imgdir"].split(sep="/")
+                img_dir = cross_platform_path_split(json.load(f_obj)["imgdir"])
 
-                #TODO verify imgdir lenght for fstring
                 self.__img_dir_label = Label(root,
                                              background=COLOR_PALETTE["bg"],
                                              foreground=COLOR_PALETTE["purple"],
@@ -59,7 +59,7 @@ class ImageLoader:
             initialdir='.', title="Select a directory for inference pass")
 
         if root.filename:
-            img_dir = root.filename.split(sep="/")
+            img_dir = cross_platform_path_split(root.filename)
             self.__img_dir_label.config(foreground=COLOR_PALETTE["purple"],
                                         text=f'{".../" if len(img_dir) > 3 else ""}{"/".join(img_dir[-2:])} selected')
 

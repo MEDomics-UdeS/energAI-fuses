@@ -19,7 +19,7 @@ from typing import Tuple
 from src.models.models import load_model
 
 from src.utils.constants import CLASS_DICT, FONT_PATH, RESIZED_PATH, RAW_PATH, IMAGE_EXT
-from src.utils.helper_functions import filter_by_nms, filter_by_score, format_detr_outputs
+from src.utils.helper_functions import cross_platform_path_split, filter_by_nms, filter_by_score, format_detr_outputs
 
 
 @torch.no_grad()
@@ -118,8 +118,8 @@ def save_test_images(model_file_name: str,
 
             # Save the image
             image_raw.save(f'{save_path}'
-                            f'{data_loader.dataset.image_paths[index].rsplit("/", 1)[-1].split(".", 1)[0]}'
-                            f'.{IMAGE_EXT}')
+                           f'{cross_platform_path_split(data_loader.dataset.image_paths[index])[-1].split(".")[0]}'
+                           f'.{IMAGE_EXT}')
 
         # Update the progress bar
         pbar.update()

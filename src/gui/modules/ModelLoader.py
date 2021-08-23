@@ -2,6 +2,7 @@ from tkinter import *
 from tkinter import filedialog
 import json
 from src.utils.constants import FONT_PATH, MODELS_PATH, COLOR_PALETTE, GUI_SETTINGS
+from src.utils.helper_functions import cross_platform_path_split
 
 class ModelLoader:
 
@@ -31,7 +32,7 @@ class ModelLoader:
                 self.__model_label = Label(root,
                                            background=COLOR_PALETTE["bg"],
                                            foreground=COLOR_PALETTE["purple"],
-                                           text=f'{json.load(f_obj)["model"].split(sep="/")[-1]} selected',
+                                           text=f'{cross_platform_path_split(json.load(f_obj)["model"])[-1]} selected',
                                            font=(FONT_PATH, 14),
                                            height=2,
                                            width=50,
@@ -56,7 +57,7 @@ class ModelLoader:
 
         if root.filename:
             self.__model_label.config(foreground=COLOR_PALETTE["purple"],
-                                      text=f'{root.filename.name.split(sep="/")[-1]} selected')
+                                      text=f'{cross_platform_path_split(root.filename.name)[-1]} selected')
             with open(GUI_SETTINGS, "r+") as f_obj:
                 settings_dict = json.load(f_obj)
                 f_obj.seek(0)

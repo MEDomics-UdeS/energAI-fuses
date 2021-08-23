@@ -26,11 +26,11 @@ from src.visualization.final_inference import save_test_images
 from src.utils.constants import INFERENCE_PATH, MODELS_PATH
 
 if __name__ == '__main__':
-    
-    env_tests()
-
     # Record start time
     start = datetime.now()
+    
+    # Run environment tests
+    env_tests()
 
     # Get number of cpu threads for PyTorch DataLoader and Ray paralleling
     num_workers = cpu_count()

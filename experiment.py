@@ -18,13 +18,16 @@ from multiprocessing import cpu_count
 from src.data.DataLoaderManagers.LearningDataLoaderManager import LearningDataLoaderManager
 from src.data.DatasetManagers.LearningDatasetManager import LearningDatasetManager
 from src.models.PipelineManager import PipelineManager
-from src.utils.helper_functions import print_dict
+from src.utils.helper_functions import print_dict, env_tests
 from src.utils.reproducibility import set_deterministic
 from src.utils.constants import RESIZED_PATH, TARGETS_PATH
 
 if __name__ == '__main__':
     # Record start time
     start = datetime.now()
+
+    # Run environment tests
+    env_tests()
 
     # Declare argument parser
     parser = argparse.ArgumentParser(description='Processing inputs')

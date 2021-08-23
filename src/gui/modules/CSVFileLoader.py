@@ -2,6 +2,7 @@ from tkinter import *
 from tkinter import filedialog
 import json
 from src.utils.constants import COLOR_PALETTE, FONT_PATH, GUI_SETTINGS
+from src.utils.helper_functions import cross_platform_path_split
 
 class CSVFileLoader:
 
@@ -32,7 +33,7 @@ class CSVFileLoader:
                 self.__json_label = Label(window,
                                            background=COLOR_PALETTE["bg"],
                                            foreground=COLOR_PALETTE["purple"],
-                                           text=f'{json.load(f_obj)["ground_truth"].split(sep="/")[-1]} selected',
+                                           text=f'{cross_platform_path_split(json.load(f_obj)["ground_truth"])[-1]} selected',
                                            font=(FONT_PATH, 14),
                                            width=30,
                                            justify=CENTER)
@@ -70,7 +71,7 @@ class CSVFileLoader:
             initialdir=".", title="Select a ground truth CSV file", filetypes=[("CSV files", "*.csv")])
 
         if window.filename:
-            self.__json_label.config(text=f'{window.filename.name.split(sep="/")[-1]} selected')
+            self.__json_label.config(text=f'{cross_platform_path_split(window.filename.name)[-1]} selected')
 
             # Overwriting the settings json file
             with open(GUI_SETTINGS, "r+") as f_obj:
