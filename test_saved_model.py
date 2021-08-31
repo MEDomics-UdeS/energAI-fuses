@@ -16,8 +16,8 @@ import argparse
 from datetime import datetime
 
 import torch
-from src.data.DataLoaderManagers.DataLoaderManager import DataLoaderManager
-from src.data.DatasetManagers.DatasetManager import DatasetManager
+from src.data.DataLoaderManagers.LearningDataLoaderManager import LearningDataLoaderManager
+from src.data.DatasetManagers.LearningDatasetManager import LearningDatasetManager
 from src.utils.helper_functions import print_dict, env_tests
 from src.visualization.inference import coco_evaluate
 from src.models.models import load_model
@@ -57,23 +57,23 @@ if __name__ == '__main__':
     print_dict(args_dict, 6)
 
     # Declare dataset manager
-    dataset_manager = DatasetManager(images_path=RESIZED_LEARNING_PATH,
-                                     targets_path=TARGETS_LEARNING_PATH,
-                                     image_size=args_dict['image_size'],
-                                     num_workers=args_dict['num_workers'],
-                                     data_aug=args_dict['data_aug'],
-                                     validation_size=args_dict['validation_size'] if args.dataset == 'learning' else 0,
-                                     test_size=args_dict['test_size'] if args.dataset == 'learning' else 1,
-                                     norm=args_dict['normalize'],
-                                     google_images=not args_dict['no_google_images'],
-                                     seed=args_dict['random_seed'])
+    dataset_manager = LearningDatasetManager(images_path=RESIZED_LEARNING_PATH,
+                                             targets_path=TARGETS_LEARNING_PATH,
+                                             image_size=args_dict['image_size'],
+                                             num_workers=args_dict['num_workers'],
+                                             data_aug=args_dict['data_aug'],
+                                             validation_size=args_dict['validation_size'] if args.dataset == 'learning' else 0,
+                                             test_size=args_dict['test_size'] if args.dataset == 'learning' else 1,
+                                             norm=args_dict['normalize'],
+                                             google_images=not args_dict['no_google_images'],
+                                             seed=args_dict['random_seed'])
 
     # Declare data loader manager
-    data_loader_manager = DataLoaderManager(dataset_manager=dataset_manager,
-                                            batch_size=args_dict['batch'],
-                                            gradient_accumulation=args_dict['gradient_accumulation'],
-                                            num_workers=args_dict['num_workers'],
-                                            deterministic=args_dict['deterministic'])
+    data_loader_manager = LearningDataLoaderManager(dataset_manager=dataset_manager,
+                                                    batch_size=args_dict['batch'],
+                                                    gradient_accumulation=args_dict['gradient_accumulation'],
+                                                    num_workers=args_dict['num_workers'],
+                                                    deterministic=args_dict['deterministic'])
 
     model = load_model(model_name=args_dict['model'],
                        pretrained=not args_dict['no_pretrained'],
