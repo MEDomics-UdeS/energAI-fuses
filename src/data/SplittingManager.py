@@ -1,4 +1,4 @@
-from sklearn.model_selection import StratifiedShuffleSplit, StratifiedKFold
+from sklearn.model_selection import StratifiedKFold, StratifiedShuffleSplit
 from typing import List
 
 from src.data.Datasets.FuseDataset import FuseDataset
@@ -18,6 +18,7 @@ class SplittingManager:
         self.__test_size = test_size
         self.__k_cross_valid = k_cross_valid
         self.__seed = seed
+        self.__google_images = google_images
 
         dataset = FuseDataset(images_path=RESIZED_LEARNING_PATH,
                               targets_path=TARGETS_LEARNING_PATH,
@@ -25,84 +26,125 @@ class SplittingManager:
                               google_images=google_images,
                               load_to_ram=False)
 
-        image_paths_train = dataset.image_paths
-        targets_tain = dataset.targets
-
-        # image_paths_test =
-
-        self.__train_image_paths = []
-        self.__valid_image_paths = []
-        self.__test_image_paths = []
-
-        if k_cross_valid == 1:
-            self.__split_dataset(dataset.image_paths, dataset.targets)
-        else:
-            for k in range(k_cross_valid):
-                pass
+        self.__split_dataset(dataset.image_paths, dataset.targets)
 
     @property
-    def train_indices_list(self) -> list:
-        return self.__train_indices_list
+    def image_paths_train(self) -> list:
+        return self.__image_paths_train
 
     @property
-    def valid_indices_list(self) -> list:
-        return self.__valid_indices_list
+    def targets_train(self) -> list:
+        return self.__targets_train
 
     @property
-    def test_indices_list(self) -> list:
-        return self.__test_indices_list
+    def image_paths_valid(self) -> list:
+        return self.__image_paths_valid
+
+    @property
+    def targets_valid(self) -> list:
+        return self.__targets_valid
+
+    @property
+    def image_paths_test(self) -> list:
+        return self.__image_paths_test
+
+    @property
+    def targets_test(self) -> list:
+        return self.__targets_test
 
     def __split_dataset(self,
-                        image_paths_in: List[str],
-                        targets_in: list,
-                        image_paths_out: List[str],
-                        targets_out: list,
-                        split_size: float,
-                        total_size: int) -> List[int]:
-        """
-        Split a dataset into two sub-datasets, used to create the validation and testing dataset splits
+                        image_paths: List[str],
+                        targets: list) -> List[tuple]:
+        total_size = sum(image_path.rsplit('/')[-1].startswith('S') for image_path in image_paths)
 
-        :param dataset_in: FuseDataset, input dataset from which to extract data
-        :param dataset_out: FuseDataset, output dataset into which we insert data
-        :param split_size: float, size of the split
-        :param total_size: int, total size of the original dataset
-        :return: tuple of two FuseDataset objects, which are the dataset_in and dataset_out after splitting
-        """
+        if self.__google_images:
+            google_image_paths = [image_path for image_path in image_paths
+                                  if image_path.rsplit('/')[-1].startswith('G')]
 
-        split_size = split_size / (1 - HOLDOUT_SIZE)
+            google_indices = [image_paths.index(google_image_path)
+                              for google_image_path in google_image_paths]
 
-        if 0 < split_size < 1:
-            if self._google_images:
-                google_image_paths = [image_path for image_path in self.__dataset.image_paths
-                                      if image_path.rsplit('/')[-1].startswith('G')]
+            google_targets = self.__filter_list(targets, google_indices, True)
 
-                google_indices = [self.__dataset.image_paths.index(google_image_path)
-                                  for google_image_path in google_image_paths]
+            image_paths = self.__filter_list(image_paths, google_indices, False)
+            targets = self.__filter_list(targets, google_indices, False)
 
-                image_paths = [image_paths[i] for i in range(len(image_paths)) if i not in google_indices]
-                targets = [targets[i] for i in range(len(targets)) if i not in google_indices]
+        most_freq_labels = self.__get_most_frequent_labels(targets)
 
-            most_freq_labels = [max(set(target['labels'].tolist()), key=target['labels'].tolist().count)
-                                for target in self.__dataset.targets]
+        strat_split_test = StratifiedShuffleSplit(n_splits=1,
+                                                  test_size=self.__test_size,
+                                                  random_state=self.__seed)
 
-            strat_split = StratifiedShuffleSplit(n_splits=1,
-                                                 test_size=split_size * total_size / len(self.__dataset),
-                                                 random_state=self._seed)
+        for _, indices_test in strat_split_test.split([0] * len(image_paths), most_freq_labels):
+            break
 
-            # Iterate through generator object once and break
-            for _, indices in strat_split.split([0] * len(self.__dataset), most_freq_labels):
+        indices_test = list(indices_test)
+
+        self.__image_paths_test = self.__filter_list(image_paths, indices_test, True)
+        self.__targets_test = self.__filter_list(targets, indices_test, True)
+
+        image_paths = self.__filter_list(image_paths, indices_test, False)
+        targets = self.__filter_list(targets, indices_test, False)
+
+        most_freq_labels = self.__get_most_frequent_labels(targets)
+
+        if self.__k_cross_valid > 1:
+            strat_split_valid = StratifiedKFold(n_splits=self.__k_cross_valid,
+                                                random_state=self.__seed, shuffle=True)
+
+            indices_valid = []
+
+            for _, indices in strat_split_valid.split([0] * len(image_paths), most_freq_labels):
+                indices_valid.append(list(indices))
+
+            image_paths_train = []
+            targets_train = []
+
+            image_paths_valid = []
+            targets_valid = []
+
+            for i in range(self.__k_cross_valid):
+                image_paths_train.append(self.__filter_list(image_paths, indices_valid[i], False))
+                targets_train.append(self.__filter_list(targets, indices_valid[i], False))
+
+                if self.__google_images:
+                    image_paths_train[i] = google_image_paths + image_paths_train[i]
+                    targets_train[i] = google_targets + targets_train[i]
+
+                image_paths_valid.append(self.__filter_list(image_paths, indices_valid[i], True))
+                targets_valid.append(self.__filter_list(targets, indices_valid[i], True))
+
+            self.__image_paths_train = image_paths_train
+            self.__targets_train = targets_train
+
+            self.__image_paths_valid = image_paths_valid
+            self.__targets_valid = targets_valid
+        else:
+            most_freq_labels = self.__get_most_frequent_labels(targets)
+
+            strat_split_valid = StratifiedShuffleSplit(n_splits=1,
+                                                       test_size=self.__validation_size * total_size / len(image_paths),
+                                                       random_state=self.__seed)
+
+            for _, indices_valid in strat_split_valid.split([0] * len(image_paths), most_freq_labels):
                 break
 
-            # # Extract the image paths, images and targets from dataset_in
-            # image_paths, _, targets = self.__dataset.extract_data(index_list=indices)
-            #
-            # # Insert the extracted image paths, images and targets into dataset_out
-            # dataset_out.add_data(image_paths, images, targets)
-            #
-            # if self._google_images:
-            #     dataset_in.add_data(google_image_paths, google_images, google_targets)
-            #
-            #
-            return (image_paths_in, targets_in), (image_paths_out, targets_out)
+            indices_valid = list(indices_valid)
+
+            self.__image_paths_train = google_image_paths + self.__filter_list(image_paths, indices_valid, False)
+            self.__targets_train = google_targets + self.__filter_list(targets, indices_valid, False)
+
+            self.__image_paths_valid = self.__filter_list(image_paths, indices_valid, True)
+            self.__targets_valid = self.__filter_list(targets, indices_valid, True)
+
+    @staticmethod
+    def __filter_list(my_list: list, indices: str, logic: bool) -> list:
+        if logic:
+            return [my_list[i] for i in range(len(my_list)) if i in indices]
         else:
-            return (self.__dataset.image_paths, self.__dataset.targets), (None, None)
+            return [my_list[i] for i in range(len(my_list)) if i not in indices]
+
+    @staticmethod
+    def __get_most_frequent_labels(targets: list) -> list:
+        return [max(set(target['labels'].tolist()), key=target['labels'].tolist().count)
+                for target in targets]
