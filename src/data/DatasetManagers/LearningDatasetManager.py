@@ -25,7 +25,7 @@ from sklearn.model_selection import StratifiedShuffleSplit
 from tqdm import tqdm, trange
 from typing import Tuple, Optional
 from src.data.DatasetManagers.CustomDatasetManager import CustomDatasetManager, ray_resize_images, ray_get_rgb
-
+from src.data.SplittingManager import SplittingManager
 from src.utils.constants import *
 from src.data.Datasets.FuseDataset import FuseDataset
 
@@ -44,7 +44,8 @@ class LearningDatasetManager(CustomDatasetManager):
                  test_size: float,
                  norm: str,
                  google_images: bool,
-                 seed: int) -> None:
+                 seed: int,
+                 splitting_manager: SplittingManager) -> None:
         """
         Class constructor
 
@@ -101,16 +102,18 @@ class LearningDatasetManager(CustomDatasetManager):
         self._dataset_valid = FuseDataset()
         self._dataset_test = FuseDataset()
 
-        # Get total dataset size
-        total_size = sum(image_path.rsplit('/')[-1].startswith('S') for image_path in self._dataset_train.image_paths)
 
-        # Split the training set into training + validation
-        self._dataset_train, self._dataset_valid = self.__split_dataset(self._dataset_train, self._dataset_valid,
-                                                                        validation_size, total_size)
 
-        # Split the training set into training + testing
-        self._dataset_train, self._dataset_test = self.__split_dataset(self._dataset_train, self._dataset_test,
-                                                                       test_size, total_size)
+        # # Get total dataset size
+        # total_size = sum(image_path.rsplit('/')[-1].startswith('S') for image_path in self._dataset_train.image_paths)
+        #
+        # # Split the training set into training + validation
+        # self._dataset_train, self._dataset_valid = self.__split_dataset(self._dataset_train, self._dataset_valid,
+        #                                                                 validation_size, total_size)
+        #
+        # # Split the training set into training + testing
+        # self._dataset_train, self._dataset_test = self.__split_dataset(self._dataset_train, self._dataset_test,
+        #                                                                test_size, total_size)
 
         if norm == 'precalculated':
             # Use precalculated mean and standard deviation

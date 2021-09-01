@@ -176,7 +176,6 @@ if __name__ == '__main__':
                                          google_images=not args.no_google_images)
 
     # Declare dataset manager
-
     dataset_manager = LearningDatasetManager(images_path=RESIZED_LEARNING_PATH,
                                              targets_path=TARGETS_LEARNING_PATH,
                                              image_size=args.image_size,
@@ -186,7 +185,8 @@ if __name__ == '__main__':
                                              test_size=args.test_size,
                                              norm=args.normalize,
                                              google_images=not args.no_google_images,
-                                             seed=args.random_seed)
+                                             seed=args.random_seed,
+                                             splitting_manager=splitting_manager)
 
     # Declare data loader manager
     data_loader_manager = LearningDataLoaderManager(dataset_manager=dataset_manager,

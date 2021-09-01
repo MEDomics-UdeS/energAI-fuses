@@ -72,22 +72,27 @@ class SplittingManager:
         most_freq_labels = self.__get_most_frequent_labels(targets)
 
         if self.__k_cross_valid > 1:
-            strat_split_test = StratifiedShuffleSplit(n_splits=1,
-                                                      test_size=self.__test_size,
-                                                      random_state=self.__seed)
+            if self.__test_size > 0:
+                strat_split_test = StratifiedShuffleSplit(n_splits=1,
+                                                          test_size=self.__test_size,
+                                                          random_state=self.__seed)
 
-            for _, indices_test in strat_split_test.split([0] * len(image_paths), most_freq_labels):
-                break
+                for _, indices_test in strat_split_test.split([0] * len(image_paths), most_freq_labels):
+                    break
 
-            indices_test = list(indices_test)
+                indices_test = list(indices_test)
 
-            self.__image_paths_test = self.__filter_list(image_paths, indices_test, True)
-            self.__targets_test = self.__filter_list(targets, indices_test, True)
+                self.__image_paths_test = self.__filter_list(image_paths, indices_test, True)
+                self.__targets_test = self.__filter_list(targets, indices_test, True)
 
-            image_paths = self.__filter_list(image_paths, indices_test, False)
-            targets = self.__filter_list(targets, indices_test, False)
+                image_paths = self.__filter_list(image_paths, indices_test, False)
+                targets = self.__filter_list(targets, indices_test, False)
 
-            most_freq_labels = self.__get_most_frequent_labels(targets)
+                most_freq_labels = self.__get_most_frequent_labels(targets)
+            else:
+                self.__image_paths_test = []
+                self.__targets_test = []
+
             strat_split_valid = StratifiedKFold(n_splits=self.__k_cross_valid,
                                                 random_state=self.__seed, shuffle=True)
 
@@ -119,37 +124,58 @@ class SplittingManager:
             self.__image_paths_valid = image_paths_valid
             self.__targets_valid = targets_valid
         else:
-            strat_split_valid = StratifiedShuffleSplit(n_splits=1,
-                                                      test_size=self.__validation_size,
-                                                      random_state=self.__seed)
+            if self.__validation_size == 0 and self.__test_size == 0:
+                self.__image_paths_train = google_image_paths + image_paths
+                self.__targets_train = google_image_paths + targets
 
-            for _, indices_valid in strat_split_valid.split([0] * len(image_paths), most_freq_labels):
-                break
+                self.__image_paths_valid = []
+                self.__targets_valid = []
 
-            indices_valid = list(indices_valid)
+                self.__image_paths_test = []
+                self.__targets_test = []
+            else:
+                if self.__validation_size > 0:
+                    strat_split_valid = StratifiedShuffleSplit(n_splits=1,
+                                                              test_size=self.__validation_size,
+                                                              random_state=self.__seed)
 
-            self.__image_paths_valid = self.__filter_list(image_paths, indices_valid, True)
-            self.__targets_valid = self.__filter_list(targets, indices_valid, True)
+                    for _, indices_valid in strat_split_valid.split([0] * len(image_paths), most_freq_labels):
+                        break
 
-            image_paths = self.__filter_list(image_paths, indices_valid, False)
-            targets = self.__filter_list(targets, indices_valid, False)
+                    indices_valid = list(indices_valid)
 
-            most_freq_labels = self.__get_most_frequent_labels(targets)
+                    self.__image_paths_valid = self.__filter_list(image_paths, indices_valid, True)
+                    self.__targets_valid = self.__filter_list(targets, indices_valid, True)
 
-            strat_split_test = StratifiedShuffleSplit(n_splits=1,
-                                                      test_size=self.__test_size * total_size / len(image_paths),
-                                                      random_state=self.__seed)
+                    image_paths = self.__filter_list(image_paths, indices_valid, False)
+                    targets = self.__filter_list(targets, indices_valid, False)
 
-            for _, indices_test in strat_split_test.split([0] * len(image_paths), most_freq_labels):
-                break
+                    most_freq_labels = self.__get_most_frequent_labels(targets)
+                else:
+                    self.__image_paths_valid = []
+                    self.__targets_valid = []
 
-            indices_test = list(indices_test)
+                if self.__test_size > 0:
+                    strat_split_test = StratifiedShuffleSplit(n_splits=1,
+                                                              test_size=self.__test_size * total_size / len(image_paths),
+                                                              random_state=self.__seed)
 
-            self.__image_paths_train = google_image_paths + self.__filter_list(image_paths, indices_test, False)
-            self.__targets_train = google_targets + self.__filter_list(targets, indices_test, False)
+                    for _, indices_test in strat_split_test.split([0] * len(image_paths), most_freq_labels):
+                        break
 
-            self.__image_paths_test = self.__filter_list(image_paths, indices_test, True)
-            self.__targets_test = self.__filter_list(targets, indices_test, True)
+                    indices_test = list(indices_test)
+
+                    self.__image_paths_train = google_image_paths + self.__filter_list(image_paths, indices_test, False)
+                    self.__targets_train = google_targets + self.__filter_list(targets, indices_test, False)
+
+                    self.__image_paths_test = self.__filter_list(image_paths, indices_test, True)
+                    self.__targets_test = self.__filter_list(targets, indices_test, True)
+                else:
+                    self.__image_paths_train = google_image_paths + image_paths
+                    self.__targets_train = google_targets + targets
+
+                    self.__image_paths_test = []
+                    self.__targets_test = []
 
     @staticmethod
     def __filter_list(my_list: list, indices: str, logic: bool) -> list:
