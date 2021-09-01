@@ -16,7 +16,7 @@ from tkinter import filedialog
 import json
 
 from src.utils.constants import COLOR_PALETTE, FONT_PATH, GUI_SETTINGS
-from src.utils.helper_functions import cross_platform_path_split
+from src.utils.helper_functions import cp_split
 
 class ImageLoader:
     """Class responsible of handling the raw image directory path"""
@@ -55,7 +55,7 @@ class ImageLoader:
         with open(GUI_SETTINGS, "r") as f_obj:
 
             try:
-                img_dir = cross_platform_path_split(json.load(f_obj)["imgdir"])
+                img_dir = cp_split(json.load(f_obj)["imgdir"])
 
                 self.__img_dir_label = Label(window,
                                              background=COLOR_PALETTE["bg"],
@@ -89,7 +89,7 @@ class ImageLoader:
             initialdir='.', title="Select a directory for inference pass")
 
         if window.filename:
-            img_dir = cross_platform_path_split(window.filename)
+            img_dir = cp_split(window.filename)
             self.__img_dir_label.config(foreground=COLOR_PALETTE["purple"],
                                         text=f'{".../" if len(img_dir) > 3 else ""}{"/".join(img_dir[-2:])} selected')
 

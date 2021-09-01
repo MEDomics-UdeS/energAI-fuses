@@ -63,9 +63,6 @@ def env_tests() -> None:
     """
     Environment tests
     """
-    # Store the platform in the environment variables
-    os.environ["PLATFORM"] = sys.platform
-    
     system_major = sys.version_info.major
 
     if REQUIRED_PYTHON == "python":
@@ -82,8 +79,8 @@ def env_tests() -> None:
                 required_major, sys.version))
 
 
-def cross_platform_path_split(filepath: str) -> List[str]:
-    """Splits filepaths independently of the platform used. Supports Windows, OS X and Linux.
+def cp_split(filepath: str) -> List[str]:
+    """Cross-platform filepath splitting. Supports Windows, OS X and Linux.
 
     Args:
         filepath (str): The complete windows or posix filepath
@@ -91,7 +88,8 @@ def cross_platform_path_split(filepath: str) -> List[str]:
     Returns:
         List[str]: A list of every individual elements in the filepath
     """
-    if os.environ.get("PLATFORM") == "win32" or os.environ.get("PLATFORM") == "cygwin":
+    # Check for the system's platform
+    if sys.platform == "win32" or sys.platform == "cygwin":
         return PureWindowsPath(filepath).parts
     else:
         return PurePosixPath(filepath).parts
