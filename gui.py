@@ -22,7 +22,7 @@ from src.gui.modules.ReadOnlyTextBox import ReadOnlyTextBox
 from src.gui.modules.OuputRedirector import OutputRedirector
 from src.gui.modules.AdvancedOptionsWindow import AdvancedOptionsWindow
 
-from src.utils.constants import INFERENCE_PATH, COLOR_PALETTE, FONT_PATH, GUI_SETTINGS
+from src.utils.constants import COLOR_PALETTE, FONT_PATH, GUI_SETTINGS
 from src.utils.helper_functions import enter_default_json
 
 
@@ -142,9 +142,9 @@ class GUI(Tk):
         else:
             # Create the subprocess command
             cmd = [
-                'python', 'final_product.py',
+                'python', 'inference_test.py',
+                '--with_gui',
                 '--image_path', settings_dict["imgdir"],
-                '--inference_path', INFERENCE_PATH,
                 '--model_file_name', settings_dict["model"],
                 '--iou_threshold', settings_dict["iou_treshold"],
                 '--score_threshold', settings_dict["score_treshold"],
@@ -163,7 +163,7 @@ class GUI(Tk):
 
 
 if __name__ == '__main__':
-    # This fixes a multithreading error with torch
+    # This fixes a multithreading error
     os.environ["MKL_THREADING_LAYER"] = "GNU"
 
     # Starts the GUI application

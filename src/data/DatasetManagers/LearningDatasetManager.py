@@ -28,7 +28,7 @@ from src.data.DatasetManagers.CustomDatasetManager import CustomDatasetManager, 
 
 from src.utils.constants import *
 from src.data.Datasets.FuseDataset import FuseDataset
-from src.utils.helper_functions import cross_platform_path_split
+from src.utils.helper_functions import cp_split
 
 
 class LearningDatasetManager(CustomDatasetManager):
@@ -103,7 +103,7 @@ class LearningDatasetManager(CustomDatasetManager):
         self._dataset_test = FuseDataset()
 
         # Get total dataset size
-        total_size = sum(cross_platform_path_split(image_path)[-1].startswith('S') for image_path in self._dataset_train.image_paths)
+        total_size = sum(cp_split(image_path)[-1].startswith('S') for image_path in self._dataset_train.image_paths)
 
         # Split the training set into training + validation
         self._dataset_train, self._dataset_valid = self.__split_dataset(self._dataset_train, self._dataset_valid,
@@ -252,7 +252,7 @@ class LearningDatasetManager(CustomDatasetManager):
         if 0 < split_size < 1:
             if self._google_images:
                 google_image_paths = [image_path for image_path in dataset_in.image_paths
-                                      if cross_platform_path_split(image_path)[-1].startswith('G')]
+                                      if cp_split(image_path)[-1].startswith('G')]
 
                 google_indices = [dataset_in.image_paths.index(google_image_path)
                                   for google_image_path in google_image_paths]

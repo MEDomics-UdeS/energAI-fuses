@@ -6,7 +6,7 @@ import ray
 from PIL import Image, ImageDraw
 import pandas as pd
 from src.utils.constants import CLASS_DICT
-from src.utils.helper_functions import cross_platform_path_split
+from src.utils.helper_functions import cp_split
 
 class CustomDatasetManager(ABC):
     
@@ -57,7 +57,7 @@ def ray_resize_images(image_paths: List[str], destination_path: str, image_size:
         annotations = pd.read_csv(annotations_csv)
     
     # Get the current image name, without the file path and without the file extension
-    f = cross_platform_path_split(image_paths[idx])[-1].split(".")[0]
+    f = cp_split(image_paths[idx])[-1].split(".")[0]
 
     # Create the box and label array if annotations are provided
     if annotations_csv:
