@@ -190,10 +190,10 @@ if __name__ == '__main__':
 
     # Declare data loader manager
     data_loader_manager = LearningDataLoaderManager(dataset_manager=dataset_manager,
-                                            batch_size=args.batch,
-                                            gradient_accumulation=args.gradient_accumulation,
-                                            num_workers=args.num_workers,
-                                            deterministic=args.deterministic)
+                                                    batch_size=args.batch,
+                                                    gradient_accumulation=args.gradient_accumulation,
+                                                    num_workers=args.num_workers,
+                                                    deterministic=args.deterministic)
 
     # Declare training, validation and testing manager
     pipeline_manager = PipelineManager(data_loader_manager=data_loader_manager,
