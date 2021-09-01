@@ -174,52 +174,60 @@ if __name__ == '__main__':
                                          seed=args.random_seed,
                                          num_workers=args.num_workers,
                                          google_images=not args.no_google_images)
+    if args.k_cross_valid > 1:
+        print(f'\n{args.k_cross_valid}-Fold Cross Validation Enabled!\n')
 
-    # Declare dataset manager
-    dataset_manager = LearningDatasetManager(images_path=RESIZED_LEARNING_PATH,
-                                             targets_path=TARGETS_LEARNING_PATH,
-                                             image_size=args.image_size,
-                                             num_workers=args.num_workers,
-                                             data_aug=args.data_aug,
-                                             validation_size=args.validation_size,
-                                             test_size=args.test_size,
-                                             norm=args.normalize,
-                                             google_images=not args.no_google_images,
-                                             seed=args.random_seed,
-                                             splitting_manager=splitting_manager)
+    for i in range(args.k_cross_valid):
+        if args.k_cross_valid > 1:
+            print(f'Cross Validation Fold Number : {i + 1}/{args.k_cross_valid}\n')
 
-    # Declare data loader manager
-    data_loader_manager = LearningDataLoaderManager(dataset_manager=dataset_manager,
-                                                    batch_size=args.batch,
-                                                    gradient_accumulation=args.gradient_accumulation,
-                                                    num_workers=args.num_workers,
-                                                    deterministic=args.deterministic)
+        # Declare dataset manager
+        dataset_manager = LearningDatasetManager(images_path=RESIZED_LEARNING_PATH,
+                                                 targets_path=TARGETS_LEARNING_PATH,
+                                                 image_size=args.image_size,
+                                                 num_workers=args.num_workers,
+                                                 data_aug=args.data_aug,
+                                                 validation_size=args.validation_size,
+                                                 test_size=args.test_size,
+                                                 norm=args.normalize,
+                                                 google_images=not args.no_google_images,
+                                                 seed=args.random_seed,
+                                                 splitting_manager=splitting_manager,
+                                                 current_fold=i)
 
-    # Declare training, validation and testing manager
-    pipeline_manager = PipelineManager(data_loader_manager=data_loader_manager,
-                                       file_name=file_name,
-                                       model_name=args.model,
-                                       learning_rate=args.learning_rate,
-                                       weight_decay=args.weight_decay,
-                                       es_patience=args.es_patience,
-                                       es_delta=args.es_delta,
-                                       mixed_precision=args.mixed_precision,
-                                       gradient_accumulation=args.gradient_accumulation,
-                                       pretrained=not args.no_pretrained,
-                                       gradient_clip=args.gradient_clip,
-                                       args_dict=vars(args),
-                                       save_model=not args.no_save_model,
-                                       image_size=args.image_size,
-                                       save_last=args.save_last,
-                                       log_training_metrics=args.log_training_metrics,
-                                       log_memory=args.log_memory,
-                                       class_loss_ceof=args.set_cost_class if args.model == 'detr' else None,
-                                       bbox_loss_coef=args.set_cost_bbox if args.model == 'detr' else None,
-                                       giou_loss_coef=args.set_cost_giou if args.model == 'detr' else None,
-                                       eos_coef=args.eos_coef if args.model == 'detr' else None)
+        # Declare data loader manager
+        data_loader_manager = LearningDataLoaderManager(dataset_manager=dataset_manager,
+                                                        batch_size=args.batch,
+                                                        gradient_accumulation=args.gradient_accumulation,
+                                                        num_workers=args.num_workers,
+                                                        deterministic=args.deterministic)
 
-    # Call the training, validation and testing manager to run the pipeline
-    pipeline_manager(args.epochs)
+        # Declare training, validation and testing manager
+        pipeline_manager = PipelineManager(data_loader_manager=data_loader_manager,
+                                           file_name=file_name,
+                                           model_name=args.model,
+                                           learning_rate=args.learning_rate,
+                                           weight_decay=args.weight_decay,
+                                           es_patience=args.es_patience,
+                                           es_delta=args.es_delta,
+                                           mixed_precision=args.mixed_precision,
+                                           gradient_accumulation=args.gradient_accumulation,
+                                           pretrained=not args.no_pretrained,
+                                           gradient_clip=args.gradient_clip,
+                                           args_dict=vars(args),
+                                           save_model=not args.no_save_model,
+                                           image_size=args.image_size,
+                                           save_last=args.save_last,
+                                           log_training_metrics=args.log_training_metrics,
+                                           log_memory=args.log_memory,
+                                           class_loss_ceof=args.set_cost_class if args.model == 'detr' else None,
+                                           bbox_loss_coef=args.set_cost_bbox if args.model == 'detr' else None,
+                                           giou_loss_coef=args.set_cost_giou if args.model == 'detr' else None,
+                                           eos_coef=args.eos_coef if args.model == 'detr' else None,
+                                           current_fold=i)
+
+        # Call the training, validation and testing manager to run the pipeline
+        pipeline_manager(args.epochs)
 
     # Print the run time of the current experiment
     print(f'\nTotal time for current experiment:\t{str(datetime.now() - start).split(".")[0]}')

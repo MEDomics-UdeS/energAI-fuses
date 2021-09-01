@@ -45,7 +45,8 @@ class LearningDatasetManager(CustomDatasetManager):
                  norm: str,
                  google_images: bool,
                  seed: int,
-                 splitting_manager: SplittingManager) -> None:
+                 splitting_manager: SplittingManager,
+                 current_fold: int) -> None:
         """
         Class constructor
 
@@ -98,11 +99,18 @@ class LearningDatasetManager(CustomDatasetManager):
                     sys.exit(1)
 
         # Declare training, validation and testing datasets
-        self._dataset_train = FuseDataset(images_path, targets_path, num_workers, google_images)
-        self._dataset_valid = FuseDataset()
-        self._dataset_test = FuseDataset()
-
-
+        self._dataset_train = FuseDataset(image_paths=splitting_manager.image_paths_train[current_fold],
+                                          targets=splitting_manager.targets_train[current_fold],
+                                          num_workers=num_workers,
+                                          phase='Training')
+        self._dataset_valid = FuseDataset(image_paths=splitting_manager.image_paths_valid[current_fold],
+                                          targets=splitting_manager.targets_valid[current_fold],
+                                          num_workers=num_workers,
+                                          phase='Validation')
+        self._dataset_test = FuseDataset(image_paths=splitting_manager.image_paths_test,
+                                         targets=splitting_manager.targets_test,
+                                         num_workers=num_workers,
+                                         phase='Testing')
 
         # # Get total dataset size
         # total_size = sum(image_path.rsplit('/')[-1].startswith('S') for image_path in self._dataset_train.image_paths)
@@ -237,55 +245,55 @@ class LearningDatasetManager(CustomDatasetManager):
         # Return a composed transforms list
         return transforms.Compose(transforms_list)
 
-    def __split_dataset(self, dataset_in: FuseDataset, dataset_out: FuseDataset, split_size: float, total_size: int) \
-            -> Tuple[FuseDataset, FuseDataset]:
-        """
-        Split a dataset into two sub-datasets, used to create the validation and testing dataset splits
-
-        :param dataset_in: FuseDataset, input dataset from which to extract data
-        :param dataset_out: FuseDataset, output dataset into which we insert data
-        :param split_size: float, size of the split
-        :param total_size: int, total size of the original dataset
-        :return: tuple of two FuseDataset objects, which are the dataset_in and dataset_out after splitting
-        """
-
-        split_size = split_size / (1 - HOLDOUT_SIZE)
-
-        if 0 < split_size < 1:
-            if self._google_images:
-                google_image_paths = [image_path for image_path in dataset_in.image_paths
-                                      if image_path.rsplit('/')[-1].startswith('G')]
-
-                google_indices = [dataset_in.image_paths.index(google_image_path)
-                                  for google_image_path in google_image_paths]
-
-                google_image_paths, google_images, google_targets = dataset_in.extract_data(index_list=google_indices)
-
-            most_freq_labels = [max(set(target['labels'].tolist()), key=target['labels'].tolist().count)
-                                for target in dataset_in.targets]
-
-            strat_split = StratifiedShuffleSplit(n_splits=1,
-                                                 test_size=split_size * total_size / len(dataset_in),
-                                                 random_state=self._seed)
-
-            # Iterate through generator object once and break
-            for _, indices in strat_split.split([0] * len(dataset_in), most_freq_labels):
-                break
-
-            # Extract the image paths, images and targets from dataset_in
-            image_paths, images, targets = dataset_in.extract_data(index_list=indices)
-
-            # Insert the extracted image paths, images and targets into dataset_out
-            dataset_out.add_data(image_paths, images, targets)
-
-            if self._google_images:
-                dataset_in.add_data(google_image_paths, google_images, google_targets)
-
-        if split_size == 1:
-            return dataset_out, dataset_in
-        else:
-            # Return the split_size input and output datasets
-            return dataset_in, dataset_out
+    # def __split_dataset(self, dataset_in: FuseDataset, dataset_out: FuseDataset, split_size: float, total_size: int) \
+    #         -> Tuple[FuseDataset, FuseDataset]:
+    #     """
+    #     Split a dataset into two sub-datasets, used to create the validation and testing dataset splits
+    #
+    #     :param dataset_in: FuseDataset, input dataset from which to extract data
+    #     :param dataset_out: FuseDataset, output dataset into which we insert data
+    #     :param split_size: float, size of the split
+    #     :param total_size: int, total size of the original dataset
+    #     :return: tuple of two FuseDataset objects, which are the dataset_in and dataset_out after splitting
+    #     """
+    #
+    #     split_size = split_size / (1 - HOLDOUT_SIZE)
+    #
+    #     if 0 < split_size < 1:
+    #         if self._google_images:
+    #             google_image_paths = [image_path for image_path in dataset_in.image_paths
+    #                                   if image_path.rsplit('/')[-1].startswith('G')]
+    #
+    #             google_indices = [dataset_in.image_paths.index(google_image_path)
+    #                               for google_image_path in google_image_paths]
+    #
+    #             google_image_paths, google_images, google_targets = dataset_in.extract_data(index_list=google_indices)
+    #
+    #         most_freq_labels = [max(set(target['labels'].tolist()), key=target['labels'].tolist().count)
+    #                             for target in dataset_in.targets]
+    #
+    #         strat_split = StratifiedShuffleSplit(n_splits=1,
+    #                                              test_size=split_size * total_size / len(dataset_in),
+    #                                              random_state=self._seed)
+    #
+    #         # Iterate through generator object once and break
+    #         for _, indices in strat_split.split([0] * len(dataset_in), most_freq_labels):
+    #             break
+    #
+    #         # Extract the image paths, images and targets from dataset_in
+    #         image_paths, images, targets = dataset_in.extract_data(index_list=indices)
+    #
+    #         # Insert the extracted image paths, images and targets into dataset_out
+    #         dataset_out.add_data(image_paths, images, targets)
+    #
+    #         if self._google_images:
+    #             dataset_in.add_data(google_image_paths, google_images, google_targets)
+    #
+    #     if split_size == 1:
+    #         return dataset_out, dataset_in
+    #     else:
+    #         # Return the split_size input and output datasets
+    #         return dataset_in, dataset_out
 
     def _calculate_mean_std(self, num_workers: int) -> Tuple[Tuple[float, float, float], Tuple[float, float, float]]:
         """

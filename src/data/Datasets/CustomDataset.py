@@ -42,16 +42,16 @@ class CustomDataset(ABC, Dataset):
         return self._image_paths
 
 
-    @abstractmethod
-    def extract_data(self, index_list: List[int]) -> Tuple[List[str], List[Image.Image], List[dict]]: pass
+    # @abstractmethod
+    # def extract_data(self, index_list: List[int]) -> Tuple[List[str], List[Image.Image], List[dict]]: pass
 
     
     @abstractmethod
     def __getitem__(self, index: int) -> Tuple[torch.Tensor, dict]: pass
 
     
-    @abstractmethod
-    def add_data(self, image_paths: List[str], images: List[Image.Image], targets: List[dict]) -> None: pass
+    # @abstractmethod
+    # def add_data(self, image_paths: List[str], images: List[Image.Image], targets: List[dict]) -> None: pass
 
 
 @ray.remote

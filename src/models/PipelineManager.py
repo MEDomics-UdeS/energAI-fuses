@@ -64,7 +64,8 @@ class PipelineManager:
                  class_loss_ceof: float,
                  bbox_loss_coef: float, 
                  giou_loss_coef: float, 
-                 eos_coef: float) -> None:
+                 eos_coef: float,
+                 current_fold: int) -> None:
         """
         Class constructor
 
@@ -98,6 +99,7 @@ class PipelineManager:
         self.__save_last = save_last
         self.__log_training_metrics = log_training_metrics
         self.__log_memory = log_memory
+        self.__current_fold = current_fold
         
         # Declare steps for tensorboard logging
         self.__train_step = 0
@@ -193,7 +195,7 @@ class PipelineManager:
         # Check if we need to save the model
         if self.__save_model:
             # Save the model in the saved_models/ folder
-            filename = f'{MODELS_PATH}{self.__file_name}'
+            filename = f'{MODELS_PATH}{self.__file_name}_fold{self.__current_fold + 1}'
             
             if self.__best_epoch >= self.__swa_start:
                 ranking_model = self.__swa_model.module if self.__save_last else self.__best_model.module
