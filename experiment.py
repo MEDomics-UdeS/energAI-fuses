@@ -171,11 +171,11 @@ if __name__ == '__main__':
                                          seed=args.random_seed,
                                          google_images=not args.no_google_images)
     if args.k_cross_valid > 1:
-        print(f'\n{args.k_cross_valid}-Fold Cross Validation Enabled!\n')
+        print(f'\n{args.k_cross_valid}-Fold Cross Validation Enabled!')
 
     for i in range(args.k_cross_valid):
         if args.k_cross_valid > 1:
-            print(f'Cross Validation Fold Number : {i + 1}/{args.k_cross_valid}\n')
+            print(f'\nCross Validation Fold Number : {i + 1}/{args.k_cross_valid}\n')
 
         # Declare file name as yyyy-mm-dd_hh-mm-ss
         file_name = f'{args.model.split("_")[0]}_{args.epochs}_fold{i + 1}_{start.strftime("%Y-%m-%d_%H-%M-%S")}'

@@ -503,7 +503,8 @@ class PipelineManager:
 
         if metrics_dict is not None:
             for i, (key, value) in enumerate(metrics_dict.items(), start=1):
-                self.__writer.add_scalar(f'{key[:2]} ({phase})/{i}. {key[6:-1]}', value, epoch)
+                self.__writer.add_scalar(f'{key.split("/")[-1][:2]} ({phase})/{i}. {key[6 + len(key.split("/")[0]):]}',
+                                         value, epoch)
 
         if phase == 'Training':
             if self.__swa_started:

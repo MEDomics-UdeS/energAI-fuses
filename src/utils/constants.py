@@ -99,7 +99,7 @@ Original Console Outputs:
  """
 
 # Evaluation metric for early stopping and best model saving
-EVAL_METRIC = COCO_PARAMS_LIST[0]
+EVAL_METRIC = 'Validation/' + COCO_PARAMS_LIST[0]
 
 # Image extension
 IMAGE_EXT = 'jpg'
