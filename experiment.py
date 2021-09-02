@@ -160,9 +160,6 @@ if __name__ == '__main__':
     # Set deterministic behavior
     set_deterministic(args.deterministic, args.random_seed)
 
-    # Declare file name as yyyy-mm-dd_hh-mm-ss
-    file_name = f'{args.model.split("_")[0]}_{args.epochs}_{start.strftime("%Y-%m-%d_%H-%M-%S")}'
-
     # Display arguments in console
     print('\n=== Arguments & Hyperparameters ===\n')
     print_dict(vars(args), 6)
@@ -172,7 +169,6 @@ if __name__ == '__main__':
                                          test_size=args.test_size,
                                          k_cross_valid=args.k_cross_valid,
                                          seed=args.random_seed,
-                                         num_workers=args.num_workers,
                                          google_images=not args.no_google_images)
     if args.k_cross_valid > 1:
         print(f'\n{args.k_cross_valid}-Fold Cross Validation Enabled!\n')
@@ -180,6 +176,9 @@ if __name__ == '__main__':
     for i in range(args.k_cross_valid):
         if args.k_cross_valid > 1:
             print(f'Cross Validation Fold Number : {i + 1}/{args.k_cross_valid}\n')
+
+        # Declare file name as yyyy-mm-dd_hh-mm-ss
+        file_name = f'{args.model.split("_")[0]}_{args.epochs}_fold{i + 1}_{start.strftime("%Y-%m-%d_%H-%M-%S")}'
 
         # Declare dataset manager
         dataset_manager = LearningDatasetManager(images_path=RESIZED_LEARNING_PATH,
@@ -223,8 +222,7 @@ if __name__ == '__main__':
                                            class_loss_ceof=args.set_cost_class if args.model == 'detr' else None,
                                            bbox_loss_coef=args.set_cost_bbox if args.model == 'detr' else None,
                                            giou_loss_coef=args.set_cost_giou if args.model == 'detr' else None,
-                                           eos_coef=args.eos_coef if args.model == 'detr' else None,
-                                           current_fold=i)
+                                           eos_coef=args.eos_coef if args.model == 'detr' else None)
 
         # Call the training, validation and testing manager to run the pipeline
         pipeline_manager(args.epochs)

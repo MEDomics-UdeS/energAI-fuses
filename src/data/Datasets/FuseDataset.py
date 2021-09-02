@@ -20,6 +20,7 @@ import ray
 from typing import Tuple, List
 
 from src.data.Datasets.CustomDataset import CustomDataset, ray_load_images
+from src.utils.constants import RESIZED_LEARNING_PATH
 
 
 class FuseDataset(CustomDataset):
@@ -53,7 +54,7 @@ class FuseDataset(CustomDataset):
         #
         # Save the image paths as an object attribute
         # self._image_paths = [os.path.join(images_path, img) for img in images]
-        self._image_paths = image_paths
+        self._image_paths = [RESIZED_LEARNING_PATH + image_path for image_path in image_paths]
         self._targets = targets
 
         # Get the dataset size

@@ -48,7 +48,11 @@ if __name__ == '__main__':
         # Declare list of commands to be executed
         if variable_params:
             cmds = list(list(cmd) for cmd in product(*variable_params.values()))
-            [cmds[i].insert(j, list(variable_params)[j // 2]) for j in range(0, len(variable_params) + 2, 2) for i in range(len(cmds))]
+
+            if len(variable_params) > 1:
+                [cmds[i].insert(j, list(variable_params)[j // 2]) for j in range(0, len(variable_params) + 2, 2) for i in range(len(cmds))]
+            else:
+                [cmds[i].insert(0, list(variable_params)[0]) for i in range(len(cmds))]
 
             if fixed_params:
                 [cmd.extend((key, value)) for key, value in fixed_params.items() for cmd in cmds]

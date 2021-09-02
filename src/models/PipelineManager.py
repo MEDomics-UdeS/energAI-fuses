@@ -64,8 +64,7 @@ class PipelineManager:
                  class_loss_ceof: float,
                  bbox_loss_coef: float, 
                  giou_loss_coef: float, 
-                 eos_coef: float,
-                 current_fold: int) -> None:
+                 eos_coef: float) -> None:
         """
         Class constructor
 
@@ -99,7 +98,6 @@ class PipelineManager:
         self.__save_last = save_last
         self.__log_training_metrics = log_training_metrics
         self.__log_memory = log_memory
-        self.__current_fold = current_fold
         
         # Declare steps for tensorboard logging
         self.__train_step = 0
@@ -195,7 +193,7 @@ class PipelineManager:
         # Check if we need to save the model
         if self.__save_model:
             # Save the model in the saved_models/ folder
-            filename = f'{MODELS_PATH}{self.__file_name}_fold{self.__current_fold + 1}'
+            filename = f'{MODELS_PATH}{self.__file_name}'
             
             if self.__best_epoch >= self.__swa_start:
                 ranking_model = self.__swa_model.module if self.__save_last else self.__best_model.module
@@ -212,8 +210,14 @@ class PipelineManager:
 
             print(f'{"Last" if self.__save_last else "Best"} model saved to:\t\t\t\t{filename}\n')
 
+        # Test the trained model
+        self.__test_model()
+
         # Save best or last epoch validation metrics dict to tensorboard
         metrics_dict = self.__last_metrics_dict if self.__save_last else self.__best_metrics_dict
+
+        # Append test results to validation results
+        metrics_dict.update(self.__test_metrics_dict)
 
         # Append 'hparams/' to the start of each metrics dictionary key to log in tensorboard
         for key in metrics_dict.fromkeys(metrics_dict):
@@ -222,8 +226,7 @@ class PipelineManager:
         # Save the hyperparameters with tensorboard
         self.__writer.add_hparams(self.__args_dict, metric_dict=metrics_dict)
 
-        # Test the trained model
-        self.__test_model()
+
 
         # Flush and close the tensorboard writer
         self.__writer.flush()
@@ -424,11 +427,11 @@ class PipelineManager:
         torch.optim.swa_utils.update_bn(self.__data_loader_train, model)
 
         # COCO Evaluation
-        metrics_dict = self.__coco_evaluate(model, self.__data_loader_test, 'Testing Metrics')
+        self.__test_metrics_dict = self.__coco_evaluate(model, self.__data_loader_test, 'Testing Metrics')
 
         # Print the testing object detection metrics results
         print('=== Testing Results ===\n')
-        print_dict(metrics_dict, 6, '.2%')
+        print_dict(self.__test_metrics_dict, 6, '.2%')
 
     @torch.no_grad()
     def __coco_evaluate(self, model, data_loader: DataLoader, desc: str) -> dict:
@@ -468,7 +471,10 @@ class PipelineManager:
         coco_evaluator.accumulate()
         coco_evaluator.summarize()
 
-        return dict(zip(COCO_PARAMS_LIST, coco_evaluator.coco_eval['bbox'].stats.tolist()))
+        phase = desc.split(" ")[0]
+        params_list = [f'{phase}/{param}' for param in COCO_PARAMS_LIST]
+
+        return dict(zip(params_list, coco_evaluator.coco_eval['bbox'].stats.tolist()))
 
     def __save_batch(self, phase: str, loss: float) -> None:
         """

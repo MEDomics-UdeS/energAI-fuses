@@ -14,7 +14,6 @@ class SplittingManager:
                  test_size: float,
                  k_cross_valid: int,
                  seed: int,
-                 num_workers: int,
                  google_images: bool) -> None:
 
         self.__validation_size = validation_size
@@ -23,14 +22,14 @@ class SplittingManager:
         self.__seed = seed
         self.__google_images = google_images
 
-        images = [img for img in sorted(os.listdir(RESIZED_LEARNING_PATH)) if img.startswith('.') is False]
+        images = [img for img in sorted(os.listdir(RAW_LEARNING_PATH)) if img.startswith('.') is False]
 
         if not google_images:
             google_imgs = [image for image in images if image.startswith('G')]
             google_indices = [images.index(google_image) for google_image in google_imgs]
             images = [e for i, e in enumerate(images) if i not in google_indices]
 
-        self.__image_paths = [os.path.join(RESIZED_LEARNING_PATH, img) for img in images]
+        self.__image_paths = [img for img in images]#[os.path.join(RESIZED_LEARNING_PATH, img) for img in images]
 
         self.__targets = json.load(open(TARGETS_LEARNING_PATH))
 
@@ -46,10 +45,11 @@ class SplittingManager:
 
         # For backwards results reproducibility, valid and test sets are reverse ordered
         for i in range(k_cross_valid):
-            self.__image_paths_valid.reverse()
-            self.__targets_valid.reverse()
-            self.__image_paths_test.reverse()
-            self.__targets_test.reverse()
+            self.__image_paths_valid[i].reverse()
+            self.__targets_valid[i].reverse()
+
+        self.__image_paths_test.reverse()
+        self.__targets_test.reverse()
 
     @property
     def image_paths_train(self) -> list:
