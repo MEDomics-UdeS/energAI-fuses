@@ -44,6 +44,13 @@ class SplittingManager:
 
         self.__split_dataset()
 
+        # For backwards results reproducibility, valid and test sets are reverse ordered
+        for i in range(k_cross_valid):
+            self.__image_paths_valid.reverse()
+            self.__targets_valid.reverse()
+            self.__image_paths_test.reverse()
+            self.__targets_test.reverse()
+
     @property
     def image_paths_train(self) -> list:
         return self.__image_paths_train
@@ -135,8 +142,8 @@ class SplittingManager:
                 targets_train.append(self.__filter_list(targets, indices_valid[i], False))
 
                 if self.__google_images:
-                    image_paths_train[i] = google_image_paths + image_paths_train[i]
-                    targets_train[i] = google_targets + targets_train[i]
+                    image_paths_train[i] = image_paths_train[i] + google_image_paths
+                    targets_train[i] = targets_train[i] + google_targets
 
                 image_paths_valid.append(self.__filter_list(image_paths, indices_valid[i], True))
                 targets_valid.append(self.__filter_list(targets, indices_valid[i], True))
@@ -148,8 +155,8 @@ class SplittingManager:
             self.__targets_valid = targets_valid
         else:
             if self.__validation_size == 0 and self.__test_size == 0:
-                self.__image_paths_train = [google_image_paths + image_paths]
-                self.__targets_train = [google_image_paths + targets]
+                self.__image_paths_train = [image_paths + google_image_paths]
+                self.__targets_train = [targets + google_image_paths]
 
                 self.__image_paths_valid = [[]]
                 self.__targets_valid = [[]]
@@ -188,14 +195,14 @@ class SplittingManager:
 
                     indices_test = list(indices_test)
 
-                    self.__image_paths_train = [google_image_paths + self.__filter_list(image_paths, indices_test, False)]
-                    self.__targets_train = [google_targets + self.__filter_list(targets, indices_test, False)]
+                    self.__image_paths_train = [self.__filter_list(image_paths, indices_test, False) + google_image_paths]
+                    self.__targets_train = [self.__filter_list(targets, indices_test, False) + google_targets]
 
                     self.__image_paths_test = self.__filter_list(image_paths, indices_test, True)
                     self.__targets_test = self.__filter_list(targets, indices_test, True)
                 else:
-                    self.__image_paths_train = [google_image_paths + image_paths]
-                    self.__targets_train = [google_targets + targets]
+                    self.__image_paths_train = [image_paths + google_image_paths]
+                    self.__targets_train = [targets + google_targets]
 
                     self.__image_paths_test = []
                     self.__targets_test = []
