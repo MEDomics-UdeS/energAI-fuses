@@ -7,6 +7,8 @@ import sys
 import zipfile
 import requests
 from tqdm import tqdm
+from PIL import Image
+
 
 from src.data.Datasets.FuseDataset import FuseDataset
 from src.utils.constants import *
@@ -18,7 +20,9 @@ class SplittingManager:
                  test_size: float,
                  k_cross_valid: int,
                  seed: int,
-                 google_images: bool) -> None:
+                 google_images: bool,
+                 image_size: int,
+                 num_workers: int) -> None:
 
         self.__validation_size = validation_size
         self.__test_size = test_size
@@ -26,13 +30,37 @@ class SplittingManager:
         self.__seed = seed
         self.__google_images = google_images
 
-        if not any(file.endswith(f'.{IMAGE_EXT}') for file in os.listdir(RESIZED_LEARNING_PATH)):
-            if not os.path.isdir(RAW_LEARNING_PATH):
+        # Check if any image exists in the data/resized folder
+        if any(file.endswith(f'.{IMAGE_EXT}') for file in os.listdir(RESIZED_LEARNING_PATH)):
+            # Get the first found image's size
+            for file in os.listdir(RESIZED_LEARNING_PATH):
+                if file.endswith(f'.{IMAGE_EXT}'):
+                    img_size = Image.open(f'{RESIZED_LEARNING_PATH}{file}').size
+                    break
+
+            # Check if the first image's size is not equal to the image_size parameter
+            if img_size != (image_size, image_size):
+                print(f'Max image size argument is {(image_size, image_size)} '
+                      f'but a resized image of {img_size} was found')
+                print(f'All images will be resized to {(image_size, image_size)}')
+
+                # Resize all images
+                self._resize_images(image_size, num_workers)
+        else:
+            # Check if any image exists in the data/raw folder
+            # if any(file.endswith(f'.{IMAGE_EXT}') for file in os.listdir(RAW_LEARNING_PATH)):
+            if os.path.isdir(RAW_LEARNING_PATH):
+                # Resize all images
+                self._resize_images(image_size, num_workers)
+            else:
                 # Ask the user if the data should be downloaded
                 if input('Raw data folder contains no images. '
                          'Do you want to download them? (~ 3 GB) (y/n): ') == 'y':
                     # Download the data
                     self.__fetch_data(IMAGES_ID, ANNOTATIONS_ID)
+
+                    # Resize all images
+                    self._resize_images(image_size, num_workers)
                 else:
                     # Exit the program
                     sys.exit(1)

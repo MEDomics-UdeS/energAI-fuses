@@ -169,7 +169,9 @@ if __name__ == '__main__':
                                          test_size=args.test_size,
                                          k_cross_valid=args.k_cross_valid,
                                          seed=args.random_seed,
-                                         google_images=not args.no_google_images)
+                                         google_images=not args.no_google_images,
+                                         image_size=args.image_size,
+                                         num_workers=args.num_workers)
     if args.k_cross_valid > 1:
         print(f'\n{args.k_cross_valid}-Fold Cross Validation Enabled!')
 
