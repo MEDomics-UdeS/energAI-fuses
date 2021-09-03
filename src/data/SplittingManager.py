@@ -78,7 +78,7 @@ class SplittingManager:
         self.__targets = json.load(open(TARGETS_LEARNING_PATH))
 
         if not google_images:
-            self.__targets = [e for i, e in enumerate(self._targets) if i not in google_indices]
+            self.__targets = [e for i, e in enumerate(self.__targets) if i not in google_indices]
 
         # Convert the targets to tensors
         for target in self.__targets:
