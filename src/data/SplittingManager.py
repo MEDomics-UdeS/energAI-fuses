@@ -6,9 +6,10 @@ import torch
 import sys
 import zipfile
 import requests
-from tqdm import tqdm
+from tqdm import tqdm, trange
 from PIL import Image
-
+import ray
+from src.data.DatasetManagers.CustomDatasetManager import CustomDatasetManager, ray_resize_images, ray_get_rgb
 
 from src.data.Datasets.FuseDataset import FuseDataset
 from src.utils.constants import *
@@ -327,3 +328,69 @@ class SplittingManager:
         print('Done!\n\nDownloading annotations to:\t', ANNOTATIONS_PATH)
         self.__download_file_from_google_drive(annotations_id, ANNOTATIONS_PATH)
         print('Done!')
+
+    @staticmethod
+    def _resize_images(image_size: int, num_workers: int) -> None:
+        """
+        Method to resize all images in the data/raw folder and save them to the data/resized folder
+
+        :param image_size: int, maximum image size in pixels (will be used for height & width)
+        :param num_workers: int, number of workers for multiprocessing
+        """
+        # Initialize ray
+        ray.init(include_dashboard=False)
+
+        # Get list of image and exclude the hidden .gitkeep file
+        imgs = [img for img in sorted(os.listdir(RAW_LEARNING_PATH)) if img.startswith('.') is False]
+
+        # Create image paths
+        image_paths = [os.path.join(RAW_LEARNING_PATH, img) for img in imgs]
+
+        # Get dataset size
+        size = len(image_paths)
+
+        # Declare empty lists to save the resize ratios and targets
+        resize_ratios = [None] * size
+        targets_list = [None] * size
+
+        # Get ray workers IDs
+        ids = [ray_resize_images.remote(image_paths, RESIZED_LEARNING_PATH, image_size, ANNOTATIONS_PATH, i) for i in range(num_workers)]
+
+        # Calculate initial number of jobs left
+        nb_job_left = size - num_workers
+
+        # Multiprocessing loop
+        for _ in trange(size, desc='Resizing images...'):
+            # Handle ray workers ready states and IDs
+            ready, ids = ray.wait(ids, num_returns=1)
+
+            # Get resize ratios, indices, box_list and targets
+            resize_ratio, idx, box_list, targets = ray.get(ready)[0]
+
+            # Save the resize ratios and targets to lists
+            resize_ratios[idx] = resize_ratio
+            targets_list[idx] = targets
+
+            # Check if there are jobs left
+            if nb_job_left > 0:
+                # Assign workers to the remaining tasks
+                ids.extend([ray_resize_images.remote(image_paths, RESIZED_LEARNING_PATH, image_size, ANNOTATIONS_PATH, size - nb_job_left)])
+
+                # Decreasing the number of jobs left
+                nb_job_left -= 1
+
+        # Shutting down ray
+        ray.shutdown()
+
+        # Calculating and displaying the average, maximum and minimum resizing ratios
+        average_ratio = sum(resize_ratios) / len(resize_ratios)
+        print(f'\nAverage resize ratio: {average_ratio:.2%}')
+        print(f'Maximum resize ratio: {max(resize_ratios):.2%}')
+        print(f'Minimum resize ratio: {min(resize_ratios):.2%}')
+
+        # Saving the targets to a json file
+        json.dump(targets_list, open(TARGETS_LEARNING_PATH, 'w'), ensure_ascii=False)
+
+        # Displaying where files have been saved to
+        print(f'\nResized images have been saved to:\t\t{RESIZED_LEARNING_PATH}')
+        print(f'Resized targets have been saved to:\t\t{TARGETS_LEARNING_PATH}')
