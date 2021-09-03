@@ -9,6 +9,6 @@
     },
 
     "variable":{
-        "--no_google_images": ["True", "False"]
+        "--no_google_images": ["True", ""]
     }
 }

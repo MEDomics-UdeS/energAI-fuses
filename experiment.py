@@ -113,7 +113,7 @@ if __name__ == '__main__':
     parser.add_argument('-dt', '--deterministic', action='store_true',
                         help='Set deterministic behaviour')
     # Pretrained argument
-    parser.add_argument('-no-pt', '--no_pretrained', action='store_true',
+    parser.add_argument('-no-pt', '--no_pretrained', type=bool, default=False,
                         help='If specified, the loaded model will not be pretrained')
 
     # Save model argument
@@ -121,7 +121,7 @@ if __name__ == '__main__':
                         help='If specified, the trained model will not be saved')
 
     # Google Images argument
-    parser.add_argument('-no-gi', '--no_google_images', action='store_true',
+    parser.add_argument('-no-gi', '--no_google_images', type=bool, default=False,
                         help='If specified, the Google Images photos will be excluded from the training subset')
 
     # Calculate training set metrics

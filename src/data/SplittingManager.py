@@ -3,6 +3,10 @@ from typing import List
 import os
 import json
 import torch
+import sys
+import zipfile
+import requests
+from tqdm import tqdm
 
 from src.data.Datasets.FuseDataset import FuseDataset
 from src.utils.constants import *
@@ -21,6 +25,17 @@ class SplittingManager:
         self.__k_cross_valid = k_cross_valid
         self.__seed = seed
         self.__google_images = google_images
+
+        if not any(file.endswith(f'.{IMAGE_EXT}') for file in os.listdir(RESIZED_LEARNING_PATH)):
+            if not os.path.isdir(RAW_LEARNING_PATH):
+                # Ask the user if the data should be downloaded
+                if input('Raw data folder contains no images. '
+                         'Do you want to download them? (~ 3 GB) (y/n): ') == 'y':
+                    # Download the data
+                    self.__fetch_data(IMAGES_ID, ANNOTATIONS_ID)
+                else:
+                    # Exit the program
+                    sys.exit(1)
 
         images = [img for img in sorted(os.listdir(RAW_LEARNING_PATH)) if img.startswith('.') is False]
 
@@ -218,3 +233,69 @@ class SplittingManager:
     def __get_most_frequent_labels(targets: list) -> list:
         return [max(set(target['labels'].tolist()), key=target['labels'].tolist().count)
                 for target in targets]
+
+    @staticmethod
+    def __download_file_from_google_drive(file_id: str, dest: str, chunk_size: int = 32768) -> None:
+        """
+        Method to download a file from Google Drive
+
+        Inspired from :
+        https://stackoverflow.com/questions/38511444/python-download-files-from-google-drive-using-url
+
+        :param file_id: str, Google Drive file ID hash to download
+        :param dest: str, filepath + filename to save the contents to
+        :param chunk_size: int, chunk size in bytes
+        """
+
+        # Declare URL, session, response and token objects
+        URL = "https://docs.google.com/uc?export=download"
+        session = requests.Session()
+        response = session.get(URL, params={'id': file_id}, stream=True)
+        token = None
+
+        # Get token from the response cookie 'download_warning'
+        for key, value in response.cookies.items():
+            if key.startswith('download_warning'):
+                token = value
+
+        # If token obtained, get params and response
+        if token:
+            params = {'id': file_id, 'confirm': token}
+            response = session.get(URL, params=params, stream=True)
+
+        # If the response is OK, then download the file chunk by chunk
+        if response.ok:
+            with open(dest, "wb") as f:
+                for chunk in tqdm(response.iter_content(chunk_size), desc='Downloading'):
+                    if chunk:
+                        f.write(chunk)
+        else:
+            raise Exception(f'Error {response.status_code}: {response.reason}')
+
+    def __fetch_data(self, images_id: str, annotations_id: str) -> None:
+        """
+        Method to fetch the images and annotations from Google Drive
+
+        :param images_id: str, Google Drive file ID hash for the images zip file
+        :param annotations_id: str, Google Drive file ID hash for the annotations file
+        """
+        # Create the file path for the images zip file
+        images_zip = os.path.join(RAW_PATH, 'images.zip')
+
+        # Download images zip file
+        print('\nDownloading images to:\t\t', RAW_PATH)
+        self.__download_file_from_google_drive(images_id, images_zip)
+
+        # Unzip the images zip file
+        print('Done!\nUnzipping images...')
+
+        with zipfile.ZipFile(images_zip, 'r') as zip_ref:
+            zip_ref.extractall(RAW_PATH)
+
+        # Delete the images zip file
+        os.remove(images_zip)
+
+        # Download the annotations file
+        print('Done!\n\nDownloading annotations to:\t', ANNOTATIONS_PATH)
+        self.__download_file_from_google_drive(annotations_id, ANNOTATIONS_PATH)
+        print('Done!')

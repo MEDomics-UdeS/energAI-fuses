@@ -9,6 +9,6 @@
     },
 
     "variable":{
-        "--no_pretrained": ["True", "False"]
+        "--no_pretrained": ["True", ""]
     }
 }
