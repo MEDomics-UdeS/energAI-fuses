@@ -18,6 +18,7 @@ import json
 from PIL import Image
 import ray
 from typing import Tuple, List
+from copy import deepcopy
 
 from src.data.Datasets.CustomDataset import CustomDataset, ray_load_images
 from src.utils.constants import RESIZED_LEARNING_PATH
@@ -55,7 +56,7 @@ class FuseDataset(CustomDataset):
         # Save the image paths as an object attribute
         # self._image_paths = [os.path.join(images_path, img) for img in images]
         self._image_paths = [RESIZED_LEARNING_PATH + image_path for image_path in image_paths]
-        self._targets = targets
+        self._targets = deepcopy(targets)
 
         # Get the dataset size
         size = len(self._image_paths)
