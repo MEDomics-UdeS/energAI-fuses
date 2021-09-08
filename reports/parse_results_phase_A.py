@@ -6,6 +6,7 @@ import pandas as pd
 from tqdm import tqdm
 from datetime import datetime
 import matplotlib.pyplot as plt
+from parsing_utils import print_ap_table
 
 
 def generate_figure(metric: str, curves_dict: dict, save: bool = False, show: bool = True) -> None:
@@ -121,16 +122,6 @@ def add_curve_to_dict(acc: EventAccumulator, scalar_key: str, run_key: str, curv
     curves_dict[run_key] = {'x': steps, 'y': vals}
 
     return curves_dict
-
-
-def print_ap_table(df: pd.DataFrame) -> None:
-    print('*' * 50)
-    print('LaTeX CODE START')
-    print('*' * 50)
-    print(df.to_latex(index=False, escape=False))
-    print('*' * 50)
-    print('LaTeX CODE END')
-    print('*' * 50)
 
 
 def print_best_result(df: pd.DataFrame, metric: str) -> None:
