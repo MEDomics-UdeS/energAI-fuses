@@ -9,9 +9,11 @@ from parsing_utils import print_ap_table
 def parse_results(saved_models_path: str,
                   log_path: str,
                   hyperparameter: str,
-                  metric: str) -> pd.DataFrame:
+                  metric: str,
+                  decimals: int = 4) -> pd.DataFrame:
+    hp_print_name = hyperparameter.replace('_', ' ')
 
-    df = pd.DataFrame(columns=[hyperparameter])
+    df = pd.DataFrame(columns=[hp_print_name])
 
     for subdir, dirs, files in os.walk(saved_models_path):
         files = [file for file in files if file != '.gitkeep']
@@ -24,29 +26,31 @@ def parse_results(saved_models_path: str,
             files_run = [i for i in files if cv_run in i]
 
             save_state = torch.load(saved_models_path + files_run[0], map_location=torch.device('cpu'))
-            hyperparameter_value = save_state['args_dict'][hyperparameter]
+            hp_value = save_state['args_dict'][hyperparameter]
 
-            df.loc[row, hyperparameter] = hyperparameter_value
+            df.loc[row, hp_print_name] = hp_value
 
             for file_run in files_run:
-                k = int(''.join(c for c in file_run.split("_")[2] if c.isdigit()))
-
                 event_acc = EventAccumulator(log_path + file_run)
                 event_acc.Reload()
-
                 _, _, metric_value = zip(*event_acc.Scalars(metric))
 
-                df.loc[row, k] = metric_value[0]
+                k = f"K={''.join(c for c in file_run.split('_')[2] if c.isdigit())}"
+                df.loc[row, k] = round(metric_value[0], decimals)
 
             row += 1
 
     cols = df.columns.tolist()
     k_cols = cols[1:]
     k_cols.sort()
-    df = df[[hyperparameter] + k_cols]
+    df = df[[hp_print_name] + k_cols]
+
     df.fillna('', inplace=True)
-    df['mean'] = df[k_cols].mean(axis=1)
-    df['std'] = df[k_cols].std(axis=1)
+
+    df['AP_{mean}'] = round(df[k_cols].mean(axis=1), decimals)
+    df['AP_{std}'] = round(df[k_cols].std(axis=1), decimals)
+
+    df = df.sort_values(hp_print_name)
 
     return df
 
@@ -59,6 +63,6 @@ if __name__ == '__main__':
     ap_table = parse_results(saved_models_path=models_path,
                              log_path=logs_path,
                              hyperparameter='image_size',
-                             metric='hparams/Validation/AP @ [IoU=0.50:0.95 | area=all | maxDets=100]')
-
+                             metric='hparams/Validation/AP @ [IoU=0.50:0.95 | area=all | maxDets=100]',
+                             decimals=4)
     print_ap_table(ap_table)
