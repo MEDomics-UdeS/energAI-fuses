@@ -4,13 +4,17 @@ import os
 import pandas as pd
 from tqdm import tqdm
 from parsing_utils import print_ap_table
+from numpy import log10, floor
 
 
-def parse_results(saved_models_path: str,
-                  log_path: str,
-                  hyperparameter: str,
-                  metric: str,
-                  decimals: int = 4) -> pd.DataFrame:
+# def round_to_1_sign_fig(x: pd.DataFrame) -> pd.DataFrame:
+#     return round(x, -int(floor(log10(abs(x)))))
+
+
+def parse_results_k(saved_models_path: str,
+                    log_path: str,
+                    hyperparameter: str,
+                    metric: str) -> pd.DataFrame:
     hp_print_name = hyperparameter.replace('_', ' ')
 
     df = pd.DataFrame(columns=[hp_print_name])
@@ -33,10 +37,11 @@ def parse_results(saved_models_path: str,
             for file_run in files_run:
                 event_acc = EventAccumulator(log_path + file_run)
                 event_acc.Reload()
+                # scalars = event_acc.Tags()['scalars']
                 _, _, metric_value = zip(*event_acc.Scalars(metric))
 
                 k = f"K={''.join(c for c in file_run.split('_')[2] if c.isdigit())}"
-                df.loc[row, k] = round(metric_value[0], decimals)
+                df.loc[row, k] = metric_value[0]
 
             row += 1
 
@@ -47,12 +52,28 @@ def parse_results(saved_models_path: str,
 
     df.fillna('', inplace=True)
 
-    df['AP_{mean}'] = round(df[k_cols].mean(axis=1), decimals)
-    df['AP_{std}'] = round(df[k_cols].std(axis=1), decimals)
+    df['AP_{mean}'] = df[k_cols].mean(axis=1)
+    df['AP_{std}'] = df[k_cols].std(axis=1)
+
+    df['precision'] = -(floor(log10(abs(df['AP_{std}'])))).astype(int)
+    first_col = df[df.columns.tolist()[0]]
+    df = df.apply(lambda x: round(x[df.columns.tolist()[1:-1]], int(x['precision'])), axis=1)
+    df = pd.concat([first_col, df], axis=1)
 
     df = df.sort_values(hp_print_name)
 
     return df
+
+
+def parse_results_all():
+    scalar_dict = {
+        'hparams/Validation/AP @ [IoU=0.50:0.95 | area=all | maxDets=100]': 'AP',
+        'hparams/Validation/AP @ [IoU=0.50 | area=all | maxDets=100]': 'AP_{50}',
+        'hparams/Validation/AP @ [IoU=0.75 | area=all | maxDets=100]': 'AP_{75}',
+        'hparams/Validation/AP @ [IoU=0.50:0.95 | area=small | maxDets=100]': 'AP_{S}',
+        'hparams/Validation/AP @ [IoU=0.50:0.95 | area=medium | maxDets=100]': 'AP_{M}',
+        'hparams/Validation/AP @ [IoU=0.50:0.95 | area=large | maxDets=100]': 'AP_{L}'
+    }
 
 
 if __name__ == '__main__':
@@ -60,9 +81,11 @@ if __name__ == '__main__':
     models_path = os.getcwd() + '/saved_models/'
     logs_path = os.getcwd() + '/logdir/'
 
-    ap_table = parse_results(saved_models_path=models_path,
-                             log_path=logs_path,
-                             hyperparameter='image_size',
-                             metric='hparams/Validation/AP @ [IoU=0.50:0.95 | area=all | maxDets=100]',
-                             decimals=4)
-    print_ap_table(ap_table)
+    ap_table_k = parse_results_k(saved_models_path=models_path,
+                                 log_path=logs_path,
+                                 hyperparameter='image_size',
+                                 metric='hparams/Validation/AP @ [IoU=0.50:0.95 | area=all | maxDets=100]')
+
+    print_ap_table(ap_table_k)
+
+    ap_table_all = parse_results_all()
