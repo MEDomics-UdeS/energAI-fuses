@@ -14,7 +14,8 @@ from numpy import log10, floor
 def parse_results_k(saved_models_path: str,
                     log_path: str,
                     hyperparameter: str,
-                    metric: str) -> pd.DataFrame:
+                    metric: str,
+                    round_to_1_digit: bool = True) -> pd.DataFrame:
     hp_print_name = hyperparameter.replace('_', ' ')
 
     df = pd.DataFrame(columns=[hp_print_name])
@@ -55,10 +56,11 @@ def parse_results_k(saved_models_path: str,
     df['AP_{mean}'] = df[k_cols].mean(axis=1)
     df['AP_{std}'] = df[k_cols].std(axis=1)
 
-    df['precision'] = -(floor(log10(abs(df['AP_{std}'])))).astype(int)
-    first_col = df[df.columns.tolist()[0]]
-    df = df.apply(lambda x: round(x[df.columns.tolist()[1:-1]], int(x['precision'])), axis=1)
-    df = pd.concat([first_col, df], axis=1)
+    if round_to_1_digit:
+        df['precision'] = -(floor(log10(abs(df['AP_{std}'])))).astype(int)
+        first_col = df[df.columns.tolist()[0]]
+        df = df.apply(lambda x: round(x[df.columns.tolist()[1:-1]], int(x['precision'])), axis=1)
+        df = pd.concat([first_col, df], axis=1)
 
     df = df.sort_values(hp_print_name)
 
