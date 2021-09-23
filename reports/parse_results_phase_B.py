@@ -3,7 +3,8 @@ import torch
 import os
 import pandas as pd
 from tqdm import tqdm
-from parsing_utils import print_ap_table
+from constants import *
+from parsing_utils import *
 from numpy import log10, floor
 
 
@@ -16,7 +17,7 @@ def parse_results_k(saved_models_path: str,
                     hyperparameter: str,
                     metric: str,
                     round_to_1_digit: bool = True) -> pd.DataFrame:
-    hp_print_name = hyperparameter.replace('_', ' ')
+    hp_print_name = hyperparameter.replace('_', '\\_')
 
     df = pd.DataFrame(columns=[hp_print_name])
 
@@ -27,7 +28,7 @@ def parse_results_k(saved_models_path: str,
 
         row = 0
 
-        for cv_run in tqdm(cv_runs, desc='Parsing results...'):
+        for cv_run in cv_runs:  # tqdm(cv_runs, desc='Parsing results...'):
             files_run = [i for i in files if cv_run in i]
 
             save_state = torch.load(saved_models_path + files_run[0], map_location=torch.device('cpu'))
@@ -42,7 +43,12 @@ def parse_results_k(saved_models_path: str,
                 _, _, metric_value = zip(*event_acc.Scalars(metric))
 
                 k = f"K={''.join(c for c in file_run.split('_')[2] if c.isdigit())}"
-                df.loc[row, k] = metric_value[0]
+
+                # temp
+                # save_state = torch.load(saved_models_path + file_run, map_location=torch.device('cpu'))
+                # hp_value = save_state['args_dict'][hyperparameter]
+
+                df.loc[row, k] = metric_value[0]  # hp_value
 
             row += 1
 
@@ -68,26 +74,35 @@ def parse_results_k(saved_models_path: str,
 
 
 def parse_results_all():
-    scalar_dict = {
-        'hparams/Validation/AP @ [IoU=0.50:0.95 | area=all | maxDets=100]': 'AP',
-        'hparams/Validation/AP @ [IoU=0.50 | area=all | maxDets=100]': 'AP_{50}',
-        'hparams/Validation/AP @ [IoU=0.75 | area=all | maxDets=100]': 'AP_{75}',
-        'hparams/Validation/AP @ [IoU=0.50:0.95 | area=small | maxDets=100]': 'AP_{S}',
-        'hparams/Validation/AP @ [IoU=0.50:0.95 | area=medium | maxDets=100]': 'AP_{M}',
-        'hparams/Validation/AP @ [IoU=0.50:0.95 | area=large | maxDets=100]': 'AP_{L}'
-    }
+    pass
 
 
 if __name__ == '__main__':
-    os.chdir('..')
-    models_path = os.getcwd() + '/saved_models/'
-    logs_path = os.getcwd() + '/logdir/'
+    index = 1
 
-    ap_table_k = parse_results_k(saved_models_path=models_path,
-                                 log_path=logs_path,
-                                 hyperparameter='image_size',
-                                 metric='hparams/Validation/AP @ [IoU=0.50:0.95 | area=all | maxDets=100]')
+    print_latex_header()
 
-    print_ap_table(ap_table_k)
+    for hparam, path in RESULTS_B_DICT.items():
+        letter = path.split('/')[-1]
 
-    ap_table_all = parse_results_all()
+        print_experiment_name(letter=letter,
+                              hparam=hparam)
+
+        for scalar_raw, scalar_clean in SCALARS_B_DICT.items():
+            ap_table_k = parse_results_k(saved_models_path=path + '/saved_models/',
+                                         log_path=path + '/logdir/',
+                                         hyperparameter=hparam,
+                                         metric=scalar_raw,
+                                         round_to_1_digit=False)
+
+            print_ap_table(letter=letter,
+                           hparam=hparam,
+                           metric=scalar_clean,
+                           index=index,
+                           df=ap_table_k)
+
+            index += 1
+
+    print_latex_footer()
+
+    # ap_table_all = parse_results_all()

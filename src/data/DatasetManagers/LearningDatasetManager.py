@@ -103,14 +103,21 @@ class LearningDatasetManager(CustomDatasetManager):
                                           targets=splitting_manager.targets_train[current_fold],
                                           num_workers=num_workers,
                                           phase='Training')
-        self._dataset_valid = FuseDataset(image_paths=splitting_manager.image_paths_valid[current_fold],
-                                          targets=splitting_manager.targets_valid[current_fold],
-                                          num_workers=num_workers,
-                                          phase='Validation')
-        self._dataset_test = FuseDataset(image_paths=splitting_manager.image_paths_test,
-                                         targets=splitting_manager.targets_test,
-                                         num_workers=num_workers,
-                                         phase='Testing')
+        if validation_size > 0:
+            self._dataset_valid = FuseDataset(image_paths=splitting_manager.image_paths_valid[current_fold],
+                                              targets=splitting_manager.targets_valid[current_fold],
+                                              num_workers=num_workers,
+                                              phase='Validation')
+        else:
+            self._dataset_valid = []
+
+        if test_size > 0:
+            self._dataset_test = FuseDataset(image_paths=splitting_manager.image_paths_test,
+                                             targets=splitting_manager.targets_test,
+                                             num_workers=num_workers,
+                                             phase='Testing')
+        else:
+            self._dataset_test = []
 
         # # Get total dataset size
         # total_size = sum(image_path.rsplit('/')[-1].startswith('S') for image_path in self._dataset_train.image_paths)
@@ -134,8 +141,12 @@ class LearningDatasetManager(CustomDatasetManager):
 
         # Apply transforms to the training, validation and testing datasets
         self._dataset_train.transforms = self.__transforms_train(mean, std, data_aug)
-        self._dataset_valid.transforms = self._transforms_base(mean, std)
-        self._dataset_test.transforms = self._transforms_base(mean, std)
+
+        if validation_size > 0:
+            self._dataset_valid.transforms = self._transforms_base(mean, std)
+
+        if test_size > 0:
+            self._dataset_test.transforms = self._transforms_base(mean, std)
 
     @property
     def dataset_train(self):
@@ -148,7 +159,6 @@ class LearningDatasetManager(CustomDatasetManager):
     @property
     def dataset_test(self):
         return self._dataset_test
-
 
     @staticmethod
     def __transforms_train(mean: Optional[Tuple[float, float, float]],

@@ -128,9 +128,9 @@ class PipelineManager:
         print(f'\n=== Dataset & Data Loader Sizes ===\n\n'
               f'Training:\t\t{len(self.__data_loader_train.dataset)} images\t\t'
               f'{len(self.__data_loader_train)} batches\n'
-              f'Validation:\t\t{len(self.__data_loader_valid.dataset)} images\t\t'
+              f'Validation:\t\t{len(self.__data_loader_valid.dataset) if len(self.__data_loader_valid) > 0 else 0} images\t\t'
               f'{len(self.__data_loader_valid)} batches\n'
-              f'Testing:\t\t{len(self.__data_loader_test.dataset)} images\t\t'
+              f'Testing:\t\t{len(self.__data_loader_test.dataset) if len(self.__data_loader_test) > 0 else 0} images\t\t'
               f'{len(self.__data_loader_test)} batches\n')
 
         # Get model and set last fully-connected layer with the right number of classes
@@ -210,8 +210,9 @@ class PipelineManager:
 
             print(f'{"Last" if self.__save_last else "Best"} model saved to:\t\t\t\t{filename}\n')
 
-        # Test the trained model
-        self.__test_model()
+        if len(self.__data_loader_test) > 0:
+            # Test the trained model
+            self.__test_model()
 
         # Save best or last epoch validation metrics dict to tensorboard
         metrics_dict = self.__last_metrics_dict if self.__save_last else self.__best_metrics_dict
@@ -225,8 +226,6 @@ class PipelineManager:
 
         # Save the hyperparameters with tensorboard
         self.__writer.add_hparams(self.__args_dict, metric_dict=metrics_dict)
-
-
 
         # Flush and close the tensorboard writer
         self.__writer.flush()
@@ -266,7 +265,8 @@ class PipelineManager:
             # Save the current epoch loss for tensorboard
             self.__save_epoch('Training', loss, metrics_dict, epoch)
 
-            metric = self.__validate_model(model, epoch)
+            if len(self.__data_loader_valid) > 0:
+                metric = self.__validate_model(model, epoch)
 
             # Check if early stopping is enabled
             if self.__es_patience:

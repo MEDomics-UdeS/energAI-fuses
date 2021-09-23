@@ -110,14 +110,14 @@ if __name__ == '__main__':
                         help='Set random seed')
 
     # Deterministic argument
-    parser.add_argument('-dt', '--deterministic', action='store_true',
+    parser.add_argument('-dt', '--deterministic', type=bool, default=False,
                         help='Set deterministic behaviour')
     # Pretrained argument
     parser.add_argument('-no-pt', '--no_pretrained', type=bool, default=False,
                         help='If specified, the loaded model will not be pretrained')
 
     # Save model argument
-    parser.add_argument('-no-sv', '--no_save_model', action='store_true',
+    parser.add_argument('-no-sv', '--no_save_model', type=bool, default=False,
                         help='If specified, the trained model will not be saved')
 
     # Google Images argument
@@ -125,15 +125,15 @@ if __name__ == '__main__':
                         help='If specified, the Google Images photos will be excluded from the training subset')
 
     # Calculate training set metrics
-    parser.add_argument('-ltm', '--log_training_metrics', action='store_true',
+    parser.add_argument('-ltm', '--log_training_metrics', type=bool, default=False,
                         help='If specified, the AP and AR metrics will be calculated and logged for training set')
 
     # Calculate training set metrics
-    parser.add_argument('-lm', '--log_memory', action='store_true',
+    parser.add_argument('-lm', '--log_memory', type=bool, default=False,
                         help='If specified, the memory will be logged')
 
     # Best or last model saved/used for test inference argument
-    parser.add_argument('-sl', '--save_last', action='store_true',
+    parser.add_argument('-sl', '--save_last', type=bool, default=False,
                         help='Specify whether to save/use for inference testing the last model, otherwise'
                              'the best model will be used')
 
