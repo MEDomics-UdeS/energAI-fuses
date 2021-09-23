@@ -194,12 +194,12 @@ class PipelineManager:
         if self.__save_model:
             # Save the model in the saved_models/ folder
             filename = f'{MODELS_PATH}{self.__file_name}'
-            
-            if self.__best_epoch >= self.__swa_start:
-                ranking_model = self.__swa_model.module if self.__save_last else self.__best_model.module
+
+            if not self.__save_last:
+                ranking_model = self.__best_model.module if self.__best_epoch >= self.__swa_start else self.__best_model
             else:
-                ranking_model = self.__model if self.__save_last else self.__best_model
-            
+                ranking_model = self.__swa_model.module if epochs >= self.__swa_start else self.__model
+
             # Storing the model and meta data in the save state
             save_state = {
                 "model": ranking_model.state_dict(),
@@ -214,18 +214,20 @@ class PipelineManager:
             # Test the trained model
             self.__test_model()
 
-        # Save best or last epoch validation metrics dict to tensorboard
-        metrics_dict = self.__last_metrics_dict if self.__save_last else self.__best_metrics_dict
+        if len(self.__data_loader_valid) > 0:
+            # Save best or last epoch validation metrics dict to tensorboard
+            metrics_dict = self.__last_metrics_dict if self.__save_last else self.__best_metrics_dict
 
-        # Append test results to validation results
-        metrics_dict.update(self.__test_metrics_dict)
+            if len(self.__data_loader_test) > 0:
+                # Append test results to validation results
+                metrics_dict.update(self.__test_metrics_dict)
 
-        # Append 'hparams/' to the start of each metrics dictionary key to log in tensorboard
-        for key in metrics_dict.fromkeys(metrics_dict):
-            metrics_dict[f'hparams/{key}'] = metrics_dict.pop(key)
+            # Append 'hparams/' to the start of each metrics dictionary key to log in tensorboard
+            for key in metrics_dict.fromkeys(metrics_dict):
+                metrics_dict[f'hparams/{key}'] = metrics_dict.pop(key)
 
-        # Save the hyperparameters with tensorboard
-        self.__writer.add_hparams(self.__args_dict, metric_dict=metrics_dict)
+            # Save the hyperparameters with tensorboard
+            self.__writer.add_hparams(self.__args_dict, metric_dict=metrics_dict)
 
         # Flush and close the tensorboard writer
         self.__writer.flush()

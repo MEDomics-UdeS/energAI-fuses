@@ -200,7 +200,7 @@ class SplittingManager:
         else:
             if self.__validation_size == 0 and self.__test_size == 0:
                 self.__image_paths_train = [image_paths + google_image_paths]
-                self.__targets_train = [targets + google_image_paths]
+                self.__targets_train = [targets + google_targets]
 
                 self.__image_paths_valid = [[]]
                 self.__targets_valid = [[]]

@@ -179,8 +179,9 @@ if __name__ == '__main__':
         if args.k_cross_valid > 1:
             print(f'\nCross Validation Fold Number : {i + 1}/{args.k_cross_valid}\n')
 
-        # Declare file name as yyyy-mm-dd_hh-mm-ss
-        file_name = f'{args.model.split("_")[0]}_{args.epochs}_fold{i + 1}_{start.strftime("%Y-%m-%d_%H-%M-%S")}'
+            file_name = f'{args.model.split("_")[0]}_{args.epochs}_fold{i + 1}_{start.strftime("%Y-%m-%d_%H-%M-%S")}'
+        else:
+            file_name = f'{args.model.split("_")[0]}_{args.epochs}_{start.strftime("%Y-%m-%d_%H-%M-%S")}'
 
         # Declare dataset manager
         dataset_manager = LearningDatasetManager(images_path=RESIZED_LEARNING_PATH,
