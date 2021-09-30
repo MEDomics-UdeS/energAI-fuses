@@ -14,8 +14,9 @@ Description:
 
 import argparse
 from datetime import datetime
-
 import torch
+
+from src.data.SplittingManager import SplittingManager
 from src.data.DataLoaderManagers.LearningDataLoaderManager import LearningDataLoaderManager
 from src.data.DatasetManagers.LearningDatasetManager import LearningDatasetManager
 from src.utils.helper_functions import print_dict, env_tests
@@ -33,12 +34,13 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Processing inputs')
 
     # Dataset Choice
-    parser.add_argument('-ds', '--dataset', action='store', type=str, default='learning',
+    parser.add_argument('-ds', '--dataset', action='store', type=str, default='holdout',
                         choices=['learning', 'holdout'],
                         help='Dataset to use for inference test')
 
     # Model file name argument
-    parser.add_argument('-mfn', '--model_file_name', action='store', type=str, default='fasterrcnn_200_2021-07-28_14-38-45',
+    parser.add_argument('-mfn', '--model_file_name', action='store', type=str,
+                        default='/home/simon/Desktop/Results_Fuses/C/saved_models/fasterrcnn_200_2021-09-23_16-41-34',
                         help=f'Model file name located in {MODELS_PATH}')
 
     # Parse arguments
@@ -46,7 +48,7 @@ if __name__ == '__main__':
 
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
-    save_state = torch.load(MODELS_PATH + args.model_file_name, map_location=device)
+    save_state = torch.load(args.model_file_name, map_location=device)
     args_dict = save_state['args_dict']
 
     # Display arguments in console
@@ -56,17 +58,32 @@ if __name__ == '__main__':
     print('\n=== Saved Model Arguments & Hyperparameters ===\n')
     print_dict(args_dict, 6)
 
+    # Declare splitting manager
+    splitting_manager = SplittingManager(
+        dataset=args.dataset,
+        validation_size=args_dict['validation_size'] if args.dataset == 'learning' else 0,
+        test_size=args_dict['test_size'] if args.dataset == 'learning' else 1,
+        k_cross_valid=1,
+        seed=args_dict['random_seed'],
+        google_images=not args_dict['no_google_images'],
+        image_size=args_dict['image_size'],
+        num_workers=args_dict['num_workers'])
+
     # Declare dataset manager
-    dataset_manager = LearningDatasetManager(images_path=RESIZED_LEARNING_PATH,
-                                             targets_path=TARGETS_LEARNING_PATH,
-                                             image_size=args_dict['image_size'],
-                                             num_workers=args_dict['num_workers'],
-                                             data_aug=args_dict['data_aug'],
-                                             validation_size=args_dict['validation_size'] if args.dataset == 'learning' else 0,
-                                             test_size=args_dict['test_size'] if args.dataset == 'learning' else 1,
-                                             norm=args_dict['normalize'],
-                                             google_images=not args_dict['no_google_images'],
-                                             seed=args_dict['random_seed'])
+    dataset_manager = LearningDatasetManager(
+        images_path=RESIZED_LEARNING_PATH if args.dataset == 'learning' else RESIZED_HOLDOUT_PATH,
+        targets_path=TARGETS_LEARNING_PATH,
+        image_size=args_dict['image_size'],
+        num_workers=args_dict['num_workers'],
+        data_aug=args_dict['data_aug'],
+        validation_size=args_dict['validation_size'] if args.dataset == 'learning' else 0,
+        test_size=args_dict['test_size'] if args.dataset == 'learning' else 1,
+        norm=args_dict['normalize'],
+        google_images=not args_dict['no_google_images'],
+        seed=args_dict['random_seed'],
+        splitting_manager=splitting_manager,
+        current_fold=1
+    )
 
     # Declare data loader manager
     data_loader_manager = LearningDataLoaderManager(dataset_manager=dataset_manager,

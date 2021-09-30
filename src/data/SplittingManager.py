@@ -17,6 +17,7 @@ from src.utils.constants import *
 
 class SplittingManager:
     def __init__(self,
+                 dataset: str,
                  validation_size: float,
                  test_size: float,
                  k_cross_valid: int,
@@ -25,6 +26,10 @@ class SplittingManager:
                  image_size: int,
                  num_workers: int) -> None:
 
+        self.__images_path = RESIZED_LEARNING_PATH if dataset == 'learning' else RESIZED_HOLDOUT_PATH
+        self.__raw_images_path = RAW_LEARNING_PATH if dataset == 'learning' else RAW_HOLDOUT_PATH
+        self.__targets_path = TARGETS_LEARNING_PATH if dataset == 'learning' else TARGETS_HOLDOUT_PATH
+
         self.__validation_size = validation_size
         self.__test_size = test_size
         self.__k_cross_valid = k_cross_valid
@@ -32,11 +37,11 @@ class SplittingManager:
         self.__google_images = google_images
 
         # Check if any image exists in the data/resized folder
-        if any(file.endswith(f'.{IMAGE_EXT}') for file in os.listdir(RESIZED_LEARNING_PATH)):
+        if any(file.endswith(f'.{IMAGE_EXT}') for file in os.listdir(self.__images_path)):
             # Get the first found image's size
-            for file in os.listdir(RESIZED_LEARNING_PATH):
+            for file in os.listdir(self.__images_path):
                 if file.endswith(f'.{IMAGE_EXT}'):
-                    img_size = Image.open(f'{RESIZED_LEARNING_PATH}{file}').size
+                    img_size = Image.open(f'{self.__images_path}{file}').size
                     break
 
             # Check if the first image's size is not equal to the image_size parameter
@@ -49,8 +54,8 @@ class SplittingManager:
                 self._resize_images(image_size, num_workers)
         else:
             # Check if any image exists in the data/raw folder
-            # if any(file.endswith(f'.{IMAGE_EXT}') for file in os.listdir(RAW_LEARNING_PATH)):
-            if os.path.isdir(RAW_LEARNING_PATH):
+            # if any(file.endswith(f'.{IMAGE_EXT}') for file in os.listdir(self.__raw_images_path)):
+            if os.path.isdir(self.__raw_images_path):
                 # Resize all images
                 self._resize_images(image_size, num_workers)
             else:
@@ -66,16 +71,16 @@ class SplittingManager:
                     # Exit the program
                     sys.exit(1)
 
-        images = [img for img in sorted(os.listdir(RAW_LEARNING_PATH)) if img.startswith('.') is False]
+        images = [img for img in sorted(os.listdir(self.__raw_images_path)) if img.startswith('.') is False]
 
         if not google_images:
             google_imgs = [image for image in images if image.startswith('G')]
             google_indices = [images.index(google_image) for google_image in google_imgs]
             images = [e for i, e in enumerate(images) if i not in google_indices]
 
-        self.__image_paths = [img for img in images]#[os.path.join(RESIZED_LEARNING_PATH, img) for img in images]
+        self.__image_paths = [img for img in images]#[os.path.join(self.__images_path, img) for img in images]
 
-        self.__targets = json.load(open(TARGETS_LEARNING_PATH))
+        self.__targets = json.load(open(self.__targets_path))
 
         if not google_images:
             self.__targets = [e for i, e in enumerate(self.__targets) if i not in google_indices]
@@ -229,7 +234,19 @@ class SplittingManager:
                     self.__image_paths_valid = [[]]
                     self.__targets_valid = [[]]
 
-                if self.__test_size > 0:
+                if self.__test_size == 1:
+                    self.__image_paths_train = []
+                    self.__targets_train = []
+
+                    self.__image_paths_test = [image_paths]
+                    self.__targets_test = [targets]
+                elif self.__test_size == 0:
+                    self.__image_paths_train = [image_paths + google_image_paths]
+                    self.__targets_train = [targets + google_targets]
+
+                    self.__image_paths_test = []
+                    self.__targets_test = []
+                else:
                     strat_split_test = StratifiedShuffleSplit(n_splits=1,
                                                               test_size=self.__test_size * total_size / len(image_paths),
                                                               random_state=self.__seed)
@@ -244,12 +261,7 @@ class SplittingManager:
 
                     self.__image_paths_test = self.__filter_list(image_paths, indices_test, True)
                     self.__targets_test = self.__filter_list(targets, indices_test, True)
-                else:
-                    self.__image_paths_train = [image_paths + google_image_paths]
-                    self.__targets_train = [targets + google_targets]
 
-                    self.__image_paths_test = []
-                    self.__targets_test = []
 
     @staticmethod
     def __filter_list(my_list: list, indices: str, logic: bool) -> list:
@@ -329,8 +341,7 @@ class SplittingManager:
         self.__download_file_from_google_drive(annotations_id, ANNOTATIONS_PATH)
         print('Done!')
 
-    @staticmethod
-    def _resize_images(image_size: int, num_workers: int) -> None:
+    def _resize_images(self, image_size: int, num_workers: int) -> None:
         """
         Method to resize all images in the data/raw folder and save them to the data/resized folder
 
@@ -341,10 +352,10 @@ class SplittingManager:
         ray.init(include_dashboard=False)
 
         # Get list of image and exclude the hidden .gitkeep file
-        imgs = [img for img in sorted(os.listdir(RAW_LEARNING_PATH)) if img.startswith('.') is False]
+        imgs = [img for img in sorted(os.listdir(self.__raw_images_path)) if img.startswith('.') is False]
 
         # Create image paths
-        image_paths = [os.path.join(RAW_LEARNING_PATH, img) for img in imgs]
+        image_paths = [os.path.join(self.__raw_images_path, img) for img in imgs]
 
         # Get dataset size
         size = len(image_paths)
@@ -354,7 +365,7 @@ class SplittingManager:
         targets_list = [None] * size
 
         # Get ray workers IDs
-        ids = [ray_resize_images.remote(image_paths, RESIZED_LEARNING_PATH, image_size, ANNOTATIONS_PATH, i) for i in range(num_workers)]
+        ids = [ray_resize_images.remote(image_paths, self.__images_path, image_size, ANNOTATIONS_PATH, i) for i in range(num_workers)]
 
         # Calculate initial number of jobs left
         nb_job_left = size - num_workers
@@ -374,7 +385,7 @@ class SplittingManager:
             # Check if there are jobs left
             if nb_job_left > 0:
                 # Assign workers to the remaining tasks
-                ids.extend([ray_resize_images.remote(image_paths, RESIZED_LEARNING_PATH, image_size, ANNOTATIONS_PATH, size - nb_job_left)])
+                ids.extend([ray_resize_images.remote(image_paths, self.__images_path, image_size, ANNOTATIONS_PATH, size - nb_job_left)])
 
                 # Decreasing the number of jobs left
                 nb_job_left -= 1
@@ -389,8 +400,8 @@ class SplittingManager:
         print(f'Minimum resize ratio: {min(resize_ratios):.2%}')
 
         # Saving the targets to a json file
-        json.dump(targets_list, open(TARGETS_LEARNING_PATH, 'w'), ensure_ascii=False)
+        json.dump(targets_list, open(self.__targets_path, 'w'), ensure_ascii=False)
 
         # Displaying where files have been saved to
-        print(f'\nResized images have been saved to:\t\t{RESIZED_LEARNING_PATH}')
-        print(f'Resized targets have been saved to:\t\t{TARGETS_LEARNING_PATH}')
+        print(f'\nResized images have been saved to:\t\t{self.__images_path}')
+        print(f'Resized targets have been saved to:\t\t{self.__targets_path}')
