@@ -99,7 +99,7 @@ class LearningDatasetManager(CustomDatasetManager):
         #             sys.exit(1)
 
         # Declare training, validation and testing datasets
-        if test_size < 0:
+        if test_size < 1:
             self._dataset_train = FuseDataset(images_path=splitting_manager.images_path,
                                               image_paths=splitting_manager.image_paths_train[current_fold],
                                               targets=splitting_manager.targets_train[current_fold],
