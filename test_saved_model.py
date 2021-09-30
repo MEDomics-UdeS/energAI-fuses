@@ -15,6 +15,8 @@ Description:
 import argparse
 from datetime import datetime
 import torch
+import os
+import json
 
 from src.data.SplittingManager import SplittingManager
 from src.data.DataLoaderManagers.LearningDataLoaderManager import LearningDataLoaderManager
@@ -39,86 +41,96 @@ if __name__ == '__main__':
                         help='Dataset to use for inference test')
 
     # Model file name argument
-    parser.add_argument('-mfn', '--model_file_name', action='store', type=str,
-                        default='/home/simon/Desktop/Results_Fuses/C/saved_models/fasterrcnn_200_2021-09-23_16-41-34',
-                        help=f'Model file name located in {MODELS_PATH}')
+    parser.add_argument('-mp', '--models_path', action='store', type=str,
+                        default='/home/simon/Desktop/Results_Fuses/C/saved_models/',
+                        help='Directory containing the models')
+
+    # JSON results file name argument
+    parser.add_argument('-json', '--json_file_name', action='store', type=str,
+                        default='test_saved_models_results.json',
+                        help='File name and location of JSON results file to save')
 
     # Parse arguments
     args = parser.parse_args()
 
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
-    save_state = torch.load(args.model_file_name, map_location=device)
-    args_dict = save_state['args_dict']
+    results_dict = {}
 
-    # Display arguments in console
-    print('\n=== Saved Model Test ===\n')
-    print_dict(vars(args), 6)
+    for filename in os.listdir(args.models_path):
+        save_state = torch.load(args.models_path + filename, map_location=device)
+        args_dict = save_state['args_dict']
 
-    print('\n=== Saved Model Arguments & Hyperparameters ===\n')
-    print_dict(args_dict, 6)
+        # Display arguments in console
+        print('\n=== Saved Model Test ===\n')
+        print_dict(vars(args), 6)
 
-    # Declare splitting manager
-    splitting_manager = SplittingManager(
-        dataset=args.dataset,
-        validation_size=args_dict['validation_size'] if args.dataset == 'learning' else 0,
-        test_size=args_dict['test_size'] if args.dataset == 'learning' else 1,
-        k_cross_valid=1,
-        seed=args_dict['random_seed'],
-        google_images=not args_dict['no_google_images'],
-        image_size=args_dict['image_size'],
-        num_workers=args_dict['num_workers'])
+        print('\n=== Saved Model Arguments & Hyperparameters ===\n')
+        print_dict(args_dict, 6)
 
-    # Declare dataset manager
-    dataset_manager = LearningDatasetManager(
-        images_path=RESIZED_LEARNING_PATH if args.dataset == 'learning' else RESIZED_HOLDOUT_PATH,
-        targets_path=TARGETS_LEARNING_PATH,
-        image_size=args_dict['image_size'],
-        num_workers=args_dict['num_workers'],
-        data_aug=args_dict['data_aug'],
-        validation_size=args_dict['validation_size'] if args.dataset == 'learning' else 0,
-        test_size=args_dict['test_size'] if args.dataset == 'learning' else 1,
-        norm=args_dict['normalize'],
-        google_images=not args_dict['no_google_images'],
-        seed=args_dict['random_seed'],
-        splitting_manager=splitting_manager,
-        current_fold=1
-    )
+        # Declare splitting manager
+        splitting_manager = SplittingManager(
+            dataset=args.dataset,
+            validation_size=args_dict['validation_size'] if args.dataset == 'learning' else 0,
+            test_size=args_dict['test_size'] if args.dataset == 'learning' else 1,
+            k_cross_valid=1,
+            seed=args_dict['random_seed'],
+            google_images=not args_dict['no_google_images'],
+            image_size=args_dict['image_size'],
+            num_workers=args_dict['num_workers'])
 
-    # Declare data loader manager
-    data_loader_manager = LearningDataLoaderManager(dataset_manager=dataset_manager,
-                                                    batch_size=args_dict['batch'],
-                                                    gradient_accumulation=args_dict['gradient_accumulation'],
-                                                    num_workers=args_dict['num_workers'],
-                                                    deterministic=args_dict['deterministic'])
+        # Declare dataset manager
+        dataset_manager = LearningDatasetManager(
+            images_path=RESIZED_LEARNING_PATH if args.dataset == 'learning' else RESIZED_HOLDOUT_PATH,
+            targets_path=TARGETS_LEARNING_PATH,
+            image_size=args_dict['image_size'],
+            num_workers=args_dict['num_workers'],
+            data_aug=args_dict['data_aug'],
+            validation_size=args_dict['validation_size'] if args.dataset == 'learning' else 0,
+            test_size=args_dict['test_size'] if args.dataset == 'learning' else 1,
+            norm=args_dict['normalize'],
+            google_images=not args_dict['no_google_images'],
+            seed=args_dict['random_seed'],
+            splitting_manager=splitting_manager,
+            current_fold=1
+        )
 
-    model = load_model(model_name=args_dict['model'],
-                       pretrained=not args_dict['no_pretrained'],
-                       num_classes=len(CLASS_DICT),
-                       progress=True)
-    model.load_state_dict(save_state['model'])
-    model.to(device)
+        # Declare data loader manager
+        data_loader_manager = LearningDataLoaderManager(dataset_manager=dataset_manager,
+                                                        batch_size=args_dict['batch'],
+                                                        gradient_accumulation=args_dict['gradient_accumulation'],
+                                                        num_workers=args_dict['num_workers'],
+                                                        deterministic=args_dict['deterministic'])
 
-    if args.dataset == 'learning':
-        # Update bn statistics for the swa_model at the end
-        torch.optim.swa_utils.update_bn(data_loader_manager.data_loader_train, model)
+        model = load_model(model_name=args_dict['model'],
+                           pretrained=not args_dict['no_pretrained'],
+                           num_classes=len(CLASS_DICT),
+                           progress=True)
+        model.load_state_dict(save_state['model'])
+        model.to(device)
 
-    metrics_dict = coco_evaluate(model=model,
-                                 data_loader=data_loader_manager.data_loader_test,
-                                 desc='Testing saved model',
-                                 device=device,
-                                 image_size=args_dict['image_size'],
-                                 model_name=args_dict['model'])
+        if args.dataset == 'learning':
+            # Update bn statistics for the swa_model at the end
+            torch.optim.swa_utils.update_bn(data_loader_manager.data_loader_train, model)
 
-    # Print the testing object detection metrics results
-    print('=== Testing Results ===\n')
-    print_dict(metrics_dict, 6, '.2%')
+        metrics_dict = coco_evaluate(model=model,
+                                     data_loader=data_loader_manager.data_loader_test,
+                                     desc='Testing saved model',
+                                     device=device,
+                                     image_size=args_dict['image_size'],
+                                     model_name=args_dict['model'])
 
-    """
-    TODO : 
-    - Implement holdout test set
-    - Save results to json for parsing for paper tables
-    """
+        # Print the testing object detection metrics results
+        print('=== Testing Results ===\n')
+        print_dict(metrics_dict, 6, '.2%')
+
+        results_dict[filename] = {'args': args_dict,
+                                  'results': metrics_dict}
+
+    with open(args.json_file_name, 'w') as fp:
+        json.dump(results_dict, fp)
+
+    print(f'\nResults have been saved to the following JSON file: {args.json_file_name}')
 
     # Print total time for inference testing
     print(f'\nTotal time for inference testing: {str(datetime.now() - start).split(".")[0]}')
