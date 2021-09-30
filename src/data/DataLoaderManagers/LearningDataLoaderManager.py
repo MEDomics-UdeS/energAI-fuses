@@ -48,6 +48,8 @@ class LearningDataLoaderManager(CustomDataLoaderManager):
         # If the training dataset is not empty, declare the training data loader
         if len(dataset_manager.dataset_train) > 0:
             self._data_loader_train = self._get_data_loader(dataset_manager.dataset_train)
+        else:
+            self._data_loader_train = []
 
         # If the validation dataset is not empty, declare the validation data loader
         if len(dataset_manager.dataset_valid) > 0:

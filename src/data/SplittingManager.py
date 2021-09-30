@@ -101,6 +101,10 @@ class SplittingManager:
         self.__targets_test.reverse()
 
     @property
+    def images_path(self) -> str:
+        return self.__images_path
+
+    @property
     def image_paths_train(self) -> list:
         return self.__image_paths_train
 
@@ -238,8 +242,8 @@ class SplittingManager:
                     self.__image_paths_train = []
                     self.__targets_train = []
 
-                    self.__image_paths_test = [image_paths]
-                    self.__targets_test = [targets]
+                    self.__image_paths_test = image_paths
+                    self.__targets_test = targets
                 elif self.__test_size == 0:
                     self.__image_paths_train = [image_paths + google_image_paths]
                     self.__targets_train = [targets + google_targets]

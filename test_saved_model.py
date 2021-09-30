@@ -99,8 +99,9 @@ if __name__ == '__main__':
     model.load_state_dict(save_state['model'])
     model.to(device)
 
-    # Update bn statistics for the swa_model at the end
-    torch.optim.swa_utils.update_bn(data_loader_manager.data_loader_train, model)
+    if args.dataset == 'learning':
+        # Update bn statistics for the swa_model at the end
+        torch.optim.swa_utils.update_bn(data_loader_manager.data_loader_train, model)
 
     metrics_dict = coco_evaluate(model=model,
                                  data_loader=data_loader_manager.data_loader_test,

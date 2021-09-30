@@ -99,12 +99,18 @@ class LearningDatasetManager(CustomDatasetManager):
         #             sys.exit(1)
 
         # Declare training, validation and testing datasets
-        self._dataset_train = FuseDataset(image_paths=splitting_manager.image_paths_train[current_fold],
-                                          targets=splitting_manager.targets_train[current_fold],
-                                          num_workers=num_workers,
-                                          phase='Training')
+        if test_size < 0:
+            self._dataset_train = FuseDataset(images_path=splitting_manager.images_path,
+                                              image_paths=splitting_manager.image_paths_train[current_fold],
+                                              targets=splitting_manager.targets_train[current_fold],
+                                              num_workers=num_workers,
+                                              phase='Training')
+        else:
+            self._dataset_train = []
+
         if validation_size > 0:
-            self._dataset_valid = FuseDataset(image_paths=splitting_manager.image_paths_valid[current_fold],
+            self._dataset_valid = FuseDataset(images_path=splitting_manager.images_path,
+                                              image_paths=splitting_manager.image_paths_valid[current_fold],
                                               targets=splitting_manager.targets_valid[current_fold],
                                               num_workers=num_workers,
                                               phase='Validation')
@@ -112,7 +118,8 @@ class LearningDatasetManager(CustomDatasetManager):
             self._dataset_valid = []
 
         if test_size > 0:
-            self._dataset_test = FuseDataset(image_paths=splitting_manager.image_paths_test,
+            self._dataset_test = FuseDataset(images_path=splitting_manager.images_path,
+                                             image_paths=splitting_manager.image_paths_test,
                                              targets=splitting_manager.targets_test,
                                              num_workers=num_workers,
                                              phase='Testing')
@@ -140,7 +147,8 @@ class LearningDatasetManager(CustomDatasetManager):
             mean, std = None, None
 
         # Apply transforms to the training, validation and testing datasets
-        self._dataset_train.transforms = self.__transforms_train(mean, std, data_aug)
+        if test_size < 1:
+            self._dataset_train.transforms = self.__transforms_train(mean, std, data_aug)
 
         if validation_size > 0:
             self._dataset_valid.transforms = self._transforms_base(mean, std)

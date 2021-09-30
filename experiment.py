@@ -165,7 +165,8 @@ if __name__ == '__main__':
     print_dict(vars(args), 6)
 
     # Declare splitting manager
-    splitting_manager = SplittingManager(validation_size=args.validation_size,
+    splitting_manager = SplittingManager(dataset='learning',
+                                         validation_size=args.validation_size,
                                          test_size=args.test_size,
                                          k_cross_valid=args.k_cross_valid,
                                          seed=args.random_seed,
