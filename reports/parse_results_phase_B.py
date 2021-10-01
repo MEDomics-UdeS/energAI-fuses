@@ -58,15 +58,29 @@ def parse_results_k(saved_models_path: str,
     df = df[[hp_print_name] + k_cols]
 
     df.fillna('', inplace=True)
+    #
+    # df['AP_{mean}'] = df[k_cols].mean(axis=1)
+    # df['AP_{std}'] = df[k_cols].std(axis=1)
+    #
+    # if round_to_1_digit:
+    #     df['precision'] = -(floor(log10(abs(df['AP_{std}'])))).astype(int)
+    #     first_col = df[df.columns.tolist()[0]]
+    #     df = df.apply(lambda x: round(x[df.columns.tolist()[1:-1]], int(x['precision'])), axis=1)
+    #     df = pd.concat([first_col, df], axis=1)
 
-    df['AP_{mean}'] = df[k_cols].mean(axis=1)
-    df['AP_{std}'] = df[k_cols].std(axis=1)
+    mean_list = []
 
-    if round_to_1_digit:
-        df['precision'] = -(floor(log10(abs(df['AP_{std}'])))).astype(int)
-        first_col = df[df.columns.tolist()[0]]
-        df = df.apply(lambda x: round(x[df.columns.tolist()[1:-1]], int(x['precision'])), axis=1)
-        df = pd.concat([first_col, df], axis=1)
+    for i, row in df.iterrows():
+        precision = get_digits_precision(row[1:].std())
+        format_str = '{:.' + str(precision) + 'f}'
+
+        mean_list.append(f'{format_str.format(round(row[1:].mean(), precision))} ± ' \
+                         f'{format_str.format(round(row[1:].std(), precision))}')
+
+        for column in df.columns.to_list()[1:]:
+            df.loc[i, column] = format_str.format(round(df.loc[i, column], precision))
+
+    df['mean ± std'] = mean_list
 
     df = df.sort_values(hp_print_name)
 

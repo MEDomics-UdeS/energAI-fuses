@@ -2,8 +2,8 @@ import os
 import json
 import pandas as pd
 
-
 from parsing_utils import get_digits_precision, print_latex_header, print_latex_footer
+
 
 def parse_results(json_path: str) -> pd.DataFrame:
     with open(json_path) as json_file:
@@ -33,35 +33,20 @@ def parse_results(json_path: str) -> pd.DataFrame:
 
         df = df.append(row, ignore_index=True)
 
-    # row = {columns[0]: 'mean ± std'}
-    #
-    # for column in columns[1:]:
-    #     row[column] = f'{df[column].mean():.4f} ± {df[column].std():.4f}'
-    #
-    # df = df.append(row, ignore_index=True)
-
-    # mean_dict = {}
-    # std_dict = {}
-    # precision_dict = {}
-
     row = {columns[0]: 'mean ± std'}
 
     for column in columns[1:]:
         precision = get_digits_precision(df[column].std())
+        format_str = '{:.' + str(precision) + 'f}'
 
-        row[column] = f'{round(df[column].mean(), precision)} ± ' \
-                      f'{round(df[column].std(), precision)}'
-
-        # mean_dict[column] = round(df[column].mean(), precision)
-        # std_dict[column] = round(df[column].std(), precision)
+        row[column] = f'{format_str.format(round(df[column].mean(), precision))} ± ' \
+                      f'{format_str.format(round(df[column].std(), precision))}'
 
         df[column] = df[column].round(precision)
-        # format_str = '{:.' + str(precision) + '}'
-        # df[column] = df[column].apply(format_str.format)
+
+        df[column] = df[column].apply(format_str.format)
 
     df = df.append(row, ignore_index=True)
-
-
 
     return df
 
