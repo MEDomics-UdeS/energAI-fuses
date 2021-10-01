@@ -1,4 +1,9 @@
 import pandas as pd
+from math import log10, floor
+
+
+def get_digits_precision(x: float) -> int:
+    return -int(floor(log10(abs(x))))
 
 
 def print_latex_header() -> None:

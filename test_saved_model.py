@@ -47,7 +47,7 @@ if __name__ == '__main__':
 
     # JSON results file name argument
     parser.add_argument('-json', '--json_file_name', action='store', type=str,
-                        default='test_saved_models_results.json',
+                        default='D_results.json',
                         help='File name and location of JSON results file to save')
 
     # Parse arguments
