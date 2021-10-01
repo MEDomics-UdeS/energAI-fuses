@@ -1,3 +1,5 @@
+PATH_A = '/home/simon/Desktop/Results_Fuses/A'
+
 RESULTS_B_DICT = {
     'image_size': '/home/simon/Desktop/Results_Fuses/B1',
     'no_pretrained': '/home/simon/Desktop/Results_Fuses/B2',

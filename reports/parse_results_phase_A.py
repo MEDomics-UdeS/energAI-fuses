@@ -7,6 +7,7 @@ from tqdm import tqdm
 from datetime import datetime
 import matplotlib.pyplot as plt
 from parsing_utils import print_ap_table
+from constants import PATH_A
 
 
 def generate_figure(metric: str, curves_dict: dict, save: bool = False, show: bool = True) -> None:
@@ -130,13 +131,19 @@ def print_best_result(df: pd.DataFrame, metric: str) -> None:
 
 
 if __name__ == '__main__':
-    os.chdir('..')
-    models_path = os.getcwd() + '/saved_models/'
-    logs_path = os.getcwd() + '/logdir/'
+    # os.chdir('..')
+    # models_path = os.getcwd() + '/saved_models/'
+    # logs_path = os.getcwd() + '/logdir/'
+    models_path = PATH_A + '/saved_models/'
+    logs_path = PATH_A + '/logdir/'
 
     ap_table, ap_curves, loss_curves, lr_curves = parse_results(models_path, logs_path)
 
-    print_ap_table(ap_table)
+    print_ap_table(letter='A',
+                   hparam='',
+                   metric='',
+                   index=0,
+                   df=ap_table)
 
     generate_figure('AP', ap_curves)
     generate_figure('Mean Loss', loss_curves)
