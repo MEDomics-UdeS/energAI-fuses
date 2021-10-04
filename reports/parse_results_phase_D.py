@@ -2,10 +2,12 @@ import os
 import json
 import pandas as pd
 
-from parsing_utils import get_digits_precision, print_latex_header, print_latex_footer
+from parsing_utils import get_latex_ap_table, get_latex_exp_name, get_digits_precision, save_latex
 
 
-def parse_results(json_path: str) -> pd.DataFrame:
+def parse_results(json_path: str,
+                  round_to_1_sign_digit: bool = False,
+                  num_decimals: int = 4) -> pd.DataFrame:
     with open(json_path) as json_file:
         results_dict = json.load(json_file)
 
@@ -37,14 +39,18 @@ def parse_results(json_path: str) -> pd.DataFrame:
 
     for column in columns[1:]:
         precision = get_digits_precision(df[column].std())
-        format_str = '{:.' + str(precision) + 'f}'
+        format_str = f'{{:.{precision}f}}'
 
         row[column] = f'{format_str.format(round(df[column].mean(), precision))} ± ' \
                       f'{format_str.format(round(df[column].std(), precision))}'
 
-        df[column] = df[column].round(precision)
-
-        df[column] = df[column].apply(format_str.format)
+        if round_to_1_sign_digit:
+            df[column] = df[column].round(precision)
+            df[column] = df[column].apply(format_str.format)
+        else:
+            format_str = f'{{:.{num_decimals}f}}'
+            df[column] = df[column].round(num_decimals)
+            df[column] = df[column].apply(format_str.format)
 
     df = df.append(row, ignore_index=True)
 
@@ -55,8 +61,11 @@ if __name__ == '__main__':
     os.chdir('..')
     json_path = f'{os.getcwd()}/D_results.json'
 
+    experiment_letter = 'D'
+
     results_df = parse_results(json_path)
 
-    print_latex_header()
-    print(results_df.to_latex(index=False, escape=False))
-    print_latex_footer()
+    output_str = get_latex_exp_name(experiment_letter)
+    output_str += get_latex_ap_table(results_df, 99, experiment_letter)
+
+    save_latex(output_str, letter=experiment_letter, path='reports/')
