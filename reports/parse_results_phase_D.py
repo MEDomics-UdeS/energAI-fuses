@@ -38,19 +38,23 @@ def parse_results(json_path: str,
     row = {columns[0]: 'mean ± std'}
 
     for column in columns[1:]:
-        precision = get_digits_precision(df[column].std())
+        std = df[column].std()
+
+        precision = get_digits_precision(std)
+        std_round = round(std, precision)
+        precision = get_digits_precision(std_round)
+
         format_str = f'{{:.{precision}f}}'
 
         row[column] = f'{format_str.format(round(df[column].mean(), precision))} ± ' \
-                      f'{format_str.format(round(df[column].std(), precision))}'
+                      f'{format_str.format(std_round)}'
 
         if round_to_1_sign_digit:
             df[column] = df[column].round(precision)
             df[column] = df[column].apply(format_str.format)
         else:
-            format_str = f'{{:.{num_decimals}f}}'
             df[column] = df[column].round(num_decimals)
-            df[column] = df[column].apply(format_str.format)
+            df[column] = df[column].apply(f'{{:.{num_decimals}f}}'.format)
 
     df = df.append(row, ignore_index=True)
 

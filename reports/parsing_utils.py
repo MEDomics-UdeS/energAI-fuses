@@ -14,7 +14,7 @@ def get_latex_exp_name(letter: str,
     if hparam:
         title += f': {hparam}'.replace('_', '\\_')
 
-    return f'\\section{{{title}}}'
+    return f'\\section{{{title}}}\n'
 
 
 def get_latex_ap_table(df: pd.DataFrame,
@@ -30,9 +30,9 @@ def get_latex_ap_table(df: pd.DataFrame,
     if metric:
         title += f': {metric}'.replace('_', '\\textsubscript')
 
-    output_str = '\\begin{table}[H]\n'
+    output_str = '\\begin{table}[H]\n\\centerline{\n'
     output_str += df.to_latex(index=False, escape=False)
-    output_str += f'\\caption{{\\label{{tab:table-{index}}}{title}}}\n\\end{{table}}'
+    output_str += f'}}\n\\caption{{\\label{{tab:table-{index}}}{title}}}\n\\end{{table}}\n'
 
     return output_str
 
