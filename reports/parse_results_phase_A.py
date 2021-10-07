@@ -4,16 +4,20 @@ import torch
 import os
 import pandas as pd
 from tqdm import tqdm
-from datetime import datetime
 import matplotlib.pyplot as plt
-from parsing_utils import get_latex_ap_table, get_latex_exp_name, get_digits_precision, save_latex
+from parsing_utils import get_latex_ap_table, get_latex_exp_name, save_latex
 from constants import PATH_A
 
 
-def generate_figure(metric: str, curves_dict: dict, save: bool = False, show: bool = True) -> None:
+def generate_figure(metric: str,
+                    curves_dict: dict,
+                    save: bool = True,
+                    show: bool = False) -> None:
     x_max = 0
     y_max = 0
     y_min = 1e15
+
+    plt.clf()
 
     for key, value in curves_dict.items():
         if metric == 'Learning Rate':
@@ -48,8 +52,10 @@ def generate_figure(metric: str, curves_dict: dict, save: bool = False, show: bo
     elif metric == 'Learning Rate':
         plt.ylim((10 ** math.floor(math.log10(y_min)), 10 ** math.ceil(math.log10(y_max))))
 
+    plt.tight_layout()
+
     if save:
-        file_path = f'reports/{metric}_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.pdf'
+        file_path = f'../reports/{metric}.pdf'
         plt.savefig(file_path)
         print(f'{metric} figure has been saved to: {file_path}')
 
@@ -60,7 +66,6 @@ def generate_figure(metric: str, curves_dict: dict, save: bool = False, show: bo
 def parse_results(saved_models_path: str,
                   log_path: str,
                   model_name: str,
-                  round_to_1_sign_digit: bool = False,
                   num_decimals: int = 4) -> pd.DataFrame:
     columns = ['Model',
                'LR',
@@ -137,11 +142,22 @@ def get_best_results(results_dict: dict,
                      metric: str) -> pd.DataFrame:
     best_results_df = pd.DataFrame()
 
-    for results in results_dict.values():
-        df = results['ap_table']
-        best_results_df = best_results_df.append(df.iloc[df[metric].argmax()])
+    best_ap_curves = {}
+    best_loss_curves = {}
+    best_lr_curves = {}
 
-    return best_results_df
+    for model_name, results in results_dict.items():
+        df = results['ap_table']
+        argmax_df = df.iloc[df[metric].argmax()]
+        argmax_str = f'{argmax_df["Model"]}/{argmax_df["LR"]}/' \
+                     f'{argmax_df["WD"]}/{argmax_df["DA"]}'
+
+        best_results_df = best_results_df.append(argmax_df)
+        best_ap_curves[model_name] = results['ap_curves'][argmax_str]
+        best_loss_curves[model_name] = results['loss_curves'][argmax_str]
+        best_lr_curves[model_name] = results['lr_curves'][argmax_str]
+
+    return best_results_df, best_ap_curves, best_loss_curves, best_lr_curves
 
 
 if __name__ == '__main__':
@@ -159,15 +175,17 @@ if __name__ == '__main__':
                                     'loss_curves': loss_curves,
                                     'lr_curves': lr_curves}
 
+    best_results_df, best_ap_curves, best_loss_curves, best_lr_curves = get_best_results(results_dict, 'AP')
+
     output_str = get_latex_exp_name('A')
-    output_str += get_latex_ap_table(get_best_results(results_dict, 'AP'), 0, 'A')
+    output_str += get_latex_ap_table(best_results_df, 0, 'A')
 
     for i, (model_name, results) in enumerate(results_dict.items()):
         output_str += get_latex_exp_name('A', hparam=model_name)
         output_str += get_latex_ap_table(results['ap_table'], i, 'A', hparam=model_name)
 
-        generate_figure(f'{model_name}: AP', results['ap_curves'])
-        generate_figure(f'{model_name}: Mean Loss', results['loss_curves'])
-        generate_figure(f'{model_name}: Learning Rate', results['lr_curves'])
+    generate_figure(f'AP', best_ap_curves)
+    generate_figure(f'Mean Loss', best_loss_curves)
+    generate_figure(f'Learning Rate', best_lr_curves)
 
     save_latex(output_str, letter='A', path='../reports/')

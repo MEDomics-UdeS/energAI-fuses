@@ -107,3 +107,4 @@ target/
 scratch.py
 
 /reports/*.txt
+/reports/*.pdf
