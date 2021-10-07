@@ -62,14 +62,11 @@ def parse_results(json_path: str,
 
 
 if __name__ == '__main__':
-    os.chdir('..')
-    json_path = f'{os.getcwd()}/D_results.json'
-
     experiment_letter = 'D'
 
-    results_df = parse_results(json_path)
+    results_df = parse_results('../D_results.json')
 
     output_str = get_latex_exp_name(experiment_letter)
     output_str += get_latex_ap_table(results_df, 99, experiment_letter)
 
-    save_latex(output_str, letter=experiment_letter, path='reports/')
+    save_latex(output_str, letter=experiment_letter, path='../reports/')

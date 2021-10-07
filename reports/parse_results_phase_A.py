@@ -6,7 +6,7 @@ import pandas as pd
 from tqdm import tqdm
 from datetime import datetime
 import matplotlib.pyplot as plt
-from parsing_utils import print_ap_table
+from parsing_utils import get_latex_ap_table, get_latex_exp_name, get_digits_precision, save_latex
 from constants import PATH_A
 
 
@@ -57,7 +57,11 @@ def generate_figure(metric: str, curves_dict: dict, save: bool = False, show: bo
         plt.show()
 
 
-def parse_results(saved_models_path: str, log_path: str) -> pd.DataFrame:
+def parse_results(saved_models_path: str,
+                  log_path: str,
+                  model_name: str,
+                  round_to_1_sign_digit: bool = False,
+                  num_decimals: int = 4) -> pd.DataFrame:
     columns = ['Model',
                'LR',
                'WD',
@@ -88,32 +92,36 @@ def parse_results(saved_models_path: str, log_path: str) -> pd.DataFrame:
 
     for subdir, dirs, files in os.walk(saved_models_path):
         files = [file for file in files if file != '.gitkeep']
-        for file in tqdm(files, desc='Parsing results...'):
+        for file in files:
             save_state = torch.load(saved_models_path + file, map_location=torch.device('cpu'))
             model = save_state['args_dict']['model'].split('_')[0]
-            lr = format(save_state['args_dict']['learning_rate'], '.0E')
-            wd = format(save_state['args_dict']['weight_decay'], '.0E')
-            da = save_state['args_dict']['data_aug']
 
-            event_acc = EventAccumulator(log_path + file)
-            event_acc.Reload()
-            # scalars = event_acc.Tags()['scalars']
+            if model == model_name:
+                lr = format(save_state['args_dict']['learning_rate'], '.0E')
+                wd = format(save_state['args_dict']['weight_decay'], '.0E')
+                da = save_state['args_dict']['data_aug']
 
-            results_list = []
+                event_acc = EventAccumulator(log_path + file)
+                event_acc.Reload()
+                # scalars = event_acc.Tags()['scalars']
 
-            for key, value in scalar_dict.items():
-                time, step, val = zip(*event_acc.Scalars(key))
-                best_ap = round(val[0] * 100, 1)
+                results_list = []
 
-                results_list.append(best_ap)
+                for key, value in scalar_dict.items():
+                    time, step, val = zip(*event_acc.Scalars(key))
+                    best_ap = round(val[0], num_decimals)
 
-            df = df.append(pd.DataFrame([[model, lr, wd, da, *results_list]], columns=df.columns))
+                    results_list.append(best_ap)
 
-            run_key = f'{model}/{lr}/{wd}/{da}'
+                df = df.append(pd.DataFrame([[model, lr, wd, da, *results_list]], columns=df.columns))
 
-            ap_curves_dict = add_curve_to_dict(event_acc, ap_curves_dict_key, run_key, ap_curves_dict)
-            loss_curves_dict = add_curve_to_dict(event_acc, loss_curves_dict_key, run_key, loss_curves_dict)
-            lr_curves_dict = add_curve_to_dict(event_acc, lr_curves_dict_key, run_key, lr_curves_dict)
+                run_key = f'{model}/{lr}/{wd}/{da}'
+
+                ap_curves_dict = add_curve_to_dict(event_acc, ap_curves_dict_key, run_key, ap_curves_dict)
+                loss_curves_dict = add_curve_to_dict(event_acc, loss_curves_dict_key, run_key, loss_curves_dict)
+                lr_curves_dict = add_curve_to_dict(event_acc, lr_curves_dict_key, run_key, lr_curves_dict)
+
+    df = df.sort_values(df.columns.to_list()[1:4])
 
     return df, ap_curves_dict, loss_curves_dict, lr_curves_dict
 
@@ -125,28 +133,41 @@ def add_curve_to_dict(acc: EventAccumulator, scalar_key: str, run_key: str, curv
     return curves_dict
 
 
-def print_best_result(df: pd.DataFrame, metric: str) -> None:
-    print('\nBest Result:\n')
-    print(df.iloc[df[metric].argmax()])
+def get_best_results(results_dict: dict,
+                     metric: str) -> pd.DataFrame:
+    best_results_df = pd.DataFrame()
+
+    for results in results_dict.values():
+        df = results['ap_table']
+        best_results_df = best_results_df.append(df.iloc[df[metric].argmax()])
+
+    return best_results_df
 
 
 if __name__ == '__main__':
-    # os.chdir('..')
-    # models_path = os.getcwd() + '/saved_models/'
-    # logs_path = os.getcwd() + '/logdir/'
     models_path = PATH_A + '/saved_models/'
     logs_path = PATH_A + '/logdir/'
 
-    ap_table, ap_curves, loss_curves, lr_curves = parse_results(models_path, logs_path)
+    results_dict = {'fasterrcnn': None,
+                    'retinanet': None,
+                    'detr': None}
 
-    print_ap_table(letter='A',
-                   hparam='',
-                   metric='',
-                   index=0,
-                   df=ap_table)
+    for model_name in tqdm(results_dict.keys(), desc='Parsing results...'):
+        ap_table, ap_curves, loss_curves, lr_curves = parse_results(models_path, logs_path, model_name=model_name)
+        results_dict[model_name] = {'ap_table': ap_table,
+                                    'ap_curves': ap_curves,
+                                    'loss_curves': loss_curves,
+                                    'lr_curves': lr_curves}
 
-    generate_figure('AP', ap_curves)
-    generate_figure('Mean Loss', loss_curves)
-    generate_figure('Learning Rate', lr_curves)
+    output_str = get_latex_exp_name('A')
+    output_str += get_latex_ap_table(get_best_results(results_dict, 'AP'), 0, 'A')
 
-    print_best_result(ap_table, 'AP')
+    for i, (model_name, results) in enumerate(results_dict.items()):
+        output_str += get_latex_exp_name('A', hparam=model_name)
+        output_str += get_latex_ap_table(results['ap_table'], i, 'A', hparam=model_name)
+
+        generate_figure(f'{model_name}: AP', results['ap_curves'])
+        generate_figure(f'{model_name}: Mean Loss', results['loss_curves'])
+        generate_figure(f'{model_name}: Learning Rate', results['lr_curves'])
+
+    save_latex(output_str, letter='A', path='../reports/')
