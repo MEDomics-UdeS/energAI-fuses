@@ -64,7 +64,6 @@ if __name__ == '__main__':
 
         cmds = [['python', 'experiment.py'] + cmd for cmd in cmds]
 
-
         # Loop through each command
         for i, cmd in enumerate(cmds, start=1):
             # Print experiment details

@@ -1,4 +1,3 @@
-import os
 import json
 import pandas as pd
 
@@ -64,7 +63,7 @@ def parse_results(json_path: str,
 if __name__ == '__main__':
     experiment_letter = 'D'
 
-    results_df = parse_results('../D_results.json')
+    results_df = parse_results('../json/D_results.json')
 
     output_str = get_latex_exp_name(experiment_letter)
     output_str += get_latex_ap_table(results_df, 99, experiment_letter)

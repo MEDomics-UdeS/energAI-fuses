@@ -5,7 +5,8 @@
         "--learning_rate": "3e-4",
         "--weight_decay": "3e-5",
         "--data_aug": "0.25",
-        "--k_cross_valid": "5"
+        "--k_cross_valid": "5",
+        "--epochs": "3"
     },
 
     "variable":{
