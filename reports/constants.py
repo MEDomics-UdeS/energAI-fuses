@@ -1,4 +1,6 @@
-PATH_A = '/home/simon/Desktop/Results_Fuses/A'
+PATH = '/home/simon/Desktop/Results_Fuses'
+
+PATH_A = PATH + '/A'
 
 RESULTS_B_DICT = {
     'image_size': '/home/simon/Desktop/Results_Fuses/B1',
