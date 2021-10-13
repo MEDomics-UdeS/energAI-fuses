@@ -1,5 +1,5 @@
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
-import math
+from math import floor, ceil, log10
 import torch
 import os
 import pandas as pd
@@ -50,7 +50,7 @@ def generate_figure(metric: str,
     elif metric == 'Mean Loss':
         plt.ylim((0, y_max))
     elif metric == 'Learning Rate':
-        plt.ylim((10 ** math.floor(math.log10(y_min)), 10 ** math.ceil(math.log10(y_max))))
+        plt.ylim((10 ** math.floor(log10(y_min)), 10 ** ceil(log10(y_max))))
 
     plt.tight_layout()
 
@@ -61,6 +61,93 @@ def generate_figure(metric: str,
 
     if show:
         plt.show()
+
+
+def generate_figure_all(best_ap_curves: dict,
+                        best_loss_curves: dict,
+                        best_lr_curves: dict,
+                        save: bool = True,
+                        show: bool = False) -> None:
+    fig, axs = plt.subplots(1, 3, figsize=(12, 3))
+
+    x_max = 0
+
+    # AP Curve
+    for key, value in best_ap_curves.items():
+        axs[0].plot(value['x'], value['y'], label=key)
+
+        x_val_max = max(value['x'])
+
+        if x_val_max > x_max:
+            x_max = x_val_max
+
+    axs[0].set_ylabel('AP')
+    axs[0].set_xlim((0, x_max))
+    axs[0].set_ylim((0, 1))
+
+    x_max = 0
+    y_max = 0
+
+    # Loss Curve
+    for key, value in best_loss_curves.items():
+        axs[1].plot(value['x'], value['y'], label=key)
+
+        x_val_max = max(value['x'])
+        y_val_max = max(value['y'])
+
+        if x_val_max > x_max:
+            x_max = x_val_max
+
+        if y_val_max > y_max:
+            y_max = y_val_max
+
+    axs[1].set_ylabel('Mean Loss')
+    axs[1].set_xlim((0, x_max))
+    axs[1].set_ylim((0, y_max))
+
+    x_max = 0
+    y_max = 0
+    y_min = 1e15
+
+    # LR Curve
+    for key, value in best_lr_curves.items():
+        axs[2].semilogy(value['x'], value['y'], label=key)
+
+        x_val_max = max(value['x'])
+        y_val_max = max(value['y'])
+        y_val_min = min(value['y'])
+
+        if x_val_max > x_max:
+            x_max = x_val_max
+
+        if y_val_max > y_max:
+            y_max = y_val_max
+
+        if y_val_min < y_min:
+            y_min = y_val_min
+
+    axs[2].set_ylabel('Learning Rate')
+    axs[2].set_xlim((0, x_max))
+    axs[2].set_ylim((10 ** floor(log10(y_min)), 10 ** ceil(log10(y_max))))
+
+    for ax in axs:
+        ax.grid()
+        ax.set_xlabel('Epoch')
+
+    handles, labels = axs[-1].get_legend_handles_labels()
+    fig.legend(handles, labels, loc='center right')
+
+    fig.tight_layout()
+
+    fig.subplots_adjust(right=0.7)
+
+    if save:
+        file_path = '../reports/figure.svg'
+        fig.savefig(file_path)
+        print(f'Figure has been saved to: {file_path}')
+
+    if show:
+        fig.show()
 
 
 def parse_results(saved_models_path: str,
@@ -185,8 +272,6 @@ if __name__ == '__main__':
         output_str += get_latex_exp_name('A', hparam=model_name)
         output_str += get_latex_ap_table(results['ap_table'], i, 'A', hparam=model_name)
 
-    generate_figure(f'AP', best_ap_curves)
-    generate_figure(f'Mean Loss', best_loss_curves)
-    generate_figure(f'Learning Rate', best_lr_curves)
+    generate_figure_all(best_ap_curves, best_loss_curves, best_lr_curves)
 
     save_latex(output_str, letter='A', path='../reports/')

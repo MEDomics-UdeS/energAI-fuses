@@ -107,3 +107,4 @@ scratch.py
 # LaTeX and figures outputs
 /reports/*.txt
 /reports/*.pdf
+/reports/*.svg
