@@ -57,6 +57,7 @@ def parse_results_k(results_all_df: pd.DataFrame,
         precision = get_digits_precision(std)
         std_round = round(std, precision)
         precision = get_digits_precision(std_round)
+        std_round = round(std, precision)
 
         format_str = f'{{:.{precision}f}}'
 
