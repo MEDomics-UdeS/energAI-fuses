@@ -23,9 +23,7 @@ def parse_results_k(results_all_df: pd.DataFrame,
 
     cv_runs = list(set(["_".join(file.split("_")[-2:]) for file in files]))
 
-    row = 0
-
-    for cv_run in cv_runs:
+    for row, cv_run in enumerate(cv_runs):
         files_run = [i for i in files if cv_run in i]
 
         save_state = torch.load(saved_models_path + files_run[0], map_location=torch.device('cpu'))
@@ -37,17 +35,12 @@ def parse_results_k(results_all_df: pd.DataFrame,
             event_acc = EventAccumulator(log_path + file_run)
             event_acc.Reload()
             # scalars = event_acc.Tags()['scalars']
+
             _, _, metric_value = zip(*event_acc.Scalars(metric))
 
             k = f"K={''.join(c for c in file_run.split('_')[2] if c.isdigit())}"
 
-            # temp
-            # save_state = torch.load(saved_models_path + file_run, map_location=torch.device('cpu'))
-            # hp_value = save_state['args_dict'][hyperparameter]
-
-            df.loc[row, k] = metric_value[0]  # hp_value
-
-        row += 1
+            df.loc[row, k] = metric_value[0]
 
     cols = df.columns.tolist()
     k_cols = cols[1:]
