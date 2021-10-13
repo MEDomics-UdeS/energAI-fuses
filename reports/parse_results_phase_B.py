@@ -18,9 +18,10 @@ def parse_results_k(results_all_df: pd.DataFrame,
 
     df = pd.DataFrame(columns=[hp_print_name])
 
-    for subdir, dirs, files in os.walk(saved_models_path):
-        files = [file for file in files if file != '.gitkeep']
+    files = os.listdir(saved_models_path)
+    files = [file for file in files if file != '.gitkeep']
 
+    for file in files:
         cv_runs = list(set(["_".join(file.split("_")[-2:]) for file in files]))
 
         row = 0

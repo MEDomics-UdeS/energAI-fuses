@@ -95,36 +95,37 @@ def parse_results(saved_models_path: str,
 
     df = pd.DataFrame(columns=columns)
 
-    for subdir, dirs, files in os.walk(saved_models_path):
-        files = [file for file in files if file != '.gitkeep']
-        for file in files:
-            save_state = torch.load(saved_models_path + file, map_location=torch.device('cpu'))
-            model = save_state['args_dict']['model'].split('_')[0]
+    files = os.listdir(saved_models_path)
+    files = [file for file in files if file != '.gitkeep']
 
-            if model == model_name:
-                lr = format(save_state['args_dict']['learning_rate'], '.0E')
-                wd = format(save_state['args_dict']['weight_decay'], '.0E')
-                da = save_state['args_dict']['data_aug']
+    for file in files:
+        save_state = torch.load(saved_models_path + file, map_location=torch.device('cpu'))
+        model = save_state['args_dict']['model'].split('_')[0]
 
-                event_acc = EventAccumulator(log_path + file)
-                event_acc.Reload()
-                # scalars = event_acc.Tags()['scalars']
+        if model == model_name:
+            lr = format(save_state['args_dict']['learning_rate'], '.0E')
+            wd = format(save_state['args_dict']['weight_decay'], '.0E')
+            da = save_state['args_dict']['data_aug']
 
-                results_list = []
+            event_acc = EventAccumulator(log_path + file)
+            event_acc.Reload()
+            # scalars = event_acc.Tags()['scalars']
 
-                for key, value in scalar_dict.items():
-                    time, step, val = zip(*event_acc.Scalars(key))
-                    best_ap = round(val[0], num_decimals)
+            results_list = []
 
-                    results_list.append(best_ap)
+            for key, value in scalar_dict.items():
+                time, step, val = zip(*event_acc.Scalars(key))
+                best_ap = round(val[0], num_decimals)
 
-                df = df.append(pd.DataFrame([[model, lr, wd, da, *results_list]], columns=df.columns))
+                results_list.append(best_ap)
 
-                run_key = f'{model}/{lr}/{wd}/{da}'
+            df = df.append(pd.DataFrame([[model, lr, wd, da, *results_list]], columns=df.columns))
 
-                ap_curves_dict = add_curve_to_dict(event_acc, ap_curves_dict_key, run_key, ap_curves_dict)
-                loss_curves_dict = add_curve_to_dict(event_acc, loss_curves_dict_key, run_key, loss_curves_dict)
-                lr_curves_dict = add_curve_to_dict(event_acc, lr_curves_dict_key, run_key, lr_curves_dict)
+            run_key = f'{model}/{lr}/{wd}/{da}'
+
+            ap_curves_dict = add_curve_to_dict(event_acc, ap_curves_dict_key, run_key, ap_curves_dict)
+            loss_curves_dict = add_curve_to_dict(event_acc, loss_curves_dict_key, run_key, loss_curves_dict)
+            lr_curves_dict = add_curve_to_dict(event_acc, lr_curves_dict_key, run_key, lr_curves_dict)
 
     df = df.sort_values(df.columns.to_list()[1:4])
 
