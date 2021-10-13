@@ -21,34 +21,33 @@ def parse_results_k(results_all_df: pd.DataFrame,
     files = os.listdir(saved_models_path)
     files = [file for file in files if file != '.gitkeep']
 
-    for file in files:
-        cv_runs = list(set(["_".join(file.split("_")[-2:]) for file in files]))
+    cv_runs = list(set(["_".join(file.split("_")[-2:]) for file in files]))
 
-        row = 0
+    row = 0
 
-        for cv_run in cv_runs:
-            files_run = [i for i in files if cv_run in i]
+    for cv_run in cv_runs:
+        files_run = [i for i in files if cv_run in i]
 
-            save_state = torch.load(saved_models_path + files_run[0], map_location=torch.device('cpu'))
-            hp_value = save_state['args_dict'][hyperparameter]
+        save_state = torch.load(saved_models_path + files_run[0], map_location=torch.device('cpu'))
+        hp_value = save_state['args_dict'][hyperparameter]
 
-            df.loc[row, hp_print_name] = hp_value
+        df.loc[row, hp_print_name] = hp_value
 
-            for file_run in files_run:
-                event_acc = EventAccumulator(log_path + file_run)
-                event_acc.Reload()
-                # scalars = event_acc.Tags()['scalars']
-                _, _, metric_value = zip(*event_acc.Scalars(metric))
+        for file_run in files_run:
+            event_acc = EventAccumulator(log_path + file_run)
+            event_acc.Reload()
+            # scalars = event_acc.Tags()['scalars']
+            _, _, metric_value = zip(*event_acc.Scalars(metric))
 
-                k = f"K={''.join(c for c in file_run.split('_')[2] if c.isdigit())}"
+            k = f"K={''.join(c for c in file_run.split('_')[2] if c.isdigit())}"
 
-                # temp
-                # save_state = torch.load(saved_models_path + file_run, map_location=torch.device('cpu'))
-                # hp_value = save_state['args_dict'][hyperparameter]
+            # temp
+            # save_state = torch.load(saved_models_path + file_run, map_location=torch.device('cpu'))
+            # hp_value = save_state['args_dict'][hyperparameter]
 
-                df.loc[row, k] = metric_value[0]  # hp_value
+            df.loc[row, k] = metric_value[0]  # hp_value
 
-            row += 1
+        row += 1
 
     cols = df.columns.tolist()
     k_cols = cols[1:]
