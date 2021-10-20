@@ -181,9 +181,6 @@ if __name__ == '__main__':
                                          image_size=args.image_size,
                                          num_workers=args.num_workers)
 
-    print(splitting_manager.image_paths_test[0])
-    print(splitting_manager.image_paths_test[-1])
-
     # Set seed for initialization
     set_seed(args.seed_init)
 
