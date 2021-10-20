@@ -20,7 +20,7 @@ from src.data.DataLoaderManagers.LearningDataLoaderManager import LearningDataLo
 from src.data.DatasetManagers.LearningDatasetManager import LearningDatasetManager
 from src.models.PipelineManager import PipelineManager
 from src.utils.helper_functions import print_dict
-from src.utils.reproducibility import set_deterministic
+from src.utils.reproducibility import set_deterministic, set_seed
 from src.utils.constants import RESIZED_LEARNING_PATH, TARGETS_LEARNING_PATH
 
 if __name__ == '__main__':
@@ -105,9 +105,13 @@ if __name__ == '__main__':
     parser.add_argument('-gc', '--gradient_clip', action='store', type=float, default=5,
                         help='Gradient clipping value')
 
-    # Random seed argument
-    parser.add_argument('-rs', '--random_seed', action='store', type=int, default=54288,
-                        help='Set random seed')
+    # Split seed argument
+    parser.add_argument('-ss', '--seed_split', action='store', type=int, default=54288,
+                        help='Set split seed')
+
+    # Initialization seed argument
+    parser.add_argument('-si', '--seed_init', action='store', type=int, default=54288,
+                        help='Set initialization seed')
 
     # Deterministic argument
     parser.add_argument('-dt', '--deterministic', type=bool, default=False,
@@ -158,7 +162,10 @@ if __name__ == '__main__':
         args = parser.parse_args()
 
     # Set deterministic behavior
-    set_deterministic(args.deterministic, args.random_seed)
+    set_deterministic(args.deterministic)
+
+    # Set seed for splitting manager
+    set_seed(args.seed_split)
 
     # Display arguments in console
     print('\n=== Arguments & Hyperparameters ===\n')
@@ -169,10 +176,17 @@ if __name__ == '__main__':
                                          validation_size=args.validation_size,
                                          test_size=args.test_size,
                                          k_cross_valid=args.k_cross_valid,
-                                         seed=args.random_seed,
+                                         seed=args.seed_split,
                                          google_images=not args.no_google_images,
                                          image_size=args.image_size,
                                          num_workers=args.num_workers)
+
+    print(splitting_manager.image_paths_test[0])
+    print(splitting_manager.image_paths_test[-1])
+
+    # Set seed for initialization
+    set_seed(args.seed_init)
+
     if args.k_cross_valid > 1:
         print(f'\n{args.k_cross_valid}-Fold Cross Validation Enabled!')
 
@@ -194,7 +208,7 @@ if __name__ == '__main__':
                                                  test_size=args.test_size,
                                                  norm=args.normalize,
                                                  google_images=not args.no_google_images,
-                                                 seed=args.random_seed,
+                                                 seed=args.seed_init,
                                                  splitting_manager=splitting_manager,
                                                  current_fold=i)
 
