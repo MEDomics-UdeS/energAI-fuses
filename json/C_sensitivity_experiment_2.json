@@ -6,8 +6,7 @@
         "--weight_decay": "3e-5",
         "--data_aug": "0.25",
         "--image_size": "1024",
-        "--validation_size": "0",
-        "--test_size": "0.1"
+        "--validation_size": "0"
     },
 
     "variable":{

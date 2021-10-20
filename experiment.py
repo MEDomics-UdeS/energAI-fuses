@@ -161,12 +161,6 @@ if __name__ == '__main__':
         # Parsing arguments
         args = parser.parse_args()
 
-    # Set deterministic behavior
-    set_deterministic(args.deterministic)
-
-    # Set seed for splitting manager
-    set_seed(args.seed_split)
-
     # Display arguments in console
     print('\n=== Arguments & Hyperparameters ===\n')
     print_dict(vars(args), 6)
@@ -180,6 +174,9 @@ if __name__ == '__main__':
                                          google_images=not args.no_google_images,
                                          image_size=args.image_size,
                                          num_workers=args.num_workers)
+
+    # Set deterministic behavior
+    set_deterministic(args.deterministic)
 
     # Set seed for initialization
     set_seed(args.seed_init)
