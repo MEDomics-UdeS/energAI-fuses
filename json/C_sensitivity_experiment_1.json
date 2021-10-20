@@ -7,8 +7,7 @@
         "--data_aug": "0.25",
         "--image_size": "1024",
         "--validation_size": "0",
-        "--test_size": "0",
-        "--save_last": "True"
+        "--test_size": "0.1"
     },
 
     "variable":{
