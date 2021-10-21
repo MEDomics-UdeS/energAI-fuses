@@ -17,11 +17,11 @@ import os
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 from typing import Tuple
-from src.models.models import load_model
+from src.coco.coco_utils import get_coco_api_from_dataset
+from src.coco.coco_eval import CocoEvaluator
 
 from src.utils.constants import CLASS_DICT, FONT_PATH, RESIZED_PATH, GUI_RESIZED_PATH, INFERENCE_PATH, RAW_PATH, IMAGE_EXT, COLOR_PALETTE
 from src.utils.helper_functions import cp_split, filter_by_nms, filter_by_score, format_detr_outputs
-
 
 @torch.no_grad()
 def save_test_images(model_file_name: str,
@@ -61,6 +61,7 @@ def save_test_images(model_file_name: str,
 
         # Declare device
         device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+
 
     # Declare progress bar
     pbar = tqdm(total=len(data_loader), leave=False, desc='Inference Test')
@@ -251,3 +252,44 @@ def scale_annotation_sizes(img: Image, pred: dict, target: dict) -> Tuple[list, 
 
     # Declare the font object to write the confidence scores on the images
     return pred_annotations, target_annotations
+
+
+@torch.no_grad()
+def coco_evaluate(model, data_loader: DataLoader, desc: str, device, image_size, model_name) -> dict:
+    """
+
+    :param model:
+    :param data_loader:
+    :return:
+    """
+    pbar = tqdm(total=len(data_loader), leave=False, desc=desc)
+
+    coco = get_coco_api_from_dataset(data_loader.dataset)
+    coco_evaluator = CocoEvaluator(coco, ['bbox'])
+
+    model.eval()
+
+    for images, targets in data_loader:
+        images = list(img.to(device) for img in images)
+
+        outputs = model(images)
+
+        if model_name == 'detr':
+            target_sizes = torch.stack(
+                [torch.tensor([image_size, image_size]) for _ in targets], dim=0)
+            outputs = format_detr_outputs(outputs, target_sizes, device)
+
+        outputs = [{k: v.to(device) for k, v in t.items()} for t in outputs]
+
+        results = {target['image_id'].item(): output for target, output in zip(targets, outputs)}
+        coco_evaluator.update(results)
+
+        pbar.update()
+
+    pbar.close()
+
+    coco_evaluator.synchronize_between_processes()
+    coco_evaluator.accumulate()
+    coco_evaluator.summarize()
+
+    return dict(zip(COCO_PARAMS_LIST, coco_evaluator.coco_eval['bbox'].stats.tolist()))

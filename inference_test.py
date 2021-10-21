@@ -23,7 +23,7 @@ from src.data.DataLoaderManagers.GuiDataLoaderManager import GuiDataLoaderManage
 from src.data.DatasetManagers.GuiDatasetManager import GuiDatasetManager
 from src.utils.helper_functions import print_dict, env_tests
 from src.visualization.inference import save_test_images
-from src.utils.constants import RESIZED_PATH, TARGETS_PATH, INFERENCE_PATH, MODELS_PATH
+from src.utils.constants import RESIZED_LEARNING_PATH, TARGETS_LEARNING_PATH, INFERENCE_PATH, MODELS_PATH
 
 if __name__ == '__main__':
     # Record start time

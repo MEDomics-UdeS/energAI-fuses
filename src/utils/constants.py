@@ -16,14 +16,19 @@ REQUIRED_PYTHON = "python3"
 
 # Image file paths
 RAW_PATH = 'data/raw/'
-LEARNING_PATH = 'data/raw/learning/'
-HOLDOUT_PATH = 'data/raw/holdout/'
+RAW_LEARNING_PATH = RAW_PATH + 'learning/'
+RAW_HOLDOUT_PATH = RAW_PATH + 'holdout/'
+
 RESIZED_PATH = 'data/resized/'
+RESIZED_LEARNING_PATH = RESIZED_PATH + 'learning/'
+RESIZED_HOLDOUT_PATH = RESIZED_PATH + 'holdout/'
+
 INFERENCE_PATH = 'data/inference/'
 GUI_RESIZED_PATH = 'data/gui_resized/'
 
 # Annotations file paths
-TARGETS_PATH = 'data/annotations/targets_resized.json'
+TARGETS_LEARNING_PATH = 'data/annotations/targets_learning_resized.json'
+TARGETS_HOLDOUT_PATH = 'data/annotations/targets_holdout_resized.json'
 GUI_TARGETS_PATH = 'data/annotations/gui_resized.json'
 ANNOTATIONS_PATH = 'data/annotations/annotations_raw.csv'
 
@@ -95,7 +100,7 @@ Original Console Outputs:
  """
 
 # Evaluation metric for early stopping and best model saving
-EVAL_METRIC = COCO_PARAMS_LIST[0]
+EVAL_METRIC = 'Validation/' + COCO_PARAMS_LIST[0]
 
 # Image extension
 IMAGE_EXT = 'jpg'

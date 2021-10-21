@@ -92,7 +92,7 @@ target/
 /logdir/
 
 # Scratchpad
-# scratch.py
+scratch.py
 
 # GUI related files
 /src/gui/*.json
@@ -104,3 +104,7 @@ target/
 # ODS LibreOffice Calc Files
 *.ods
 
+# LaTeX and figures outputs
+/reports/*.txt
+/reports/*.pdf
+/reports/*.svg

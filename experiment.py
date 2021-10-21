@@ -15,12 +15,13 @@ import argparse
 from datetime import datetime
 from multiprocessing import cpu_count
 
+from src.data.SplittingManager import SplittingManager
 from src.data.DataLoaderManagers.LearningDataLoaderManager import LearningDataLoaderManager
 from src.data.DatasetManagers.LearningDatasetManager import LearningDatasetManager
 from src.models.PipelineManager import PipelineManager
-from src.utils.helper_functions import print_dict, env_tests
-from src.utils.reproducibility import set_deterministic
-from src.utils.constants import RESIZED_PATH, TARGETS_PATH
+from src.utils.helper_functions import print_dict
+from src.utils.reproducibility import set_deterministic, set_seed
+from src.utils.constants import RESIZED_LEARNING_PATH, TARGETS_LEARNING_PATH
 
 if __name__ == '__main__':
     # Record start time
@@ -107,38 +108,45 @@ if __name__ == '__main__':
     parser.add_argument('-gc', '--gradient_clip', action='store', type=float, default=5,
                         help='Gradient clipping value')
 
-    # Random seed argument
-    parser.add_argument('-rs', '--random_seed', action='store', type=int, default=54288,
-                        help='Set random seed')
+    # Split seed argument
+    parser.add_argument('-ss', '--seed_split', action='store', type=int, default=54288,
+                        help='Set split seed')
+
+    # Initialization seed argument
+    parser.add_argument('-si', '--seed_init', action='store', type=int, default=54288,
+                        help='Set initialization seed')
 
     # Deterministic argument
-    parser.add_argument('-dt', '--deterministic', action='store_true',
+    parser.add_argument('-dt', '--deterministic', type=bool, default=False,
                         help='Set deterministic behaviour')
     # Pretrained argument
-    parser.add_argument('-no-pt', '--no_pretrained', action='store_true',
+    parser.add_argument('-no-pt', '--no_pretrained', type=bool, default=False,
                         help='If specified, the loaded model will not be pretrained')
 
     # Save model argument
-    parser.add_argument('-no-sv', '--no_save_model', action='store_true',
+    parser.add_argument('-no-sv', '--no_save_model', type=bool, default=False,
                         help='If specified, the trained model will not be saved')
 
     # Google Images argument
-    parser.add_argument('-no-gi', '--no_google_images', action='store_true',
+    parser.add_argument('-no-gi', '--no_google_images', type=bool, default=False,
                         help='If specified, the Google Images photos will be excluded from the training subset')
 
     # Calculate training set metrics
-    parser.add_argument('-ltm', '--log_training_metrics', action='store_true',
+    parser.add_argument('-ltm', '--log_training_metrics', type=bool, default=False,
                         help='If specified, the AP and AR metrics will be calculated and logged for training set')
 
     # Calculate training set metrics
-    parser.add_argument('-lm', '--log_memory', action='store_true',
+    parser.add_argument('-lm', '--log_memory', type=bool, default=False,
                         help='If specified, the memory will be logged')
 
     # Best or last model saved/used for test inference argument
-    parser.add_argument('-sl', '--save_last', action='store_true',
+    parser.add_argument('-sl', '--save_last', type=bool, default=False,
                         help='Specify whether to save/use for inference testing the last model, otherwise'
                              'the best model will be used')
 
+    # Argument to enable k-fold cross-validation
+    parser.add_argument('-kcv', '--k_cross_valid', action='store', type=int, default=1,
+                        help='Number of folds for k-fold cross validation (1 = no k-fold cross validation)')
     # Parsing arguments
     args = parser.parse_args()
 
@@ -156,60 +164,83 @@ if __name__ == '__main__':
         # Parsing arguments
         args = parser.parse_args()
 
-    # Set deterministic behavior
-    set_deterministic(args.deterministic, args.random_seed)
-
-    # Declare file name as yyyy-mm-dd_hh-mm-ss
-    file_name = f'{args.model.split("_")[0]}_{args.epochs}_{start.strftime("%Y-%m-%d_%H-%M-%S")}'
-
     # Display arguments in console
     print('\n=== Arguments & Hyperparameters ===\n')
     print_dict(vars(args), 6)
 
-    # Declare dataset manager
-    dataset_manager = LearningDatasetManager(images_path=RESIZED_PATH,
-                                     targets_path=TARGETS_PATH,
-                                     image_size=args.image_size,
-                                     num_workers=args.num_workers,
-                                     data_aug=args.data_aug,
-                                     validation_size=args.validation_size,
-                                     test_size=args.test_size,
-                                     norm=args.normalize,
-                                     google_images=not args.no_google_images,
-                                     seed=args.random_seed)
+    # Declare splitting manager
+    splitting_manager = SplittingManager(dataset='learning',
+                                         validation_size=args.validation_size,
+                                         test_size=args.test_size,
+                                         k_cross_valid=args.k_cross_valid,
+                                         seed=args.seed_split,
+                                         google_images=not args.no_google_images,
+                                         image_size=args.image_size,
+                                         num_workers=args.num_workers)
 
-    # Declare data loader manager
-    data_loader_manager = LearningDataLoaderManager(dataset_manager=dataset_manager,
-                                            batch_size=args.batch,
-                                            gradient_accumulation=args.gradient_accumulation,
-                                            num_workers=args.num_workers,
-                                            deterministic=args.deterministic)
+    # Set deterministic behavior
+    set_deterministic(args.deterministic)
 
-    # Declare training, validation and testing manager
-    train_valid_test_manager = PipelineManager(data_loader_manager=data_loader_manager,
-                                               file_name=file_name,
-                                               model_name=args.model,
-                                               learning_rate=args.learning_rate,
-                                               weight_decay=args.weight_decay,
-                                               es_patience=args.es_patience,
-                                               es_delta=args.es_delta,
-                                               mixed_precision=args.mixed_precision,
-                                               gradient_accumulation=args.gradient_accumulation,
-                                               pretrained=not args.no_pretrained,
-                                               gradient_clip=args.gradient_clip,
-                                               args_dict=vars(args),
-                                               save_model=not args.no_save_model,
-                                               image_size=args.image_size,
-                                               save_last=args.save_last,
-                                               log_training_metrics=args.log_training_metrics,
-                                               log_memory=args.log_memory,
-                                               class_loss_ceof=args.set_cost_class if args.model == 'detr' else None,
-                                               bbox_loss_coef=args.set_cost_bbox if args.model == 'detr' else None,
-                                               giou_loss_coef=args.set_cost_giou if args.model == 'detr' else None,
-                                               eos_coef=args.eos_coef if args.model == 'detr' else None)
+    # Set seed for initialization
+    set_seed(args.seed_init)
 
-    # Call the training, validation and testing manager to run the pipeline
-    train_valid_test_manager(args.epochs)
+    if args.k_cross_valid > 1:
+        print(f'\n{args.k_cross_valid}-Fold Cross Validation Enabled!')
+
+    for i in range(args.k_cross_valid):
+        if args.k_cross_valid > 1:
+            print(f'\nCross Validation Fold Number : {i + 1}/{args.k_cross_valid}\n')
+
+            file_name = f'{args.model.split("_")[0]}_{args.epochs}_fold{i + 1}_{start.strftime("%Y-%m-%d_%H-%M-%S")}'
+        else:
+            file_name = f'{args.model.split("_")[0]}_{args.epochs}_{start.strftime("%Y-%m-%d_%H-%M-%S")}'
+
+        # Declare dataset manager
+        dataset_manager = LearningDatasetManager(images_path=RESIZED_LEARNING_PATH,
+                                                 targets_path=TARGETS_LEARNING_PATH,
+                                                 image_size=args.image_size,
+                                                 num_workers=args.num_workers,
+                                                 data_aug=args.data_aug,
+                                                 validation_size=args.validation_size,
+                                                 test_size=args.test_size,
+                                                 norm=args.normalize,
+                                                 google_images=not args.no_google_images,
+                                                 seed=args.seed_init,
+                                                 splitting_manager=splitting_manager,
+                                                 current_fold=i)
+
+        # Declare data loader manager
+        data_loader_manager = LearningDataLoaderManager(dataset_manager=dataset_manager,
+                                                        batch_size=args.batch,
+                                                        gradient_accumulation=args.gradient_accumulation,
+                                                        num_workers=args.num_workers,
+                                                        deterministic=args.deterministic)
+
+        # Declare training, validation and testing manager
+        pipeline_manager = PipelineManager(data_loader_manager=data_loader_manager,
+                                           file_name=file_name,
+                                           model_name=args.model,
+                                           learning_rate=args.learning_rate,
+                                           weight_decay=args.weight_decay,
+                                           es_patience=args.es_patience,
+                                           es_delta=args.es_delta,
+                                           mixed_precision=args.mixed_precision,
+                                           gradient_accumulation=args.gradient_accumulation,
+                                           pretrained=not args.no_pretrained,
+                                           gradient_clip=args.gradient_clip,
+                                           args_dict=vars(args),
+                                           save_model=not args.no_save_model,
+                                           image_size=args.image_size,
+                                           save_last=args.save_last,
+                                           log_training_metrics=args.log_training_metrics,
+                                           log_memory=args.log_memory,
+                                           class_loss_ceof=args.set_cost_class if args.model == 'detr' else None,
+                                           bbox_loss_coef=args.set_cost_bbox if args.model == 'detr' else None,
+                                           giou_loss_coef=args.set_cost_giou if args.model == 'detr' else None,
+                                           eos_coef=args.eos_coef if args.model == 'detr' else None)
+
+        # Call the training, validation and testing manager to run the pipeline
+        pipeline_manager(args.epochs)
 
     # Print the run time of the current experiment
     print(f'\nTotal time for current experiment:\t{str(datetime.now() - start).split(".")[0]}')

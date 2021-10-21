@@ -128,9 +128,9 @@ class PipelineManager:
         print(f'\n=== Dataset & Data Loader Sizes ===\n\n'
               f'Training:\t\t{len(self.__data_loader_train.dataset)} images\t\t'
               f'{len(self.__data_loader_train)} batches\n'
-              f'Validation:\t\t{len(self.__data_loader_valid.dataset)} images\t\t'
+              f'Validation:\t\t{len(self.__data_loader_valid.dataset) if len(self.__data_loader_valid) > 0 else 0} images\t\t'
               f'{len(self.__data_loader_valid)} batches\n'
-              f'Testing:\t\t{len(self.__data_loader_test.dataset)} images\t\t'
+              f'Testing:\t\t{len(self.__data_loader_test.dataset) if len(self.__data_loader_test) > 0 else 0} images\t\t'
               f'{len(self.__data_loader_test)} batches\n')
 
         # Get model and set last fully-connected layer with the right number of classes
@@ -194,12 +194,12 @@ class PipelineManager:
         if self.__save_model:
             # Save the model in the saved_models/ folder
             filename = f'{MODELS_PATH}{self.__file_name}'
-            
-            if self.__best_epoch >= self.__swa_start:
-                ranking_model = self.__swa_model.module if self.__save_last else self.__best_model.module
+
+            if not self.__save_last:
+                ranking_model = self.__best_model.module if self.__best_epoch >= self.__swa_start else self.__best_model
             else:
-                ranking_model = self.__model if self.__save_last else self.__best_model
-            
+                ranking_model = self.__swa_model.module if epochs >= self.__swa_start else self.__model
+
             # Storing the model and meta data in the save state
             save_state = {
                 "model": ranking_model.state_dict(),
@@ -210,18 +210,26 @@ class PipelineManager:
 
             print(f'{"Last" if self.__save_last else "Best"} model saved to:\t\t\t\t{filename}\n')
 
-        # Save best or last epoch validation metrics dict to tensorboard
-        metrics_dict = self.__last_metrics_dict if self.__save_last else self.__best_metrics_dict
+        if len(self.__data_loader_valid) > 0:
+            # Save best or last epoch validation metrics dict to tensorboard
+            metrics_dict = self.__last_metrics_dict if self.__save_last else self.__best_metrics_dict
+        else:
+            metrics_dict = {}
 
-        # Append 'hparams/' to the start of each metrics dictionary key to log in tensorboard
-        for key in metrics_dict.fromkeys(metrics_dict):
-            metrics_dict[f'hparams/{key}'] = metrics_dict.pop(key)
+        if len(self.__data_loader_test) > 0:
+            # Test the trained model
+            self.__test_model()
 
-        # Save the hyperparameters with tensorboard
-        self.__writer.add_hparams(self.__args_dict, metric_dict=metrics_dict)
+            # Append test results to validation results
+            metrics_dict.update(self.__test_metrics_dict)
 
-        # Test the trained model
-        self.__test_model()
+        if len(self.__data_loader_valid) > 0 or len(self.__data_loader_test) > 0:
+            # Append 'hparams/' to the start of each metrics dictionary key to log in tensorboard
+            for key in metrics_dict.fromkeys(metrics_dict):
+                metrics_dict[f'hparams/{key}'] = metrics_dict.pop(key)
+
+            # Save the hyperparameters with tensorboard
+            self.__writer.add_hparams(self.__args_dict, metric_dict=metrics_dict)
 
         # Flush and close the tensorboard writer
         self.__writer.flush()
@@ -261,7 +269,8 @@ class PipelineManager:
             # Save the current epoch loss for tensorboard
             self.__save_epoch('Training', loss, metrics_dict, epoch)
 
-            metric = self.__validate_model(model, epoch)
+            if len(self.__data_loader_valid) > 0:
+                metric = self.__validate_model(model, epoch)
 
             # Check if early stopping is enabled
             if self.__es_patience:
@@ -422,11 +431,11 @@ class PipelineManager:
         torch.optim.swa_utils.update_bn(self.__data_loader_train, model)
 
         # COCO Evaluation
-        metrics_dict = self.__coco_evaluate(model, self.__data_loader_test, 'Testing Metrics')
+        self.__test_metrics_dict = self.__coco_evaluate(model, self.__data_loader_test, 'Testing Metrics')
 
         # Print the testing object detection metrics results
         print('=== Testing Results ===\n')
-        print_dict(metrics_dict, 6, '.2%')
+        print_dict(self.__test_metrics_dict, 6, '.2%')
 
     @torch.no_grad()
     def __coco_evaluate(self, model, data_loader: DataLoader, desc: str) -> dict:
@@ -466,7 +475,10 @@ class PipelineManager:
         coco_evaluator.accumulate()
         coco_evaluator.summarize()
 
-        return dict(zip(COCO_PARAMS_LIST, coco_evaluator.coco_eval['bbox'].stats.tolist()))
+        phase = desc.split(" ")[0]
+        params_list = [f'{phase}/{param}' for param in COCO_PARAMS_LIST]
+
+        return dict(zip(params_list, coco_evaluator.coco_eval['bbox'].stats.tolist()))
 
     def __save_batch(self, phase: str, loss: float) -> None:
         """
@@ -495,7 +507,8 @@ class PipelineManager:
 
         if metrics_dict is not None:
             for i, (key, value) in enumerate(metrics_dict.items(), start=1):
-                self.__writer.add_scalar(f'{key[:2]} ({phase})/{i}. {key[6:-1]}', value, epoch)
+                self.__writer.add_scalar(f'{key.split("/")[-1][:2]} ({phase})/{i}. {key[6 + len(key.split("/")[0]):]}',
+                                         value, epoch)
 
         if phase == 'Training':
             if self.__swa_started:

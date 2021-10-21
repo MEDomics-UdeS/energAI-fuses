@@ -42,7 +42,7 @@ def set_seed(seed: int) -> None:
     random.seed(seed)
 
 
-def set_deterministic(deterministic: bool, seed: int) -> None:
+def set_deterministic(deterministic: bool) -> None:
     """
     Function to set deterministic behavior to ensure results reproducibility
 
@@ -52,6 +52,3 @@ def set_deterministic(deterministic: bool, seed: int) -> None:
     torch.backends.cudnn.deterministic = deterministic
     torch.backends.cudnn.benchmark = not deterministic
     torch.use_deterministic_algorithms(deterministic)
-
-    #if deterministic:
-    set_seed(seed)
