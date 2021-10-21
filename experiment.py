@@ -19,7 +19,7 @@ from src.data.SplittingManager import SplittingManager
 from src.data.DataLoaderManagers.LearningDataLoaderManager import LearningDataLoaderManager
 from src.data.DatasetManagers.LearningDatasetManager import LearningDatasetManager
 from src.models.PipelineManager import PipelineManager
-from src.utils.helper_functions import print_dict
+from src.utils.helper_functions import print_dict, env_tests
 from src.utils.reproducibility import set_deterministic, set_seed
 from src.utils.constants import RESIZED_LEARNING_PATH, TARGETS_LEARNING_PATH
 
