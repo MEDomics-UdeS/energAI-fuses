@@ -1,3 +1,16 @@
+"""
+File:
+    src/gui/ImageViewer.py
+
+Authors:
+    - Simon Giard-Leroux
+    - Guillaume Cléroux
+    - Shreyas Sunil Kulkarni
+
+Description:
+    Small image viewing  tkinter app with embedded Matplotlib visualization canvas
+"""
+
 from tkinter import *
 from PIL import Image
 import os
@@ -8,8 +21,15 @@ from src.gui.modules.ReadOnlyTextBox import ReadOnlyTextBox
 
 
 class ImageViewer:
+    """Small image viewing  tkinter app with embedded Matplotlib visualization canvas"""
 
     def __init__(self, window: Toplevel, textbox: ReadOnlyTextBox) -> None:
+        """Class constructor
+
+        Args:
+            window (Toplevel): Root window of the image viewer app
+            textbox (ReadOnlyTextBox): GUI's app read-only text box
+        """
 
         self.__img_list = []
         self.__canvas = None
@@ -92,12 +112,27 @@ class ImageViewer:
         self.__exit_button.grid(row=1, column=1, pady=10)
         self.__status.grid(row=2, column=0, columnspan=3, sticky="w"+"e")
     
-    
     def close_window(self, window: Toplevel, textbox: ReadOnlyTextBox) -> None:
+        """Closes the app
+
+        Args:
+            window (Toplevel): Root window of the image viewer app
+            textbox (ReadOnlyTextBox): GUI's app read-only text box
+        """
+        
         textbox.insert("Closing the Image Viewer app.\n\n")
         window.destroy()
     
     def __create_mpl_canvas(self, image: Image, frame: LabelFrame) -> None:
+        """Creates a Matplotlib canvas for visualization
+
+        Args:
+            image (Image): Annotated image with bounding boxes
+            frame (LabelFrame): Root frame of the Matplotlib canvas
+
+        Notes:
+            Inspired from: https://matplotlib.org/3.1.0/gallery/user_interfaces/embedding_in_tk_sgskip.html
+        """
         
         # Deleting the widgets from the screen
         if self.__canvas is not None:
@@ -107,8 +142,8 @@ class ImageViewer:
             
         # Create the figure
         fig = Figure(dpi=100,
-                        facecolor=COLOR_PALETTE["widgets"],
-                        edgecolor=COLOR_PALETTE["fg"])
+                     facecolor=COLOR_PALETTE["widgets"],
+                     edgecolor=COLOR_PALETTE["fg"])
         fig.add_subplot(111).imshow(image)
         
         # Creating the new image canvas
@@ -120,14 +155,18 @@ class ImageViewer:
         self.__toolbar = NavigationToolbar2Tk(self.__canvas, frame)
         self.__toolbar.update()
     
-
     def __prev_img(self, window: Toplevel, idx: int) -> None:
+        """Switch to previous image in directory
+
+        Args:
+            window (Toplevel): Root window of the image viewer app
+            idx (int): Index of the image to display
+        """
         
         # Update the image filename
         self.__frame.config(text=self.__img_list[idx][0])
         
         # Update the image
-        # self.__fig_list[idx + 1][1].clf(keep_observers=True)
         self.__create_mpl_canvas(self.__img_list[idx][1], self.__frame)
 
         # Update the buttons
@@ -138,14 +177,18 @@ class ImageViewer:
         # Update status bar
         self.__status.config(text=f'Image {idx + 1} of {len(self.__img_list)}')
         
-
     def __next_img(self, window: Toplevel, idx: int) -> None:
+        """Switch to next image in directory
+
+        Args:
+            window (Toplevel): Root window of the image viewer app
+            idx (int): Index of the image to display
+        """
 
         # Update the image filename
         self.__frame.config(text=self.__img_list[idx + 1][0])
 
         # Update the image
-        # self.__fig_list[idx][1].clf(keep_observers=True)
         self.__create_mpl_canvas(self.__img_list[idx + 1][1], self.__frame)
         
         # Update the buttons

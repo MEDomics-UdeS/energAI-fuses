@@ -28,6 +28,7 @@ from src.data.DatasetManagers.CustomDatasetManager import CustomDatasetManager, 
 from src.data.SplittingManager import SplittingManager
 from src.utils.constants import *
 from src.data.Datasets.FuseDataset import FuseDataset
+from src.utils.helper_functions import cp_split
 
 
 class LearningDatasetManager(CustomDatasetManager):

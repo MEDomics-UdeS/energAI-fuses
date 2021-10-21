@@ -19,15 +19,18 @@ from multiprocessing import cpu_count
 import torch
 from src.data.DataLoaderManagers.LearningDataLoaderManager import LearningDataLoaderManager
 from src.data.DatasetManagers.LearningDatasetManager import LearningDatasetManager
+from src.data.DataLoaderManagers.GuiDataLoaderManager import GuiDataLoaderManager
+from src.data.DatasetManagers.GuiDatasetManager import GuiDatasetManager
 from src.utils.helper_functions import print_dict, env_tests
 from src.visualization.inference import save_test_images
 from src.utils.constants import RESIZED_LEARNING_PATH, TARGETS_LEARNING_PATH, INFERENCE_PATH, MODELS_PATH
 
 if __name__ == '__main__':
-    env_tests()
-
     # Record start time
     start = datetime.now()
+
+    # Run environment tests
+    env_tests()
 
     # Get number of cpu threads for PyTorch DataLoader and Ray paralleling
     num_workers = cpu_count()
@@ -64,42 +67,75 @@ if __name__ == '__main__':
     parser.add_argument('-no-gi', '--no_google_images', action='store_true',
                         help='If specified, the Google Images photos will be excluded from the training subset')
 
-    # Parse arguments
-    args = parser.parse_args()
+    # Visualization using the GUI
+    parser.add_argument('-gui', '--with_gui', action='store_true',
+                        help='If specified, the inference results will be shown in the GUI application')
 
+    # Specified images path for inference
+    parser.add_argument('-img', '--image_path', action='store', type=str, default=None,
+                        help="Image directory to use for inference test")
+
+    # Selected device
+    parser.add_argument('-d', '--device', action='store', type=str, default='cpu',
+                        help="Select the device for inference")
+
+    # Selected ground truth CSV file
+    parser.add_argument("-gtf", "--ground_truth_file", action="store", type=str, default=None,
+                        help="Select a CSV file for ground truth drawing on images")
+
+    # Parsing arguments
+    args = parser.parse_args()
+    
     # Display arguments in console
     print('\n=== Arguments & Hyperparameters ===\n')
     print_dict(vars(args), 6)
 
     image_size = torch.load(args.model_file_name, map_location=torch.device('cpu'))["args_dict"]["image_size"]
 
-    # Declare dataset manager
-
-    dataset_manager = LearningDatasetManager(images_path=RESIZED_LEARNING_PATH,
-                                             targets_path=TARGETS_LEARNING_PATH,
-                                             image_size=image_size,
-                                             num_workers=num_workers,
-                                             data_aug=0,
-                                             validation_size=0,
-                                             test_size=1,
-                                             norm=args.normalize,
-                                             google_images=not args.no_google_images,
-                                             seed=0)
-
-    # Declare data loader manager
-    data_loader_manager = LearningDataLoaderManager(dataset_manager=dataset_manager,
-                                            batch_size=args.batch,
-                                            gradient_accumulation=1,
+    # Using GUI specific data managers
+    if args.with_gui:
+        #TODO there should be a try-except for GUI specific settings if someone wants to run the script standalone in a console instead of going through gui.py
+        # Loading the images dataset
+        dataset_manager = GuiDatasetManager(image_size=image_size,
+                                            images_path=args.image_path,
                                             num_workers=num_workers,
-                                            deterministic=True)
+                                            gt_file=args.ground_truth_file)
+        
+        data_loader_manager = GuiDataLoaderManager(dataset=dataset_manager,
+                                                   batch_size=args.batch,
+                                                   gradient_accumulation=1,
+                                                   num_workers=num_workers,
+                                                   deterministic=True)
+    else:
+        # Declare dataset manager
+        dataset_manager = LearningDatasetManager(images_path=RESIZED_PATH,
+                                                 targets_path=TARGETS_PATH,
+                                                 image_size=image_size,
+                                                 num_workers=num_workers,
+                                                 data_aug=0,
+                                                 validation_size=0,
+                                                 test_size=1,
+                                                 norm=args.normalize,
+                                                 google_images=not args.no_google_images,
+                                                 seed=0)
+
+        # Declare data loader manager
+        data_loader_manager = LearningDataLoaderManager(dataset_manager=dataset_manager,
+                                                        batch_size=args.batch,
+                                                        gradient_accumulation=1,
+                                                        num_workers=num_workers,
+                                                        deterministic=True)
 
     # Perform an inference loop and save all images with the ground truth and predicted bounding boxes
     save_test_images(model_file_name=args.model_file_name,
                      data_loader=data_loader_manager.data_loader_test,
+                     with_gui=args.with_gui,
                      iou_threshold=args.iou_threshold,
                      score_threshold=args.score_threshold,
                      save_path=INFERENCE_PATH,
-                     image_size=image_size)
+                     img_path=args.image_path,
+                     image_size=image_size,
+                     device_type=args.device)
 
     # Print file save path location
     print(f'\nInference results saved to: {INFERENCE_PATH}')

@@ -16,7 +16,7 @@ from src.data.DataLoaderManagers.CustomDataLoaderManager import CustomDataLoader
 
 
 
-class GuiDataLoader(CustomDataLoaderManager):
+class GuiDataLoaderManager(CustomDataLoaderManager):
     """
     Data Loader Manager class, handles the creation of the training, validation and testing data loaders.
     """
@@ -48,9 +48,9 @@ class GuiDataLoader(CustomDataLoaderManager):
 
         # If the training dataset is not empty, declare the training data loader
         if len(dataset.dataset) > 0:
-            self._data_loader = self._get_data_loader(dataset.dataset)
+            self._data_loader_test = self._get_data_loader(dataset.dataset)
 
 
     @property
-    def data_loader(self):
-        return self._data_loader
+    def data_loader_test(self):
+        return self._data_loader_test

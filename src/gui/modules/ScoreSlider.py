@@ -1,11 +1,33 @@
+"""
+File:
+    src/gui/modules/ScoreSlider.py
+
+Authors:
+    - Simon Giard-Leroux
+    - Guillaume Cléroux
+    - Shreyas Sunil Kulkarni
+
+Description:
+    Class responsible of handling the score treshold value for inference
+"""
+
 from tkinter import *
 import json
 from src.utils.constants import GUI_SETTINGS, FONT_PATH, COLOR_PALETTE
 
 
 class ScoreSlider:
+    """Class responsible of handling the score treshold value for inference"""
 
     def __init__(self, window: Toplevel) -> None:
+        """Class constructor
+
+        Args:
+            window (Toplevel): Root window
+
+        Notes:
+            By default, the score treshold will be set to 0.5
+        """
         
         Label(window, 
               background=COLOR_PALETTE["bg"],
@@ -33,6 +55,12 @@ class ScoreSlider:
         self.__slider.grid(row=3, column=0, pady=10)
 
     def __slide(self, value: DoubleVar) -> None:
+        """Updates the settings JSON file when the user interacts with the slider
+
+        Args:
+            value (DoubleVar): Current value of the slider
+        """
+        
         # Overwriting the settings json file
         with open(GUI_SETTINGS, "r+") as f_obj:
             settings_dict = json.load(f_obj)
@@ -44,4 +72,6 @@ class ScoreSlider:
 
     @property
     def slider(self):
+        """Get the slider widget"""
+        
         return self.__slider

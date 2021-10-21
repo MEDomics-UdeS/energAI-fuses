@@ -23,6 +23,7 @@ from torchvision.ops import nms
 from typing import List
 import torch.nn.functional as F
 from src.detr.box_ops import box_cxcywh_to_xyxy
+from pathlib import PurePosixPath, PureWindowsPath
 
 from src.utils.constants import REQUIRED_PYTHON, IMAGE_EXT
 
@@ -76,8 +77,22 @@ def env_tests() -> None:
         raise TypeError(
             "This project requires Python {}. Found: Python {}".format(
                 required_major, sys.version))
+
+
+def cp_split(filepath: str) -> List[str]:
+    """Cross-platform filepath splitting. Supports Windows, OS X and Linux.
+
+    Args:
+        filepath (str): The complete windows or posix filepath
+
+    Returns:
+        List[str]: A list of every individual elements in the filepath
+    """
+    # Check for the system's platform
+    if sys.platform == "win32" or sys.platform == "cygwin":
+        return PureWindowsPath(filepath).parts
     else:
-        print(">>> Development environment passes all tests!")
+        return PurePosixPath(filepath).parts
 
 
 def filter_by_nms(preds_list: List[dict], iou_threshold: float) -> List[dict]:

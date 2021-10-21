@@ -17,15 +17,10 @@ from datetime import datetime
 import json
 import argparse
 
-from src.utils.helper_functions import env_tests
-
 
 if __name__ == '__main__':
     # Record start time
     start = datetime.now()
-
-    # Run environment tests
-    env_tests()
 
     # Declare argument parser
     parser = argparse.ArgumentParser(description='Processing inputs')

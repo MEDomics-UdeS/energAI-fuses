@@ -27,6 +27,9 @@ if __name__ == '__main__':
     # Record start time
     start = datetime.now()
 
+    # Run environment tests
+    env_tests()
+
     # Declare argument parser
     parser = argparse.ArgumentParser(description='Processing inputs')
 
