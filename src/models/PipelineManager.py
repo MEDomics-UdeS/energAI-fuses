@@ -210,18 +210,20 @@ class PipelineManager:
 
             print(f'{"Last" if self.__save_last else "Best"} model saved to:\t\t\t\t{filename}\n')
 
+        if len(self.__data_loader_valid) > 0:
+            # Save best or last epoch validation metrics dict to tensorboard
+            metrics_dict = self.__last_metrics_dict if self.__save_last else self.__best_metrics_dict
+        else:
+            metrics_dict = {}
+
         if len(self.__data_loader_test) > 0:
             # Test the trained model
             self.__test_model()
 
-        if len(self.__data_loader_valid) > 0:
-            # Save best or last epoch validation metrics dict to tensorboard
-            metrics_dict = self.__last_metrics_dict if self.__save_last else self.__best_metrics_dict
+            # Append test results to validation results
+            metrics_dict.update(self.__test_metrics_dict)
 
-            if len(self.__data_loader_test) > 0:
-                # Append test results to validation results
-                metrics_dict.update(self.__test_metrics_dict)
-
+        if len(self.__data_loader_valid) > 0 or len(self.__data_loader_test) > 0:
             # Append 'hparams/' to the start of each metrics dictionary key to log in tensorboard
             for key in metrics_dict.fromkeys(metrics_dict):
                 metrics_dict[f'hparams/{key}'] = metrics_dict.pop(key)
