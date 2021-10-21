@@ -18,10 +18,13 @@ import json
 from src.utils.constants import COLOR_PALETTE, FONT_PATH, GUI_SETTINGS
 from src.utils.helper_functions import cp_split
 
+
 class ImageLoader:
-    """Class responsible of handling the raw image directory path"""
-    
-    def __init__(self, window: Tk) -> None:
+    """
+    Class responsible of handling the raw image directory path
+    """
+    def __init__(self,
+                 window: Tk) -> None:
         """Class constructor
 
         Args:
@@ -53,14 +56,14 @@ class ImageLoader:
         
         # Reading the settings JSON file
         with open(GUI_SETTINGS, "r") as f_obj:
-
             try:
                 img_dir = cp_split(json.load(f_obj)["imgdir"])
 
                 self.__img_dir_label = Label(window,
                                              background=COLOR_PALETTE["bg"],
                                              foreground=COLOR_PALETTE["purple"],
-                                             text=f'{".../" if len(img_dir) > 3 else ""}{"/".join(img_dir[-2:])} selected',
+                                             text=f'{".../" if len(img_dir) > 3 else ""}'
+                                                  f'{"/".join(img_dir[-2:])} selected',
                                              font=(FONT_PATH, 14),
                                              height=2,
                                              width=50,
@@ -102,7 +105,7 @@ class ImageLoader:
                 json.dump(settings_dict, f_obj)
 
     @property
-    def img_dir_label(self):
+    def img_dir_label(self) -> Label:
         """Get the raw image directory path label widget"""
         
         return self.__img_dir_label

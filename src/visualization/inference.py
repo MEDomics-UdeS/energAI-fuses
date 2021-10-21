@@ -16,12 +16,14 @@ from PIL import Image, ImageDraw, ImageFont
 import os
 from tqdm import tqdm
 from torch.utils.data import DataLoader
-from typing import Tuple
+from typing import Tuple, Any
+
 from src.coco.coco_utils import get_coco_api_from_dataset
 from src.coco.coco_eval import CocoEvaluator
-
-from src.utils.constants import CLASS_DICT, FONT_PATH, RESIZED_PATH, GUI_RESIZED_PATH, INFERENCE_PATH, RAW_PATH, IMAGE_EXT, COLOR_PALETTE
+from src.utils.constants import *
 from src.utils.helper_functions import cp_split, filter_by_nms, filter_by_score, format_detr_outputs
+from src.models.models import load_model
+
 
 @torch.no_grad()
 def save_test_images(model_file_name: str,
@@ -61,7 +63,6 @@ def save_test_images(model_file_name: str,
 
         # Declare device
         device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-
 
     # Declare progress bar
     pbar = tqdm(total=len(data_loader), leave=False, desc='Inference Test')
@@ -151,7 +152,11 @@ def save_test_images(model_file_name: str,
     pbar.close()
     
     
-def draw_annotations(draw: ImageDraw.ImageDraw, pred_box_dict: dict, target_box_dict: dict, pred_annotations: list, target_annotations: list) -> None:
+def draw_annotations(draw: ImageDraw.ImageDraw,
+                     pred_box_dict: dict,
+                     target_box_dict: dict,
+                     pred_annotations: list,
+                     target_annotations: list) -> None:
     """
     Function to draw bounding boxes on an image
 
@@ -200,7 +205,10 @@ def draw_annotations(draw: ImageDraw.ImageDraw, pred_box_dict: dict, target_box_
             (pred_box[0], pred_box[1]), text=f'{pred_label} {pred_score:.4f}', font=font, fill=COLOR_PALETTE["yellow"], stroke_width=int(font.size / 10), stroke_fill=COLOR_PALETTE["bg"])
 
 
-def resize_box_coord(box_dict: dict, downsize_ratio: float, x_offset: float, y_offset: float) -> dict:
+def resize_box_coord(box_dict: dict,
+                     downsize_ratio: float,
+                     x_offset: float,
+                     y_offset: float) -> dict:
     # Loop through each bounding box
     for i in range(len(box_dict['boxes'])):
         # Loop through each of the 4 coordinates (x_min, y_min, x_max, y_max)
@@ -217,7 +225,9 @@ def resize_box_coord(box_dict: dict, downsize_ratio: float, x_offset: float, y_o
     return box_dict
 
 
-def scale_annotation_sizes(img: Image, pred: dict, target: dict) -> Tuple[list, list]:
+def scale_annotation_sizes(img: Image,
+                           pred: dict,
+                           target: dict) -> Tuple[list, list]:
     """
     Function to scale the annotations drawn on an image during inference
 
@@ -255,7 +265,12 @@ def scale_annotation_sizes(img: Image, pred: dict, target: dict) -> Tuple[list, 
 
 
 @torch.no_grad()
-def coco_evaluate(model, data_loader: DataLoader, desc: str, device, image_size, model_name) -> dict:
+def coco_evaluate(model: Any,
+                  data_loader: DataLoader,
+                  desc: str,
+                  device: torch.device,
+                  image_size: int,
+                  model_name: str) -> dict:
     """
 
     :param model:

@@ -1,6 +1,6 @@
 """
 File:
-    src/data/DatasetManager.py
+    src/data/DatasetManagers/LearningDatasetManager.py
 
 Authors:
     - Simon Giard-Leroux
@@ -13,22 +13,16 @@ Description:
 
 import json
 import os
-import sys
-import zipfile
-
 import numpy as np
 import ray
-import requests
-from PIL import Image
 from torchvision import transforms
-# from sklearn.model_selection import StratifiedShuffleSplit
-from tqdm import tqdm, trange
-from typing import Tuple, Optional
+from tqdm import trange
+from typing import Optional, Tuple
+
 from src.data.DatasetManagers.CustomDatasetManager import CustomDatasetManager, ray_resize_images, ray_get_rgb
 from src.data.SplittingManager import SplittingManager
 from src.utils.constants import *
 from src.data.Datasets.FuseDataset import FuseDataset
-from src.utils.helper_functions import cp_split
 
 
 class LearningDatasetManager(CustomDatasetManager):
@@ -36,9 +30,6 @@ class LearningDatasetManager(CustomDatasetManager):
     Dataset Manager class, handles the creation of the training, validation and testing datasets.
     """
     def __init__(self,
-                 images_path: str,
-                 targets_path: str,
-                 image_size: int,
                  num_workers: int,
                  data_aug: float,
                  validation_size: float,
@@ -63,41 +54,6 @@ class LearningDatasetManager(CustomDatasetManager):
         """
         self._google_images = google_images
         self._seed = seed
-
-        # # Check if any image exists in the data/resized folder
-        # if any(file.endswith(f'.{IMAGE_EXT}') for file in os.listdir(RESIZED_LEARNING_PATH)):
-        #     # Get the first found image's size
-        #     for file in os.listdir(RESIZED_LEARNING_PATH):
-        #         if file.endswith(f'.{IMAGE_EXT}'):
-        #             img_size = Image.open(f'{RESIZED_LEARNING_PATH}{file}').size
-        #             break
-        #
-        #     # Check if the first image's size is not equal to the image_size parameter
-        #     if img_size != (image_size, image_size):
-        #         print(f'Max image size argument is {(image_size, image_size)} '
-        #               f'but a resized image of {img_size} was found')
-        #         print(f'All images will be resized to {(image_size, image_size)}')
-        #
-        #         # Resize all images
-        #         self._resize_images(image_size, num_workers)
-        # else:
-        #     # Check if any image exists in the data/raw folder
-        #     # if any(file.endswith(f'.{IMAGE_EXT}') for file in os.listdir(RAW_LEARNING_PATH)):
-        #     if os.path.isdir(RAW_LEARNING_PATH):
-        #         # Resize all images
-        #         self._resize_images(image_size, num_workers)
-        #     else:
-        #         # Ask the user if the data should be downloaded
-        #         if input('Raw data folder contains no images. '
-        #                  'Do you want to download them? (~ 3 GB) (y/n): ') == 'y':
-        #             # Download the data
-        #             self.__fetch_data(IMAGES_ID, ANNOTATIONS_ID)
-        #
-        #             # Resize all images
-        #             self._resize_images(image_size, num_workers)
-        #         else:
-        #             # Exit the program
-        #             sys.exit(1)
 
         # Declare training, validation and testing datasets
         if test_size < 1:
@@ -127,17 +83,6 @@ class LearningDatasetManager(CustomDatasetManager):
         else:
             self._dataset_test = []
 
-        # # Get total dataset size
-        # total_size = sum(image_path.rsplit('/')[-1].startswith('S') for image_path in self._dataset_train.image_paths)
-        #
-        # # Split the training set into training + validation
-        # self._dataset_train, self._dataset_valid = self.__split_dataset(self._dataset_train, self._dataset_valid,
-        #                                                                 validation_size, total_size)
-        #
-        # # Split the training set into training + testing
-        # self._dataset_train, self._dataset_test = self.__split_dataset(self._dataset_train, self._dataset_test,
-        #                                                                test_size, total_size)
-
         if norm == 'precalculated':
             # Use precalculated mean and standard deviation
             mean, std = MEAN, STD
@@ -148,7 +93,7 @@ class LearningDatasetManager(CustomDatasetManager):
             mean, std = None, None
 
         # Apply transforms to the training, validation and testing datasets
-        if test_size < 1:
+        if (test_size + validation_size) < 1:
             self._dataset_train.transforms = self.__transforms_train(mean, std, data_aug)
 
         if validation_size > 0:
@@ -199,57 +144,8 @@ class LearningDatasetManager(CustomDatasetManager):
         # Return a composed transforms list
         return transforms.Compose(transforms_list)
 
-    # def __split_dataset(self, dataset_in: FuseDataset, dataset_out: FuseDataset, split_size: float, total_size: int) \
-    #         -> Tuple[FuseDataset, FuseDataset]:
-    #     """
-    #     Split a dataset into two sub-datasets, used to create the validation and testing dataset splits
-    #
-    #     :param dataset_in: FuseDataset, input dataset from which to extract data
-    #     :param dataset_out: FuseDataset, output dataset into which we insert data
-    #     :param split_size: float, size of the split
-    #     :param total_size: int, total size of the original dataset
-    #     :return: tuple of two FuseDataset objects, which are the dataset_in and dataset_out after splitting
-    #     """
-    #
-    #     split_size = split_size / (1 - HOLDOUT_SIZE)
-    #
-    #     if 0 < split_size < 1:
-    #         if self._google_images:
-    #             google_image_paths = [image_path for image_path in dataset_in.image_paths
-    #                                   if image_path.rsplit('/')[-1].startswith('G')]
-    #
-    #             google_indices = [dataset_in.image_paths.index(google_image_path)
-    #                               for google_image_path in google_image_paths]
-    #
-    #             google_image_paths, google_images, google_targets = dataset_in.extract_data(index_list=google_indices)
-    #
-    #         most_freq_labels = [max(set(target['labels'].tolist()), key=target['labels'].tolist().count)
-    #                             for target in dataset_in.targets]
-    #
-    #         strat_split = StratifiedShuffleSplit(n_splits=1,
-    #                                              test_size=split_size * total_size / len(dataset_in),
-    #                                              random_state=self._seed)
-    #
-    #         # Iterate through generator object once and break
-    #         for _, indices in strat_split.split([0] * len(dataset_in), most_freq_labels):
-    #             break
-    #
-    #         # Extract the image paths, images and targets from dataset_in
-    #         image_paths, images, targets = dataset_in.extract_data(index_list=indices)
-    #
-    #         # Insert the extracted image paths, images and targets into dataset_out
-    #         dataset_out.add_data(image_paths, images, targets)
-    #
-    #         if self._google_images:
-    #             dataset_in.add_data(google_image_paths, google_images, google_targets)
-    #
-    #     if split_size == 1:
-    #         return dataset_out, dataset_in
-    #     else:
-    #         # Return the split_size input and output datasets
-    #         return dataset_in, dataset_out
-
-    def _calculate_mean_std(self, num_workers: int) -> Tuple[Tuple[float, float, float], Tuple[float, float, float]]:
+    def _calculate_mean_std(self,
+                            num_workers: int) -> Tuple[Tuple[float, float, float], Tuple[float, float, float]]:
         """
         Method to calculate the mean and standard deviation for each channel (R, G, B) for each image
 

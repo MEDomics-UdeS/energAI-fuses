@@ -13,14 +13,14 @@ Description:
 
 import torch
 import torchvision.models.detection as detection
-from typing import Optional
+from typing import Optional, Any
 
 
 def load_model(model_name: str,
                pretrained: bool,
                num_classes: int,
                progress: bool = True,
-               trainable_backbone_layers: Optional[int] = None):
+               trainable_backbone_layers: Optional[int] = None) -> Any:
     """
     Method to load a model from PyTorch
 
@@ -74,7 +74,9 @@ def load_model(model_name: str,
     return model
 
 
-def replace_model_head(model, model_name: str, num_classes: int):
+def replace_model_head(model: Any,
+                       model_name: str,
+                       num_classes: int) -> Any:
     """
     Replace model head with the right number of classes (for transfer learning)
 
@@ -103,7 +105,7 @@ def replace_model_head(model, model_name: str, num_classes: int):
     return model
 
 
-def load_detr_state_dict(model):
+def load_detr_state_dict(model):  # Type: models.detr.DETR
     """
     Load pretrained weights for DE:TR model
     """

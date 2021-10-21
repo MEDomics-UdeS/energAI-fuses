@@ -17,22 +17,27 @@ from tkinter import *
 from subprocess import Popen, PIPE
 from threading import Thread
 from queue import Queue, Empty
-from typing import Callable, List
+from typing import Callable
+
 from src.gui.modules.ReadOnlyTextBox import ReadOnlyTextBox
-from src.utils.constants import COLOR_PALETTE
 from src.gui.ImageViewer import ImageViewer
+from src.utils.constants import COLOR_PALETTE
 
 
 class OutputRedirector:
-    """Class that creates a thread that reads a subprocess' output and dumps it in a read-only text box"""
-    
-    def __init__(self, window: Tk, target: ReadOnlyTextBox, cmd: List[str]) -> None:
+    """
+    Class that creates a thread that reads a subprocess' output and dumps it in a read-only text box
+    """
+    def __init__(self,
+                 window: Tk,
+                 target: ReadOnlyTextBox,
+                 cmd: list) -> None:
         """Class constructor
 
         Args:
             window (Tk): Root window
             target (ReadOnlyTextBox): Output's target destination
-            cmd (List[str]): List of every flags used for the subprocess
+            cmd (list(str)): List of every flags used for the subprocess
         """
         
         # Declare the parent window of the OutputRedirector
@@ -43,7 +48,8 @@ class OutputRedirector:
         
         # Displaying the process to the user
         self.__target.insert(
-            f'{"-" * 100}\nStarting Inference and resizing images\n{"-" * 100}\nThis process can take a few minutes depending on the size of the directory.\n')
+            f'{"-" * 100}\nStarting Inference and resizing images\n{"-" * 100}\n'
+            f'This process can take a few minutes depending on the size of the directory.\n')
 
         # Starts the inference process
         self.__process = Popen(cmd, stdout=PIPE)
@@ -57,7 +63,8 @@ class OutputRedirector:
         # Start the update loop
         self.update(q)
     
-    def reader_thread(self, q: Queue) -> None:
+    def reader_thread(self,
+                      q: Queue) -> None:
         """Read subprocess output and put it into the queue
 
         Args:
@@ -71,7 +78,8 @@ class OutputRedirector:
         finally:
             q.put(None)
 
-    def update(self, q: Queue) -> None:
+    def update(self,
+               q: Queue) -> None:
         """Update GUI with items from the queue
 
         Args:
@@ -100,7 +108,8 @@ class OutputRedirector:
         self.__window.after(25, self.update, q)
 
 
-def iter_except(function: Callable, exception: Exception) -> None:
+def iter_except(function: Callable,
+                exception: Exception) -> None:
     """Works like builtin 2-argument `iter()`, but stops on `exception`
 
     Args:

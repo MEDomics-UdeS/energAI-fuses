@@ -43,7 +43,11 @@ class EarlyStopper:
     """
     Early stopping class
     """
-    def __init__(self, patience: int, min_delta: float, mode: str = 'max', percentage: bool = False) -> None:
+    def __init__(self,
+                 patience: int,
+                 min_delta: float,
+                 mode: str = 'max',
+                 percentage: bool = False) -> None:
         """
         Class constructor
 
@@ -65,7 +69,8 @@ class EarlyStopper:
             self.__is_better = lambda a, b: True
             self.step = lambda a: False
 
-    def step(self, metrics: float) -> bool:
+    def step(self,
+             metrics: float) -> bool:
         """
         Step function
 
@@ -91,7 +96,10 @@ class EarlyStopper:
 
         return False
 
-    def __init_is_better(self, mode: str, min_delta: float, percentage: bool) -> None:
+    def __init_is_better(self,
+                         mode: str,
+                         min_delta: float,
+                         percentage: bool) -> None:
         """
         Method to initialize the self.__is_better method depending on the mode, min_delta and percentage parameters
 

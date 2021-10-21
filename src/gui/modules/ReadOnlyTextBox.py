@@ -12,13 +12,16 @@ Description:
 """
 
 from tkinter import *
+
 from src.utils.constants import COLOR_PALETTE
 
 
 class ReadOnlyTextBox:
-    """Custom read-only tkinter text box"""
-    
-    def __init__(self, window: Tk) -> None:
+    """
+    Custom read-only tkinter text box
+    """
+    def __init__(self,
+                 window: Tk) -> None:
         """Class constructor
 
         Args:
@@ -50,7 +53,8 @@ class ReadOnlyTextBox:
 
         self.__scroll.config(command=self.__textbox.yview)
 
-    def insert(self, text: str) -> None:
+    def insert(self,
+               text: str) -> None:
         """Inserts text in the text box
 
         Args:

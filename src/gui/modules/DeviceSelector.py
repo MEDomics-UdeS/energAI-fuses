@@ -13,13 +13,17 @@ Description:
 
 from tkinter import *
 import torch
-from src.utils.constants import COLOR_PALETTE, FONT_PATH, GUI_SETTINGS
 import json
 
-class DeviceSelector:
-    """Class responsible of handling the device for inference"""
+from src.utils.constants import COLOR_PALETTE, FONT_PATH, GUI_SETTINGS
 
-    def __init__(self, window: Toplevel) -> None:
+
+class DeviceSelector:
+    """
+    Class responsible of handling the device for inference
+    """
+    def __init__(self,
+                 window: Toplevel) -> None:
         """Class constructor
 
         Args:
@@ -35,7 +39,7 @@ class DeviceSelector:
         self.__device_option = StringVar()
 
         devices = [('CUDA', 'cuda'),
-                    ('CPU', 'cpu')]
+                   ('CPU', 'cpu')]
 
         Label(window,
               background=COLOR_PALETTE["bg"],
@@ -77,7 +81,7 @@ class DeviceSelector:
             json.dump(settings_dict, f_obj)
 
     @property
-    def device_option(self):
+    def device_option(self) -> StringVar:
         """Get the device option widget"""
         
         return self.__device_option

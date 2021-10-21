@@ -12,6 +12,7 @@ Description:
 """
 
 from tkinter import *
+
 from src.utils.constants import COLOR_PALETTE
 from src.gui.modules.ResetButton import ResetButton
 from src.gui.modules.IOUSlider import IOUSlider
@@ -21,8 +22,11 @@ from src.gui.modules.CSVFileLoader import CSVFileLoader
 from src.gui.modules.ModelLoader import ModelLoader
 from src.gui.modules.ImageLoader import ImageLoader
 
+
 class AdvancedOptionsWindow:
-    """Single instance GUI window for advanced options"""
+    """
+    Single instance GUI window for advanced options
+    """
     
     def __init__(self, window: Tk, model: ModelLoader, img_dir: ImageLoader) -> None:
         """Class constructor

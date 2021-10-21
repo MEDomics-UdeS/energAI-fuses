@@ -14,6 +14,7 @@ Description:
 import json
 from tkinter import *
 from tkinter.messagebox import WARNING, askokcancel
+
 from src.utils.constants import GUI_SETTINGS, COLOR_PALETTE, FONT_PATH
 from src.utils.helper_functions import enter_default_json
 from src.gui.modules.ModelLoader import ModelLoader
@@ -23,9 +24,11 @@ from src.gui.modules.ScoreSlider import ScoreSlider
 from src.gui.modules.DeviceSelector import DeviceSelector
 from src.gui.modules.CSVFileLoader import CSVFileLoader
 
-class ResetButton:
-    """Class responsible to reset the settings JSON file and the GUI's state"""
 
+class ResetButton:
+    """
+    Class responsible to reset the settings JSON file and the GUI's state
+    """
     def __init__(self, 
                  window: Toplevel, 
                  model: ModelLoader, 
@@ -57,8 +60,8 @@ class ResetButton:
                command=lambda: self.restore_defaults(model, img_dir, iou, score, device, gt_csv)
                ).grid(row=6, column=1, pady=10)
 
-    def restore_defaults(self,
-                         model: ModelLoader,
+    @staticmethod
+    def restore_defaults(model: ModelLoader,
                          img_dir: ImageLoader,
                          iou: IOUSlider,
                          score: ScoreSlider,
@@ -93,9 +96,9 @@ class ResetButton:
 
             # Resetting the widgets to defaults value
             model.model_label.config(foreground=COLOR_PALETTE["red"],
-                                    text="No model selected")
+                                     text="No model selected")
             img_dir.img_dir_label.config(foreground=COLOR_PALETTE["red"],
-                                        text="No image directory selected")
+                                         text="No image directory selected")
 
             # Restoring the defaults advanced options
             iou.slider.set(settings_dict["iou_treshold"])

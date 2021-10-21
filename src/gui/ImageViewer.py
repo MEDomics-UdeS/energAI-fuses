@@ -14,16 +14,20 @@ Description:
 from tkinter import *
 from PIL import Image
 import os
-from src.utils.constants import INFERENCE_PATH, IMAGE_EXT, COLOR_PALETTE, FONT_PATH
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
+
+from src.utils.constants import INFERENCE_PATH, IMAGE_EXT, COLOR_PALETTE, FONT_PATH
 from src.gui.modules.ReadOnlyTextBox import ReadOnlyTextBox
 
 
 class ImageViewer:
-    """Small image viewing  tkinter app with embedded Matplotlib visualization canvas"""
-
-    def __init__(self, window: Toplevel, textbox: ReadOnlyTextBox) -> None:
+    """
+    Small image viewing  tkinter app with embedded Matplotlib visualization canvas
+    """
+    def __init__(self,
+                 window: Toplevel,
+                 textbox: ReadOnlyTextBox) -> None:
         """Class constructor
 
         Args:
@@ -111,8 +115,10 @@ class ImageViewer:
         self.__next_button.grid(row=1, column=2)
         self.__exit_button.grid(row=1, column=1, pady=10)
         self.__status.grid(row=2, column=0, columnspan=3, sticky="w"+"e")
-    
-    def close_window(self, window: Toplevel, textbox: ReadOnlyTextBox) -> None:
+
+    @staticmethod
+    def close_window(window: Toplevel,
+                     textbox: ReadOnlyTextBox) -> None:
         """Closes the app
 
         Args:
@@ -123,7 +129,9 @@ class ImageViewer:
         textbox.insert("Closing the Image Viewer app.\n\n")
         window.destroy()
     
-    def __create_mpl_canvas(self, image: Image, frame: LabelFrame) -> None:
+    def __create_mpl_canvas(self,
+                            image: Image,
+                            frame: LabelFrame) -> None:
         """Creates a Matplotlib canvas for visualization
 
         Args:
@@ -155,7 +163,9 @@ class ImageViewer:
         self.__toolbar = NavigationToolbar2Tk(self.__canvas, frame)
         self.__toolbar.update()
     
-    def __prev_img(self, window: Toplevel, idx: int) -> None:
+    def __prev_img(self,
+                   window: Toplevel,
+                   idx: int) -> None:
         """Switch to previous image in directory
 
         Args:
@@ -177,7 +187,9 @@ class ImageViewer:
         # Update status bar
         self.__status.config(text=f'Image {idx + 1} of {len(self.__img_list)}')
         
-    def __next_img(self, window: Toplevel, idx: int) -> None:
+    def __next_img(self,
+                   window: Toplevel,
+                   idx: int) -> None:
         """Switch to next image in directory
 
         Args:

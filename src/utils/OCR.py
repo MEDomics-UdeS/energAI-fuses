@@ -25,7 +25,8 @@ from typing import Tuple
 from constants import RAW_PATH, OCR_DICT
 
 
-def label_ocr(img: str, box: Tuple[float]) -> str:
+def label_ocr(img: str,
+              box: Tuple[float]) -> str:
     """
 
     :param img:

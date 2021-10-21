@@ -11,23 +11,18 @@ Description:
     Training, validation and testing pipeline manager
 """
 
+from copy import deepcopy
 import numpy as np
 import torch
 from torch.nn.utils import clip_grad_norm_
 from torch.cuda.amp import autocast
 from torch.cuda.amp.grad_scaler import GradScaler
 from torch.cuda import memory_reserved, memory_allocated
-from src.data.DataLoaderManagers.CocoDataLoaderManager import CocoDataLoaderManager
-from src.data.DatasetManagers.CocoDatasetManager import CocoDatasetManager
-from src.detr.criterion import build_criterion
-from src.models.SummaryWriter import SummaryWriter
-from tqdm import tqdm
-from torch.utils.data import DataLoader
-from typing import Optional
-from copy import deepcopy
-
 from torch.optim.swa_utils import AveragedModel, SWALR
 from torch.optim.lr_scheduler import CosineAnnealingLR
+from torch.utils.data import DataLoader
+from tqdm import tqdm
+from typing import Optional, Any
 
 from src.utils.constants import CLASS_DICT, LOG_PATH, MODELS_PATH, EVAL_METRIC, COCO_PARAMS_LIST
 from src.data.DataLoaderManagers.LearningDataLoaderManager import LearningDataLoaderManager
@@ -37,13 +32,16 @@ from src.coco.coco_utils import get_coco_api_from_dataset
 from src.coco.coco_eval import CocoEvaluator
 from src.utils.helper_functions import print_dict, format_detr_outputs
 from src.detr.box_ops import batch_box_xyxy_to_cxcywh
+from src.data.DataLoaderManagers.CocoDataLoaderManager import CocoDataLoaderManager
+from src.data.DatasetManagers.CocoDatasetManager import CocoDatasetManager
+from src.detr.criterion import build_criterion
+from src.models.SummaryWriter import SummaryWriter
 
 
 class PipelineManager:
     """
     Training, validation and testing manager.
     """
-
     def __init__(self, data_loader_manager: LearningDataLoaderManager,
                  file_name: str,
                  model_name: str,
@@ -280,7 +278,11 @@ class PipelineManager:
                     print(f'Early stopping criterion has been reached after {self.__es_patience} epochs\n')
                     break
 
-    def __evaluate(self, model, data_loader: DataLoader, phase: str, epoch: int) -> float:
+    def __evaluate(self,
+                   model: Any,
+                   data_loader: DataLoader,
+                   phase: str,
+                   epoch: int) -> float:
         """
         To perform forward passes, compute the losses and perform backward passes on the model
 
@@ -350,7 +352,9 @@ class PipelineManager:
         # Return the mean loss for the current epoch
         return float(np.mean(loss_list_epoch))
 
-    def __update_model(self, losses: torch.Tensor, i: int) -> None:
+    def __update_model(self,
+                       losses: torch.Tensor,
+                       i: int) -> None:
         """
 
         :param losses:
@@ -390,7 +394,9 @@ class PipelineManager:
                 self.__scaler.update()
                 self.__optimizer.zero_grad(set_to_none=True)
 
-    def __validate_model(self, model, epoch: int) -> float:
+    def __validate_model(self,
+                         model: Any,
+                         epoch: int) -> float:
         """
         Validate the model for the current epoch
 
@@ -438,7 +444,10 @@ class PipelineManager:
         print_dict(self.__test_metrics_dict, 6, '.2%')
 
     @torch.no_grad()
-    def __coco_evaluate(self, model, data_loader: DataLoader, desc: str) -> dict:
+    def __coco_evaluate(self,
+                        model: Any,
+                        data_loader: DataLoader,
+                        desc: str) -> dict:
         """
 
         :param model:
@@ -480,7 +489,9 @@ class PipelineManager:
 
         return dict(zip(params_list, coco_evaluator.coco_eval['bbox'].stats.tolist()))
 
-    def __save_batch(self, phase: str, loss: float) -> None:
+    def __save_batch(self,
+                     phase: str,
+                     loss: float) -> None:
         """
         Save batch losses to tensorboard
 
@@ -494,7 +505,11 @@ class PipelineManager:
             self.__writer.add_scalar(f'Loss/{phase} (total per batch)', loss, self.__valid_step)
             self.__valid_step += 1
 
-    def __save_epoch(self, phase: str, loss: float, metrics_dict: Optional[dict], epoch: int) -> None:
+    def __save_epoch(self,
+                     phase: str,
+                     loss: float,
+                     metrics_dict: Optional[dict],
+                     epoch: int) -> None:
         """
         Save epoch results to tensorboard
 
@@ -516,7 +531,8 @@ class PipelineManager:
             else:
                 self.__writer.add_scalar('Learning Rate', self.__scheduler.get_last_lr()[0], epoch)
 
-    def __save_memory(self, scale: float = 1e-9) -> None:
+    def __save_memory(self,
+                      scale: float = 1e-9) -> None:
         """
         Save current memory usage to tensorboard
 
@@ -532,37 +548,59 @@ class PipelineManager:
 
         self.__total_step += 1
 
-    def __rank_images(self, model, metrics: str = 'loss') -> dict:
+    def __rank_images(self,
+                      model: Any,
+                      metrics: str = 'loss') -> dict:
         
         performance_dict = {
             "training": [],
             "validation": [],
             "testing": []
         }
+
         if metrics == 'coco':
             # Maybe use deepcopy for coco ranking
-            # self.__coco_ranking_pass(model, ds=self.__data_loader_train.dataset,
-            #                     data_type="training", performance_dict=performance_dict, desc="Ranking training images by AP")
-            self.__coco_ranking_pass(model, ds=self.__data_loader_valid.dataset,
-                                data_type="validation", performance_dict=performance_dict, desc="Ranking validation images by AP")
-            self.__coco_ranking_pass(model, ds=self.__data_loader_test.dataset,
-                                data_type="testing", performance_dict=performance_dict, desc="Ranking test images by AP")
+            self.__coco_ranking_pass(model,
+                                     ds=self.__data_loader_valid.dataset,
+                                     data_type="validation",
+                                     performance_dict=performance_dict,
+                                     desc="Ranking validation images by AP")
+            self.__coco_ranking_pass(model,
+                                     ds=self.__data_loader_test.dataset,
+                                     data_type="testing",
+                                     performance_dict=performance_dict,
+                                     desc="Ranking test images by AP")
         elif metrics == 'loss':
-            self.__loss_ranking_pass(model, data_loader=self.__data_loader_train,
-                                     data_type="training", performance_dict=performance_dict, desc="Ranking training images by loss")
-            self.__loss_ranking_pass(model, data_loader=self.__data_loader_valid,
-                                     data_type="validation", performance_dict=performance_dict, desc="Ranking validation images by loss")
-            self.__loss_ranking_pass(model, data_loader=self.__data_loader_test,
-                                     data_type="testing", performance_dict=performance_dict, desc="Ranking test images by loss")
+            self.__loss_ranking_pass(model,
+                                     data_loader=self.__data_loader_train,
+                                     data_type="training",
+                                     performance_dict=performance_dict,
+                                     desc="Ranking training images by loss")
+            self.__loss_ranking_pass(model,
+                                     data_loader=self.__data_loader_valid,
+                                     data_type="validation",
+                                     performance_dict=performance_dict,
+                                     desc="Ranking validation images by loss")
+            self.__loss_ranking_pass(model,
+                                     data_loader=self.__data_loader_test,
+                                     data_type="testing",
+                                     performance_dict=performance_dict,
+                                     desc="Ranking test images by loss")
         return performance_dict
 
     @torch.no_grad()
-    def __loss_ranking_pass(self, model, data_loader: DataLoader, data_type: str, performance_dict: dict, desc: str) -> None:
+    def __loss_ranking_pass(self,
+                            model: Any,
+                            data_loader: DataLoader,
+                            data_type: str,
+                            performance_dict: dict,
+                            desc: str) -> None:
         # Declare tqdm progress bar
         pbar = tqdm(total=len(data_loader), leave=False, desc=desc)
         
         # Specify that the model will be trained
         model.train()
+
         if self.__model_name == 'detr':
             self.__criterion.train()
 
@@ -608,7 +646,7 @@ class PipelineManager:
             # Updating the progress bar
             pbar.update()
 
-        # Sorting the values in the dictionnary from highest to lowest
+        # Sorting the values in the dictionary from highest to lowest
         performance_dict[data_type] = sorted(performance_dict[data_type], key=lambda x: x["metrics"]["total_loss"])
 
         # Closing the progress bar
@@ -616,7 +654,12 @@ class PipelineManager:
     
     # FIXME do not use, function doesn't work yet  
     @torch.no_grad()
-    def __coco_ranking_pass(self, model, ds, data_type: str, performance_dict: dict, desc: str) -> None:
+    def __coco_ranking_pass(self,
+                            model: Any,
+                            ds,
+                            data_type: str,
+                            performance_dict: dict,
+                            desc: str) -> None:
         # Declare tqdm progress bar
         pbar = tqdm(total=len(ds), leave=False, desc=desc)
 
@@ -639,7 +682,8 @@ class PipelineManager:
                 outputs = model(images)
 
                 if self.__model_name == 'detr':
-                    target_sizes = torch.stack([torch.tensor([self.__image_size, self.__image_size]) for _ in targets], dim=0)
+                    target_sizes = torch.stack([torch.tensor([self.__image_size, self.__image_size]) for _ in targets],
+                                               dim=0)
                     outputs = format_detr_outputs(outputs, target_sizes, self.__device)
 
                 outputs = [{k: v.to(self.__device)

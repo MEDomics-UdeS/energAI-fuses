@@ -12,7 +12,7 @@ Description:
 """
 
 # Environment constant
-REQUIRED_PYTHON = "python3"
+REQUIRED_PYTHON = 'python3'
 
 # Image file paths
 RAW_PATH = 'data/raw/'

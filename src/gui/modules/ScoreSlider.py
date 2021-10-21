@@ -8,18 +8,21 @@ Authors:
     - Shreyas Sunil Kulkarni
 
 Description:
-    Class responsible of handling the score treshold value for inference
+    Class responsible of handling the score threshold value for inference
 """
 
 from tkinter import *
 import json
+
 from src.utils.constants import GUI_SETTINGS, FONT_PATH, COLOR_PALETTE
 
 
 class ScoreSlider:
-    """Class responsible of handling the score treshold value for inference"""
-
-    def __init__(self, window: Toplevel) -> None:
+    """
+    Class responsible of handling the score threshold value for inference
+    """
+    def __init__(self,
+                 window: Toplevel) -> None:
         """Class constructor
 
         Args:
@@ -38,14 +41,17 @@ class ScoreSlider:
 
         # Creating the sliding button widget
         self.__slider = Scale(window, 
-                       background=COLOR_PALETTE["widgets"],
-                       foreground=COLOR_PALETTE["fg"],
-                       activebackground=COLOR_PALETTE["active"],
-                       highlightbackground=COLOR_PALETTE["active"],
-                       troughcolor=COLOR_PALETTE["bg"],
-                       font=(FONT_PATH, 12),
-                       from_=0.1, to=1.0, orient=HORIZONTAL, resolution=0.1,
-              command=self.__slide)
+                              background=COLOR_PALETTE["widgets"],
+                              foreground=COLOR_PALETTE["fg"],
+                              activebackground=COLOR_PALETTE["active"],
+                              highlightbackground=COLOR_PALETTE["active"],
+                              troughcolor=COLOR_PALETTE["bg"],
+                              font=(FONT_PATH, 12),
+                              from_=0.1,
+                              to=1.0,
+                              orient=HORIZONTAL,
+                              resolution=0.1,
+                              command=self.__slide)
 
         # Loading the current saved value for score treshold
         with open(GUI_SETTINGS, "r") as f_obj:
@@ -54,7 +60,8 @@ class ScoreSlider:
         # Putting the widget on screen
         self.__slider.grid(row=3, column=0, pady=10)
 
-    def __slide(self, value: DoubleVar) -> None:
+    @staticmethod
+    def __slide(value: DoubleVar) -> None:
         """Updates the settings JSON file when the user interacts with the slider
 
         Args:
@@ -71,7 +78,7 @@ class ScoreSlider:
             json.dump(settings_dict, f_obj)
 
     @property
-    def slider(self):
+    def slider(self) -> Scale:
         """Get the slider widget"""
         
         return self.__slider

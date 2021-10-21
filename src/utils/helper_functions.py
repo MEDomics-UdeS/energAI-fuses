@@ -22,14 +22,13 @@ from google_images_download import google_images_download
 from torchvision.ops import nms
 from typing import List
 import torch.nn.functional as F
-from src.detr.box_ops import box_cxcywh_to_xyxy
 from pathlib import PurePosixPath, PureWindowsPath
 
+from src.detr.box_ops import box_cxcywh_to_xyxy
 from src.utils.constants import REQUIRED_PYTHON, IMAGE_EXT
 
 
-def count_images(path: str = "C:/Users/gias2402/Google Drive/"
-                             "Maîtrise SGL CIMA+/General/Fuses Survey Dataset 2",
+def count_images(path: str,
                  minimum: int = 20) -> None:
     """
     Function to count images in some folders
@@ -95,7 +94,8 @@ def cp_split(filepath: str) -> List[str]:
         return PurePosixPath(filepath).parts
 
 
-def filter_by_nms(preds_list: List[dict], iou_threshold: float) -> List[dict]:
+def filter_by_nms(preds_list: List[dict],
+                  iou_threshold: float) -> List[dict]:
     """
     Function to filter a bounding boxes predictions list by using non-maximum suppression
 
@@ -112,7 +112,8 @@ def filter_by_nms(preds_list: List[dict], iou_threshold: float) -> List[dict]:
     return preds_nms
 
 
-def filter_by_score(preds_list: List[dict], score_threshold: float) -> List[dict]:
+def filter_by_score(preds_list: List[dict],
+                    score_threshold: float) -> List[dict]:
     """
     Function to filter a bounding boxes predictions list by using a confidence score threshold
 
@@ -135,8 +136,7 @@ def filter_by_score(preds_list: List[dict], score_threshold: float) -> List[dict
     return preds_filt
 
 
-def google_image_scraper(chrome_driver_path: str = 'C:/Users/simon.giard-leroux/Google Drive/'
-                                                   'Maîtrise/Python/fuseFinder/chromedriver.exe',
+def google_image_scraper(chrome_driver_path: str = '../chromedriver.exe',
                          prefix: str = 'English Electric C',
                          postfix: str = 'J') -> None:
     """
@@ -197,7 +197,9 @@ def json_to_csv(dir_list: List[str]) -> None:
                 csv_file.close()
 
 
-def print_dict(dictionary: dict, n_spaces: int, str_format: str = None) -> None:
+def print_dict(dictionary: dict,
+               n_spaces: int,
+               str_format: str = None) -> None:
     """
 
     :param dictionary:
@@ -215,8 +217,7 @@ def print_dict(dictionary: dict, n_spaces: int, str_format: str = None) -> None:
             print(f'{key}:{" " * (max_key_length - len(key))}{value:{str_format}}')
 
 
-def rename_photos(root_dir: str = 'C:/Users/simon.giard-leroux/Google Drive/'
-                                  'Maîtrise SGL CIMA+/General/Fuses Survey Dataset 2') -> None:
+def rename_photos(root_dir: str) -> None:
     """
     Rename all photos in a folder's subfolders
 
@@ -250,7 +251,7 @@ def format_detr_outputs(outputs: List[dict], target_sizes: torch.Tensor, device:
     return results
 
 
-def enter_default_json(file):
+def enter_default_json(file) -> None:
     # Loading in the default values for inference
     iou_treshold = "0.5"
     score_treshold = "0.5"

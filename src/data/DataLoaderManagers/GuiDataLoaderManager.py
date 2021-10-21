@@ -1,6 +1,6 @@
 """
 File:
-    src/data/DataLoaderManager.py
+    src/data/DataLoaderManagers/GuiDataLoaderManager.py
 
 Authors:
     - Simon Giard-Leroux
@@ -8,12 +8,11 @@ Authors:
     - Shreyas Sunil Kulkarni
 
 Description:
-    Generate data loaders for batch management and multiprocessing during training, validation and testing.
+    Contains the GuiDataLoaderManager, DataLoaderManager for GUI inference tool.
 """
 
 from src.data.DatasetManagers.GuiDatasetManager import GuiDatasetManager
 from src.data.DataLoaderManagers.CustomDataLoaderManager import CustomDataLoaderManager
-
 
 
 class GuiDataLoaderManager(CustomDataLoaderManager):
@@ -49,7 +48,6 @@ class GuiDataLoaderManager(CustomDataLoaderManager):
         # If the training dataset is not empty, declare the training data loader
         if len(dataset.dataset) > 0:
             self._data_loader_test = self._get_data_loader(dataset.dataset)
-
 
     @property
     def data_loader_test(self):

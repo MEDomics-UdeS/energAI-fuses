@@ -17,13 +17,14 @@ from datetime import datetime
 from multiprocessing import cpu_count
 
 import torch
+from src.data.SplittingManager import SplittingManager
 from src.data.DataLoaderManagers.LearningDataLoaderManager import LearningDataLoaderManager
 from src.data.DatasetManagers.LearningDatasetManager import LearningDatasetManager
 from src.data.DataLoaderManagers.GuiDataLoaderManager import GuiDataLoaderManager
 from src.data.DatasetManagers.GuiDatasetManager import GuiDatasetManager
 from src.utils.helper_functions import print_dict, env_tests
 from src.visualization.inference import save_test_images
-from src.utils.constants import RESIZED_LEARNING_PATH, TARGETS_LEARNING_PATH, INFERENCE_PATH, MODELS_PATH
+from src.utils.constants import INFERENCE_PATH, MODELS_PATH
 
 if __name__ == '__main__':
     # Record start time
@@ -94,7 +95,11 @@ if __name__ == '__main__':
 
     # Using GUI specific data managers
     if args.with_gui:
-        #TODO there should be a try-except for GUI specific settings if someone wants to run the script standalone in a console instead of going through gui.py
+        """
+        TODO there should be a try-except for GUI specific settings if someone wants to run the script
+        standalone in a console instead of going through gui.py
+        """
+
         # Loading the images dataset
         dataset_manager = GuiDatasetManager(image_size=image_size,
                                             images_path=args.image_path,
@@ -107,17 +112,24 @@ if __name__ == '__main__':
                                                    num_workers=num_workers,
                                                    deterministic=True)
     else:
+        splitting_manager = SplittingManager(dataset='learning',
+                                             validation_size=0,
+                                             test_size=1,
+                                             k_cross_valid=1,
+                                             seed=0,
+                                             google_images=not args.no_google_images,
+                                             image_size=image_size,
+                                             num_workers=num_workers)
         # Declare dataset manager
-        dataset_manager = LearningDatasetManager(images_path=RESIZED_PATH,
-                                                 targets_path=TARGETS_PATH,
-                                                 image_size=image_size,
-                                                 num_workers=num_workers,
+        dataset_manager = LearningDatasetManager(num_workers=num_workers,
                                                  data_aug=0,
                                                  validation_size=0,
                                                  test_size=1,
                                                  norm=args.normalize,
                                                  google_images=not args.no_google_images,
-                                                 seed=0)
+                                                 seed=0,
+                                                 splitting_manager=splitting_manager,
+                                                 current_fold=1)
 
         # Declare data loader manager
         data_loader_manager = LearningDataLoaderManager(dataset_manager=dataset_manager,

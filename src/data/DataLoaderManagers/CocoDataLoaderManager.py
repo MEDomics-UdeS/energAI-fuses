@@ -1,3 +1,16 @@
+"""
+File:
+    src/data/DataLoaderManagers/CocoDataLoaderManager.py
+
+Authors:
+    - Simon Giard-Leroux
+    - Guillaume Cléroux
+    - Shreyas Sunil Kulkarni
+
+Description:
+    Contains the CocoDataLoaderManager class, DataLoaderManager for COCO evaluation.
+"""
+
 from src.data.DatasetManagers.CocoDatasetManager import CocoDatasetManager
 from src.data.DataLoaderManagers.CustomDataLoaderManager import CustomDataLoaderManager
 

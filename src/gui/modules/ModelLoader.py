@@ -14,13 +14,17 @@ Description:
 from tkinter import *
 from tkinter import filedialog
 import json
+
 from src.utils.constants import FONT_PATH, MODELS_PATH, COLOR_PALETTE, GUI_SETTINGS
 from src.utils.helper_functions import cp_split
 
-class ModelLoader:
-    """Class responsible of handling the trained model file path"""
 
-    def __init__(self, window: Tk) -> None:
+class ModelLoader:
+    """
+    Class responsible of handling the trained model file path
+    """
+    def __init__(self,
+                 window: Tk) -> None:
         """Class constructor
 
         Args:
@@ -51,7 +55,6 @@ class ModelLoader:
 
         # Reading the settings JSON file
         with open(GUI_SETTINGS, "r") as f_obj:
-
             try:
                 self.__model_label = Label(window,
                                            background=COLOR_PALETTE["bg"],
@@ -74,7 +77,8 @@ class ModelLoader:
             # Putting the label on screen
             self.__model_label.grid(row=2, column=0)
 
-    def __select_model(self, window: Tk) -> None:
+    def __select_model(self,
+                       window: Tk) -> None:
         """Opens a file manager window to select the model
 
         Args:
@@ -97,7 +101,7 @@ class ModelLoader:
                 json.dump(settings_dict, f_obj)
 
     @property
-    def model_label(self):
+    def model_label(self) -> Label:
         """Get the model label widget"""
         
         return self.__model_label

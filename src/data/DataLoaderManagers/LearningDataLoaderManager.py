@@ -1,6 +1,6 @@
 """
 File:
-    src/data/DataLoaderManager.py
+    src/data/DataLoaderManagers/LearningDataLoaderManager.py
 
 Authors:
     - Simon Giard-Leroux
@@ -8,7 +8,7 @@ Authors:
     - Shreyas Sunil Kulkarni
 
 Description:
-    Generate data loaders for batch management and multiprocessing during training, validation and testing.
+    Contains the GuiDataLoaderManager, DataLoaderManager for model training.
 """
 
 from src.data.DatasetManagers.LearningDatasetManager import LearningDatasetManager

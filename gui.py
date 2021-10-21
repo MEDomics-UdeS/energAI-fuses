@@ -21,19 +21,18 @@ from src.gui.modules.ImageLoader import ImageLoader
 from src.gui.modules.ReadOnlyTextBox import ReadOnlyTextBox
 from src.gui.modules.OuputRedirector import OutputRedirector
 from src.gui.modules.AdvancedOptionsWindow import AdvancedOptionsWindow
-
 from src.utils.constants import COLOR_PALETTE, FONT_PATH, GUI_SETTINGS
 from src.utils.helper_functions import enter_default_json
 
 
 class GUI(Tk):
-    """Small cross platform GUI application to visualize a model's inference results
+    """
+    Small cross platform GUI application to visualize a model's inference results
 
     Notes:
         Since the settings are stored in src/gui/gui_settings.json, they will be kept 
         across reruns of this script
     """
-
     def __init__(self) -> None:
         """Class constructor"""
 
@@ -85,25 +84,26 @@ class GUI(Tk):
                ).grid(row=4, column=2, pady=10)
 
         self.__frame = LabelFrame(self,
-                   background=COLOR_PALETTE["bg"],
-                   foreground=COLOR_PALETTE["fg"],
-                   text="Application output",
-                   font=(FONT_PATH, 14),
-                   width=860,
-                   height=200
-        )
+                                  background=COLOR_PALETTE["bg"],
+                                  foreground=COLOR_PALETTE["fg"],
+                                  text="Application output",
+                                  font=(FONT_PATH, 14),
+                                  width=860,
+                                  height=200)
         self.__frame.grid(row=5, column=0, columnspan=3, padx=20, pady=20)
         self.__frame.grid_propagate(False)
         
         self.__textbox = ReadOnlyTextBox(window=self.__frame)
 
-    def create_json_file(self) -> None:
+    @staticmethod
+    def create_json_file() -> None:
         """Creates the default GUI settings JSON file"""
         
         with open(GUI_SETTINGS, "a+") as f_obj:
             enter_default_json(f_obj)
 
-    def __check_for_errors(self, settings: dict) -> str:
+    @staticmethod
+    def __check_for_errors(settings: dict) -> str:
         """Checks if every mandatory settings are initialized by the user
 
         Args:
@@ -141,15 +141,13 @@ class GUI(Tk):
                       message=self.__check_for_errors(settings_dict))
         else:
             # Create the subprocess command
-            cmd = [
-                'python', 'inference_test.py',
-                '--with_gui',
-                '--image_path', settings_dict["imgdir"],
-                '--model_file_name', settings_dict["model"],
-                '--iou_threshold', settings_dict["iou_treshold"],
-                '--score_threshold', settings_dict["score_treshold"],
-                '--device', settings_dict["device"]
-            ]
+            cmd = ['python', 'inference_test.py',
+                   '--with_gui',
+                   '--image_path', settings_dict["imgdir"],
+                   '--model_file_name', settings_dict["model"],
+                   '--iou_threshold', settings_dict["iou_treshold"],
+                   '--score_threshold', settings_dict["score_treshold"],
+                   '--device', settings_dict["device"]]
 
             # Adding the ground truth json file if one is entered by the user
             try:

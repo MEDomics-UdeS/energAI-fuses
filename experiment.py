@@ -21,7 +21,6 @@ from src.data.DatasetManagers.LearningDatasetManager import LearningDatasetManag
 from src.models.PipelineManager import PipelineManager
 from src.utils.helper_functions import print_dict, env_tests
 from src.utils.reproducibility import set_deterministic, set_seed
-from src.utils.constants import RESIZED_LEARNING_PATH, TARGETS_LEARNING_PATH
 
 if __name__ == '__main__':
     # Record start time
@@ -196,10 +195,7 @@ if __name__ == '__main__':
             file_name = f'{args.model.split("_")[0]}_{args.epochs}_{start.strftime("%Y-%m-%d_%H-%M-%S")}'
 
         # Declare dataset manager
-        dataset_manager = LearningDatasetManager(images_path=RESIZED_LEARNING_PATH,
-                                                 targets_path=TARGETS_LEARNING_PATH,
-                                                 image_size=args.image_size,
-                                                 num_workers=args.num_workers,
+        dataset_manager = LearningDatasetManager(num_workers=args.num_workers,
                                                  data_aug=args.data_aug,
                                                  validation_size=args.validation_size,
                                                  test_size=args.test_size,

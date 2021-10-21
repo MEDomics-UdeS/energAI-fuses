@@ -1,3 +1,16 @@
+"""
+File:
+    src/data/DatasetManagers/CustomDatasetManager.py
+
+Authors:
+    - Simon Giard-Leroux
+    - Guillaume Cléroux
+    - Shreyas Sunil Kulkarni
+
+Description:
+    Contains the CustomDatasetManager, parent DatasetManager for all children classes.
+"""
+
 from abc import ABC, abstractmethod
 from typing import Optional, Tuple, List
 from torchvision import transforms
@@ -5,14 +18,18 @@ import numpy as np
 import ray
 from PIL import Image, ImageDraw
 import pandas as pd
+
 from src.utils.constants import CLASS_DICT
 from src.utils.helper_functions import cp_split
 
+
 class CustomDatasetManager(ABC):
-    
+    """
+    Parent class for all DatasetManager child classes.
+    """
     @staticmethod
     def _transforms_base(mean: Optional[Tuple[float, float, float]],
-                          std: Optional[Tuple[float, float, float]]) -> transforms.Compose:
+                         std: Optional[Tuple[float, float, float]]) -> transforms.Compose:
         """
         Method to construct the validation and testing datasets transforms
 
@@ -32,21 +49,26 @@ class CustomDatasetManager(ABC):
         # Return a composed transforms list
         return transforms.Compose(transforms_list)
 
-
     @staticmethod
     @abstractmethod
-    def _resize_images(image_size: int, num_workers: int) -> None: pass
+    def _resize_images(image_size: int, num_workers: int) -> None:
+        pass
 
 
 @ray.remote
-def ray_resize_images(image_paths: List[str], destination_path: str, image_size: int, annotations_csv: str,
-                      idx: int, show_bounding_boxes: bool = False) -> Tuple[float, int, np.array, dict]:
+def ray_resize_images(image_paths: List[str],
+                      destination_path: str,
+                      image_size: int,
+                      annotations_csv: str,
+                      idx: int,
+                      show_bounding_boxes: bool = False) -> Tuple[float, int, np.array, dict]:
     """
     Ray remote function to parallelize the resizing of images
 
     :param image_paths: list, contains image paths
+    :param destination_path: str, destination file path
     :param image_size: int, image size to resize all images to (height & width)
-    :param annotations: pandas DataFrame, contains the coordinates of each ground truth bounding box for each image
+    :param annotations_csv: str, file path to csv file containing bounding box annotations
     :param idx: int, current index
     :param show_bounding_boxes: bool, if True, ground truth bounding boxes are drawn on the resized images
                                 (used to test if bounding boxes are properly resized)
@@ -136,19 +158,18 @@ def ray_resize_images(image_paths: List[str], destination_path: str, image_size:
             # Draw the current ground truth bounding box if the show_bounding_boxes argument is set to True
             if show_bounding_boxes:
                 draw.rectangle([(box_array[i][0], box_array[i][1]), (box_array[i][2], box_array[i][3])],
-                            outline="red", width=5)
-
+                               outline="red", width=5)
 
         # Calculate the area of each bounding box
         area = [int(a) for a in list((box_array[:, 3] - box_array[:, 1])
-                                    * (box_array[:, 2] - box_array[:, 0]))]
+                * (box_array[:, 2] - box_array[:, 0]))]
 
         # Save ground truth targets to a dictionary
         targets = {"boxes": list(box_array.tolist()),
-                "labels": label_list,
-                "image_id": idx,
-                "area": area,
-                "iscrowd": [0] * num_boxes}
+                   "labels": label_list,
+                   "image_id": idx,
+                   "area": area,
+                   "iscrowd": [0] * num_boxes}
 
         # Return the objects required for ray parallelization
         return resize_ratio, idx, box_array, targets
@@ -156,8 +177,10 @@ def ray_resize_images(image_paths: List[str], destination_path: str, image_size:
     # Return the objects required for ray parallelization
     return resize_ratio, idx
 
+
 @ray.remote
-def ray_get_rgb(image_paths: List[str], idx: int) -> Tuple[np.array, np.array, np.array, int]:
+def ray_get_rgb(image_paths: List[str],
+                idx: int) -> Tuple[np.array, np.array, np.array, int]:
     """
     Ray remote function to parallelize the extraction of R, G, B values from images
 

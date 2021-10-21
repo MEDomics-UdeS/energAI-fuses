@@ -1,5 +1,17 @@
+"""
+File:
+    src/data/SplittingManager.py
+
+Authors:
+    - Simon Giard-Leroux
+    - Guillaume Cléroux
+    - Shreyas Sunil Kulkarni
+
+Description:
+    Contains the SplittingManager class to split dataset into training, validation, testing and k-fold sets.
+"""
+
 from sklearn.model_selection import StratifiedKFold, StratifiedShuffleSplit
-from typing import List
 import os
 import json
 import torch
@@ -9,9 +21,8 @@ import requests
 from tqdm import tqdm, trange
 from PIL import Image
 import ray
-from src.data.DatasetManagers.CustomDatasetManager import CustomDatasetManager, ray_resize_images, ray_get_rgb
 
-from src.data.Datasets.FuseDataset import FuseDataset
+from src.data.DatasetManagers.CustomDatasetManager import ray_resize_images
 from src.utils.constants import *
 
 
@@ -78,7 +89,7 @@ class SplittingManager:
             google_indices = [images.index(google_image) for google_image in google_imgs]
             images = [e for i, e in enumerate(images) if i not in google_indices]
 
-        self.__image_paths = [img for img in images]#[os.path.join(self.__images_path, img) for img in images]
+        self.__image_paths = [img for img in images]
 
         self.__targets = json.load(open(self.__targets_path))
 
@@ -266,7 +277,6 @@ class SplittingManager:
                     self.__image_paths_test = self.__filter_list(image_paths, indices_test, True)
                     self.__targets_test = self.__filter_list(targets, indices_test, True)
 
-
     @staticmethod
     def __filter_list(my_list: list, indices: str, logic: bool) -> list:
         if logic:
@@ -280,7 +290,9 @@ class SplittingManager:
                 for target in targets]
 
     @staticmethod
-    def __download_file_from_google_drive(file_id: str, dest: str, chunk_size: int = 32768) -> None:
+    def __download_file_from_google_drive(file_id: str,
+                                          dest: str,
+                                          chunk_size: int = 32768) -> None:
         """
         Method to download a file from Google Drive
 
@@ -317,7 +329,9 @@ class SplittingManager:
         else:
             raise Exception(f'Error {response.status_code}: {response.reason}')
 
-    def __fetch_data(self, images_id: str, annotations_id: str) -> None:
+    def __fetch_data(self,
+                     images_id: str,
+                     annotations_id: str) -> None:
         """
         Method to fetch the images and annotations from Google Drive
 
@@ -345,7 +359,9 @@ class SplittingManager:
         self.__download_file_from_google_drive(annotations_id, ANNOTATIONS_PATH)
         print('Done!')
 
-    def _resize_images(self, image_size: int, num_workers: int) -> None:
+    def _resize_images(self,
+                       image_size: int,
+                       num_workers: int) -> None:
         """
         Method to resize all images in the data/raw folder and save them to the data/resized folder
 
