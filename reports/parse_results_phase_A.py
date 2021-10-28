@@ -50,7 +50,7 @@ def generate_figure(metric: str,
     elif metric == 'Mean Loss':
         plt.ylim((0, y_max))
     elif metric == 'Learning Rate':
-        plt.ylim((10 ** math.floor(log10(y_min)), 10 ** ceil(log10(y_max))))
+        plt.ylim((10 ** floor(log10(y_min)), 10 ** ceil(log10(y_max))))
 
     plt.tight_layout()
 

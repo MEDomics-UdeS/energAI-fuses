@@ -1,30 +1,22 @@
-import json
+import os
 import pandas as pd
+import torch
+from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
 from parsing_utils import get_latex_ap_table, get_latex_exp_name, get_digits_precision, save_latex
+from constants import PATH_C, AP_DICT, SCALARS_C_DICT
 
 
-def parse_results(json_path: str,
+def parse_results(saved_models_path: str,
+                  log_path: str,
                   round_to_1_sign_digit: bool = False,
                   num_decimals: int = 4) -> pd.DataFrame:
-    with open(json_path) as json_file:
-        results_dict = json.load(json_file)
-
     columns_all_seeds = ['Seed']
     columns_std = ['Metric', 'Mean', 'Std (Absolute)', 'Std (Relative)']
 
-    scalar_dict = {
-        'AP @ [IoU=0.50:0.95 | area=all | maxDets=100]': 'AP',
-        'AP @ [IoU=0.50 | area=all | maxDets=100]': 'AP_{50}',
-        'AP @ [IoU=0.75 | area=all | maxDets=100]': 'AP_{75}',
-        'AP @ [IoU=0.50:0.95 | area=small | maxDets=100]': 'AP_{S}',
-        'AP @ [IoU=0.50:0.95 | area=medium | maxDets=100]': 'AP_{M}',
-        'AP @ [IoU=0.50:0.95 | area=large | maxDets=100]': 'AP_{L}'
-    }
-
     metrics_list = []
 
-    for value in scalar_dict.values():
+    for value in AP_DICT.values():
         metrics_list.append(value)
 
     columns_all_seeds = columns_all_seeds + metrics_list
@@ -35,13 +27,27 @@ def parse_results(json_path: str,
     for metric in metrics_list:
         df_std = df_std.append({columns_std[0]: metric}, ignore_index=True)
 
-    for run_dict in results_dict.values():
-        row = {columns_all_seeds[0]: str(run_dict["args"]["random_seed"])}
+    files = os.listdir(saved_models_path)
+    files = [file for file in files if file != '.gitkeep']
 
-        for scalar_long, scalar_short in scalar_dict.items():
-            row[scalar_short] = run_dict["results"][scalar_long]
+    for file in files:
+        results_dict = {}
 
-        df_all_seeds = df_all_seeds.append(row, ignore_index=True)
+        save_state = torch.load(saved_models_path + file, map_location=torch.device('cpu'))
+        seed_init = save_state['args_dict']['seed_init']
+
+        results_dict[columns_all_seeds[0]] = str(seed_init)
+
+        event_acc = EventAccumulator(log_path + file)
+        event_acc.Reload()
+
+        for tag_long, tag_short in SCALARS_C_DICT.items():
+            _, _, metric_value = zip(*event_acc.Scalars(tag_long))
+            results_dict[tag_short] = metric_value[0]
+
+        df_all_seeds = df_all_seeds.append(results_dict, ignore_index=True)
+
+    df_all_seeds = df_all_seeds.sort_values('AP', ascending=False)
 
     row = {columns_all_seeds[0]: 'mean ± std'}
 
@@ -78,9 +84,10 @@ def parse_results(json_path: str,
 
 
 if __name__ == '__main__':
-    experiment_letter = 'D'
+    experiment_letter = 'C'
 
-    df_all_seeds, df_std = parse_results('../json/D_results.json')
+    df_all_seeds, df_std = parse_results(saved_models_path=PATH_C + '/saved_models/',
+                                         log_path=PATH_C + '/logdir/')
 
     output_str = get_latex_exp_name(experiment_letter)
     output_str += get_latex_ap_table(df_all_seeds, 99, experiment_letter)
