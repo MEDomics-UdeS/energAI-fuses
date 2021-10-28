@@ -10,5 +10,9 @@
         "--test_size": "0",
         "--save_last": "True",
         "--seed_init": "5986"
+    },
+
+    "variable": {
+
     }
 }
