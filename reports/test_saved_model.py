@@ -44,12 +44,12 @@ if __name__ == '__main__':
 
     # Model file name argument
     parser.add_argument('-mp', '--models_path', action='store', type=str,
-                        default='/home/simon/Desktop/Results_Fuses/D/saved_models/',
+                        default='/home/simon/Desktop/Results_Fuses/A/saved_models/',
                         help='Directory containing the models')
 
     # LaTeX results file name argument
     parser.add_argument('-latex', '--latex_file_name', action='store', type=str,
-                        default='reports/latex_phase_D.txt',
+                        default='reports/latex_phase_A.txt',
                         help='File name and location of LaTeX results file to save')
 
     # Parse arguments
