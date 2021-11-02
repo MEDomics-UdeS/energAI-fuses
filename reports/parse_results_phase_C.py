@@ -4,7 +4,7 @@ import torch
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
 from parsing_utils import get_latex_ap_table, get_latex_exp_name, get_digits_precision, save_latex
-from constants import PATH_C, AP_DICT, SCALARS_C_DICT
+from constants import PATH_C, AP_DICT, SCALARS_TEST_DICT
 
 
 def parse_results(saved_models_path: str,
@@ -41,7 +41,7 @@ def parse_results(saved_models_path: str,
         event_acc = EventAccumulator(log_path + file)
         event_acc.Reload()
 
-        for tag_long, tag_short in SCALARS_C_DICT.items():
+        for tag_long, tag_short in SCALARS_TEST_DICT.items():
             _, _, metric_value = zip(*event_acc.Scalars(tag_long))
             results_dict[tag_short] = metric_value[0]
 

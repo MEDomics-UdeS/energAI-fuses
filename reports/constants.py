@@ -1,12 +1,14 @@
+from os.path import join
+
 PATH = '/home/simon/Desktop/Results_Fuses'
 
-PATH_A = PATH + '/A'
-PATH_C = PATH + '/C'
+PATH_A = join(PATH, 'A')
+PATH_C = join(PATH, 'C')
 
 RESULTS_B_DICT = {
-    'image_size': '/home/simon/Desktop/Results_Fuses/B1',
-    'no_pretrained': '/home/simon/Desktop/Results_Fuses/B2',
-    'no_google_images': '/home/simon/Desktop/Results_Fuses/B3'
+    'image_size': join(PATH, 'B1'),
+    'no_pretrained': join(PATH, 'B2'),
+    'no_google_images': join(PATH, 'B3')
 }
 
 AP_DICT = {
@@ -18,9 +20,9 @@ AP_DICT = {
     'AP @ [IoU=0.50:0.95 | area=large | maxDets=100]': 'AP_{L}'
 }
 
-SCALARS_B_DICT = {}
-SCALARS_C_DICT = {}
+SCALARS_VALID_DICT = {}
+SCALARS_TEST_DICT = {}
 
 for key, value in AP_DICT.items():
-    SCALARS_B_DICT['hparams/Validation/' + key] = value
-    SCALARS_C_DICT['hparams/Testing/' + key] = value
+    SCALARS_VALID_DICT['hparams/Validation/' + key] = value
+    SCALARS_TEST_DICT['hparams/Testing/' + key] = value

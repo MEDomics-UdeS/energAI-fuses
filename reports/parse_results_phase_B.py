@@ -3,7 +3,7 @@ import torch
 import os
 import pandas as pd
 from tqdm import tqdm
-from constants import RESULTS_B_DICT, SCALARS_B_DICT
+from constants import RESULTS_B_DICT, SCALARS_VALID_DICT
 from parsing_utils import get_latex_ap_table, get_latex_exp_name, get_digits_precision, save_latex
 
 
@@ -71,12 +71,12 @@ def parse_results_k(results_all_df: pd.DataFrame,
         hp_name_value = f'{hp_print_name}/{hp_value}'
 
         if hp_name_value in results_all_df[first_col].to_list():
-            results_all_df.loc[results_all_df[first_col] == hp_name_value, SCALARS_B_DICT[metric]] = result_str
+            results_all_df.loc[results_all_df[first_col] == hp_name_value, SCALARS_VALID_DICT[metric]] = result_str
         else:
             idx = len(results_all_df)
 
             results_all_df.loc[idx, first_col] = hp_name_value
-            results_all_df.loc[idx, SCALARS_B_DICT[metric]] = result_str
+            results_all_df.loc[idx, SCALARS_VALID_DICT[metric]] = result_str
 
         if round_to_1_digit:
             for column in df.columns.to_list()[1:]:
@@ -97,14 +97,14 @@ if __name__ == '__main__':
 
     output_str = ''
 
-    results_all_df = pd.DataFrame(columns=['hyperparameter'] + list(SCALARS_B_DICT.values()))
+    results_all_df = pd.DataFrame(columns=['hyperparameter'] + list(SCALARS_VALID_DICT.values()))
 
     for hparam, path in tqdm(RESULTS_B_DICT.items(), desc='Parsing results...'):
         letter = path.split('/')[-1]
 
         output_str += get_latex_exp_name(letter=letter, hparam=hparam)
 
-        for scalar_raw, scalar_clean in SCALARS_B_DICT.items():
+        for scalar_raw, scalar_clean in SCALARS_VALID_DICT.items():
             ap_table_k, results_all_df = parse_results_k(results_all_df=results_all_df,
                                                          saved_models_path=path + '/saved_models/',
                                                          log_path=path + '/logdir/',
