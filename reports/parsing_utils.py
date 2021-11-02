@@ -2,14 +2,23 @@ import pandas as pd
 from math import log10, floor
 from typing import Optional
 
+from reports.constants import AP_DICT
+
 
 def get_digits_precision(x: float) -> int:
-    return -int(floor(log10(abs(x))))
+    if x == 0:
+        return 0
+    else:
+        return -int(floor(log10(abs(x))))
 
 
-def get_latex_exp_name(letter: str,
+def get_latex_exp_name(letter: str, *,
+                       phase: Optional[str] = None,
                        hparam: Optional[str] = None) -> str:
     title = f'Experiment {letter}'
+
+    if phase:
+        title += f': {phase}'
 
     if hparam:
         title += f': {hparam}'.replace('_', '\\_')
@@ -17,12 +26,16 @@ def get_latex_exp_name(letter: str,
     return f'\\section{{{title}}}\n'
 
 
-def get_latex_ap_table(df: pd.DataFrame,
+def get_latex_ap_table(df: pd.DataFrame, *,
                        index: int,
                        letter: str,
+                       phase: Optional[str] = None,
                        hparam: Optional[str] = None,
                        metric: Optional[str] = None) -> str:
     title = f'Experiment {letter}'
+
+    if phase:
+        title += f': {phase}'
 
     if hparam:
         title += f': {hparam}'.replace('_', '\\_')
@@ -46,3 +59,12 @@ def save_latex(input_str: str,
         file.write(input_str)
 
     print(f'LaTeX output has been saved to: {file_path}')
+
+
+def get_scalars_dict(phase: str) -> dict:
+    scalars_dict = {}
+
+    for key, value in AP_DICT.items():
+        scalars_dict[f'hparams/{phase}/{key}'] = value
+
+    return scalars_dict

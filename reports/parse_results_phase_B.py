@@ -3,11 +3,13 @@ import torch
 import os
 import pandas as pd
 from tqdm import tqdm
-from constants import RESULTS_B_DICT, SCALARS_VALID_DICT
-from parsing_utils import get_latex_ap_table, get_latex_exp_name, get_digits_precision, save_latex
+from constants import RESULTS_B_DICT, PHASES_LIST
+from parsing_utils import get_latex_ap_table, get_latex_exp_name, get_digits_precision, save_latex, get_scalars_dict
 
 
 def parse_results_k(results_all_df: pd.DataFrame,
+                    phase: str,
+                    scalars_dict: dict,
                     saved_models_path: str,
                     log_path: str,
                     hyperparameter: str,
@@ -26,13 +28,13 @@ def parse_results_k(results_all_df: pd.DataFrame,
     for row, cv_run in enumerate(cv_runs):
         files_run = [i for i in files if cv_run in i]
 
-        save_state = torch.load(saved_models_path + files_run[0], map_location=torch.device('cpu'))
+        save_state = torch.load(os.path.join(saved_models_path, files_run[0]), map_location=torch.device('cpu'))
         hp_value = save_state['args_dict'][hyperparameter]
 
         df.loc[row, hp_print_name] = hp_value
 
         for file_run in files_run:
-            event_acc = EventAccumulator(log_path + file_run)
+            event_acc = EventAccumulator(os.path.join(log_path, file_run))
             event_acc.Reload()
             # scalars = event_acc.Tags()['scalars']
 
@@ -40,7 +42,7 @@ def parse_results_k(results_all_df: pd.DataFrame,
 
             k = f"K={''.join(c for c in file_run.split('_')[2] if c.isdigit())}"
 
-            df.loc[row, k] = metric_value[0]
+            df.loc[row, k] = metric_value[0] if metric_value[0] >= 0 else 0
 
     cols = df.columns.tolist()
     k_cols = cols[1:]
@@ -68,15 +70,15 @@ def parse_results_k(results_all_df: pd.DataFrame,
 
         first_col = results_all_df.columns.to_list()[0]
         hp_value = f'{df.loc[i, df.columns.to_list()[0]]}'
-        hp_name_value = f'{hp_print_name}/{hp_value}'
+        hp_name_value = f'{phase[0]}/{hp_print_name}/{hp_value}'
 
         if hp_name_value in results_all_df[first_col].to_list():
-            results_all_df.loc[results_all_df[first_col] == hp_name_value, SCALARS_VALID_DICT[metric]] = result_str
+            results_all_df.loc[results_all_df[first_col] == hp_name_value, scalars_dict[metric]] = result_str
         else:
             idx = len(results_all_df)
 
             results_all_df.loc[idx, first_col] = hp_name_value
-            results_all_df.loc[idx, SCALARS_VALID_DICT[metric]] = result_str
+            results_all_df.loc[idx, scalars_dict[metric]] = result_str
 
         if round_to_1_digit:
             for column in df.columns.to_list()[1:]:
@@ -94,33 +96,42 @@ def parse_results_k(results_all_df: pd.DataFrame,
 
 if __name__ == '__main__':
     index = 1
-
+    exp_letter = 'B'
     output_str = ''
+    main_phase = 'Validation'
 
-    results_all_df = pd.DataFrame(columns=['hyperparameter'] + list(SCALARS_VALID_DICT.values()))
+    results_all_df = pd.DataFrame(columns=['hyperparameter'] + list(get_scalars_dict(phase=main_phase).values()))
 
     for hparam, path in tqdm(RESULTS_B_DICT.items(), desc='Parsing results...'):
         letter = path.split('/')[-1]
 
-        output_str += get_latex_exp_name(letter=letter, hparam=hparam)
+        for phase in PHASES_LIST:
+            output_str += get_latex_exp_name(letter=letter,
+                                             phase=phase,
+                                             hparam=hparam)
 
-        for scalar_raw, scalar_clean in SCALARS_VALID_DICT.items():
-            ap_table_k, results_all_df = parse_results_k(results_all_df=results_all_df,
-                                                         saved_models_path=path + '/saved_models/',
-                                                         log_path=path + '/logdir/',
-                                                         hyperparameter=hparam,
-                                                         metric=scalar_raw,
-                                                         round_to_1_digit=False)
-            output_str += get_latex_ap_table(df=ap_table_k,
-                                             index=index,
-                                             letter=letter,
-                                             hparam=hparam,
-                                             metric=scalar_clean)
+            scalars_dict = get_scalars_dict(phase=phase)
 
-            index += 1
+            for scalar_raw, scalar_clean in scalars_dict.items():
+                ap_table_k, results_all_df = parse_results_k(results_all_df=results_all_df,
+                                                             phase=phase,
+                                                             scalars_dict=scalars_dict,
+                                                             saved_models_path=os.path.join(path, 'saved_models'),
+                                                             log_path=os.path.join(path, 'logdir'),
+                                                             hyperparameter=hparam,
+                                                             metric=scalar_raw,
+                                                             round_to_1_digit=False)
+                output_str += get_latex_ap_table(df=ap_table_k,
+                                                 index=index,
+                                                 letter=letter,
+                                                 phase=phase,
+                                                 hparam=hparam,
+                                                 metric=scalar_clean)
 
-    output_str = get_latex_exp_name(letter='B') + get_latex_ap_table(df=results_all_df,
-                                                                     index=0,
-                                                                     letter='B') + output_str
+                index += 1
 
-    save_latex(output_str, letter='B')
+    output_str = get_latex_exp_name(letter=exp_letter) + get_latex_ap_table(df=results_all_df,
+                                                                            index=0,
+                                                                            letter=exp_letter) + output_str
+
+    save_latex(output_str, letter=exp_letter)

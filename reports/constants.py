@@ -20,9 +20,4 @@ AP_DICT = {
     'AP @ [IoU=0.50:0.95 | area=large | maxDets=100]': 'AP_{L}'
 }
 
-SCALARS_VALID_DICT = {}
-SCALARS_TEST_DICT = {}
-
-for key, value in AP_DICT.items():
-    SCALARS_VALID_DICT['hparams/Validation/' + key] = value
-    SCALARS_TEST_DICT['hparams/Testing/' + key] = value
+PHASES_LIST = ['Validation', 'Testing']
