@@ -6,9 +6,7 @@
         "--weight_decay": "3e-5",
         "--data_aug": "0.25",
         "--image_size": "1024",
-        "--validation_size": "0",
         "--test_size": "0",
-        "--save_last": "True",
         "--seed_init": "5986"
     },
 

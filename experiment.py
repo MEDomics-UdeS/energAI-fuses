@@ -74,7 +74,7 @@ if __name__ == '__main__':
                         help='Learning rate for optimizer')
 
     # Weight decay argument
-    parser.add_argument('-wd', '--weight_decay', action='store', type=float, default=0.0001,
+    parser.add_argument('-wd', '--weight_decay', action='store', type=float, default=0.00003,
                         help='Weight decay (L2 penalty) for optimizer')
 
     # Model argument
