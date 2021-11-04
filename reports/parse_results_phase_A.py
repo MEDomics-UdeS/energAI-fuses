@@ -5,8 +5,11 @@ import os
 import pandas as pd
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-from parsing_utils import get_latex_ap_table, get_latex_exp_name, save_latex
-from constants import PATH_A
+import json
+from typing import Optional
+
+from reports.parsing_utils import get_latex_ap_table, get_latex_exp_name, save_latex, get_digits_precision
+from reports.constants import PATH_A, PHASES_LIST
 
 
 def generate_figure(metric: str,
@@ -150,9 +153,10 @@ def generate_figure_all(best_ap_curves: dict,
         fig.show()
 
 
-def parse_results(saved_models_path: str,
-                  log_path: str,
-                  model_name: str,
+def parse_results(model_name: str, *,
+                  models_path: Optional[str] = None,
+                  logs_path: Optional[str] = None,
+                  json_path: Optional[str] = None,
                   num_decimals: int = 4) -> pd.DataFrame:
     columns = ['Model',
                'LR',
@@ -182,41 +186,65 @@ def parse_results(saved_models_path: str,
 
     df = pd.DataFrame(columns=columns)
 
-    files = os.listdir(saved_models_path)
-    files = [file for file in files if file != '.gitkeep']
+    if json_path:
+        with open(json_path) as json_file:
+            results_dict = json.load(json_file)
 
-    for file in files:
-        save_state = torch.load(saved_models_path + file, map_location=torch.device('cpu'))
-        model = save_state['args_dict']['model'].split('_')[0]
+        for run_dict in results_dict.values():
+            model = run_dict['args']['model'].split('_')[0]
 
-        if model == model_name:
-            lr = format(save_state['args_dict']['learning_rate'], '.0E')
-            wd = format(save_state['args_dict']['weight_decay'], '.0E')
-            da = save_state['args_dict']['data_aug']
+            if model == model_name:
+                lr = format(run_dict['args']['learning_rate'], '.0E')
+                wd = format(run_dict['args']['weight_decay'], '.0E')
+                da = run_dict['args']['data_aug']
 
-            event_acc = EventAccumulator(log_path + file)
-            event_acc.Reload()
-            # scalars = event_acc.Tags()['scalars']
+                results_list = []
 
-            results_list = []
+                for key, value in scalar_dict.items():
+                    ap = round(run_dict['results'][key.split('/')[-1]], num_decimals)
 
-            for key, value in scalar_dict.items():
-                time, step, val = zip(*event_acc.Scalars(key))
-                best_ap = round(val[0], num_decimals)
+                    results_list.append(ap)
 
-                results_list.append(best_ap)
+                df = df.append(pd.DataFrame([[model, lr, wd, da, *results_list]], columns=df.columns))
+    else:
+        files = os.listdir(models_path)
+        files = [file for file in files if file != '.gitkeep']
 
-            df = df.append(pd.DataFrame([[model, lr, wd, da, *results_list]], columns=df.columns))
+        for file in files:
+            save_state = torch.load(os.path.join(models_path, file), map_location=torch.device('cpu'))
+            model = save_state['args_dict']['model'].split('_')[0]
 
-            run_key = f'{model}/{lr}/{wd}/{da}'
+            if model == model_name:
+                lr = format(save_state['args_dict']['learning_rate'], '.0E')
+                wd = format(save_state['args_dict']['weight_decay'], '.0E')
+                da = save_state['args_dict']['data_aug']
 
-            ap_curves_dict = add_curve_to_dict(event_acc, ap_curves_dict_key, run_key, ap_curves_dict)
-            loss_curves_dict = add_curve_to_dict(event_acc, loss_curves_dict_key, run_key, loss_curves_dict)
-            lr_curves_dict = add_curve_to_dict(event_acc, lr_curves_dict_key, run_key, lr_curves_dict)
+                event_acc = EventAccumulator(logs_path + file)
+                event_acc.Reload()
+                # scalars = event_acc.Tags()['scalars']
+
+                results_list = []
+
+                for key, value in scalar_dict.items():
+                    time, step, val = zip(*event_acc.Scalars(key))
+                    best_ap = round(val[0], num_decimals)
+
+                    results_list.append(best_ap)
+
+                df = df.append(pd.DataFrame([[model, lr, wd, da, *results_list]], columns=df.columns))
+
+                run_key = f'{model}/{lr}/{wd}/{da}'
+
+                ap_curves_dict = add_curve_to_dict(event_acc, ap_curves_dict_key, run_key, ap_curves_dict)
+                loss_curves_dict = add_curve_to_dict(event_acc, loss_curves_dict_key, run_key, loss_curves_dict)
+                lr_curves_dict = add_curve_to_dict(event_acc, lr_curves_dict_key, run_key, lr_curves_dict)
 
     df = df.sort_values(df.columns.to_list()[1:4])
 
-    return df, ap_curves_dict, loss_curves_dict, lr_curves_dict
+    if json_path:
+        return df
+    else:
+        return df, ap_curves_dict, loss_curves_dict, lr_curves_dict
 
 
 def add_curve_to_dict(acc: EventAccumulator, scalar_key: str, run_key: str, curves_dict: dict) -> dict:
@@ -235,15 +263,21 @@ def get_best_results(results_dict: dict,
     best_lr_curves = {}
 
     for model_name, results in results_dict.items():
-        df = results['ap_table']
-        argmax_df = df.iloc[df[metric].argmax()]
-        argmax_str = f'{argmax_df["Model"]}/{argmax_df["LR"]}/' \
-                     f'{argmax_df["WD"]}/{argmax_df["DA"]}'
+        for phase in PHASES_LIST:
+            df = results[f'ap_table_{phase}']
+            argmax_df = df.iloc[df[metric].argmax()]
+            model = argmax_df['Model']
+            argmax_df = argmax_df.replace(model, f"{phase[0]}/{argmax_df['Model']}")
 
-        best_results_df = best_results_df.append(argmax_df)
-        best_ap_curves[model_name] = results['ap_curves'][argmax_str]
-        best_loss_curves[model_name] = results['loss_curves'][argmax_str]
-        best_lr_curves[model_name] = results['lr_curves'][argmax_str]
+            best_results_df = best_results_df.append(argmax_df)
+
+            if phase == PHASES_LIST[0]:
+                argmax_str = f'{model}/{argmax_df["LR"]}/' \
+                             f'{argmax_df["WD"]}/{argmax_df["DA"]}'
+
+                best_ap_curves[model_name] = results['ap_curves'][argmax_str]
+                best_loss_curves[model_name] = results['loss_curves'][argmax_str]
+                best_lr_curves[model_name] = results['lr_curves'][argmax_str]
 
     return best_results_df, best_ap_curves, best_loss_curves, best_lr_curves
 
@@ -251,14 +285,21 @@ def get_best_results(results_dict: dict,
 if __name__ == '__main__':
     models_path = PATH_A + '/saved_models/'
     logs_path = PATH_A + '/logdir/'
+    json_path = 'reports/results_phase_A.json'
 
     results_dict = {'fasterrcnn': None,
                     'retinanet': None,
                     'detr': None}
 
     for model_name in tqdm(results_dict.keys(), desc='Parsing results...'):
-        ap_table, ap_curves, loss_curves, lr_curves = parse_results(models_path, logs_path, model_name=model_name)
-        results_dict[model_name] = {'ap_table': ap_table,
+        ap_table_valid, ap_curves, loss_curves, lr_curves = parse_results(model_name,
+                                                                          models_path=models_path,
+                                                                          logs_path=logs_path)
+        ap_table_test = parse_results(model_name,
+                                      json_path='../reports/results_phase_A.json')
+
+        results_dict[model_name] = {f'ap_table_{PHASES_LIST[0]}': ap_table_valid,
+                                    f'ap_table_{PHASES_LIST[1]}': ap_table_test,
                                     'ap_curves': ap_curves,
                                     'loss_curves': loss_curves,
                                     'lr_curves': lr_curves}
@@ -266,11 +307,21 @@ if __name__ == '__main__':
     best_results_df, best_ap_curves, best_loss_curves, best_lr_curves = get_best_results(results_dict, 'AP')
 
     output_str = get_latex_exp_name('A')
-    output_str += get_latex_ap_table(best_results_df, 0, 'A')
+    output_str += get_latex_ap_table(best_results_df, index=0, letter='A')
 
-    for i, (model_name, results) in enumerate(results_dict.items()):
-        output_str += get_latex_exp_name('A', hparam=model_name)
-        output_str += get_latex_ap_table(results['ap_table'], i, 'A', hparam=model_name)
+    i = 0
+
+    for model_name, results in results_dict.items():
+        for phase in PHASES_LIST:
+            output_str += get_latex_exp_name('A',
+                                             phase=phase,
+                                             hparam=model_name)
+            output_str += get_latex_ap_table(results[f'ap_table_{phase}'],
+                                             index=i,
+                                             letter='A',
+                                             phase=phase,
+                                             hparam=model_name)
+            i += 1
 
     generate_figure_all(best_ap_curves, best_loss_curves, best_lr_curves)
 

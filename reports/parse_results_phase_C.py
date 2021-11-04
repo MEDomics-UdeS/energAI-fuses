@@ -3,8 +3,8 @@ import pandas as pd
 import torch
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
-from parsing_utils import get_latex_ap_table, get_latex_exp_name, get_digits_precision, save_latex
-from constants import PATH_C, AP_DICT, SCALARS_TEST_DICT
+from parsing_utils import get_latex_ap_table, get_latex_exp_name, get_digits_precision, save_latex, get_scalars_dict
+from constants import PATH_C, AP_DICT
 
 
 def parse_results(saved_models_path: str,
@@ -41,7 +41,7 @@ def parse_results(saved_models_path: str,
         event_acc = EventAccumulator(log_path + file)
         event_acc.Reload()
 
-        for tag_long, tag_short in SCALARS_TEST_DICT.items():
+        for tag_long, tag_short in get_scalars_dict('Testing').items():
             _, _, metric_value = zip(*event_acc.Scalars(tag_long))
             results_dict[tag_short] = metric_value[0]
 
@@ -90,7 +90,7 @@ if __name__ == '__main__':
                                          log_path=PATH_C + '/logdir/')
 
     output_str = get_latex_exp_name(experiment_letter)
-    output_str += get_latex_ap_table(df_all_seeds, 99, experiment_letter)
-    output_str += get_latex_ap_table(df_std, 100, experiment_letter)
+    output_str += get_latex_ap_table(df_all_seeds, index=99, letter=experiment_letter)
+    output_str += get_latex_ap_table(df_std, index=100, letter=experiment_letter)
 
     save_latex(output_str, letter=experiment_letter, path='../reports/')

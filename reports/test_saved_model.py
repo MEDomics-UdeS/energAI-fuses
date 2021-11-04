@@ -65,7 +65,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     models_path = os.path.join(args.models_path, args.experiment_letter, 'saved_models')
-    json_file_name = os.path.join('reports', f'results_phase_{args.experiment_letter}.txt')
+    json_file_name = os.path.join('reports', f'results_phase_{args.experiment_letter}.json')
 
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
