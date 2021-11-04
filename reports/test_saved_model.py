@@ -16,6 +16,7 @@ import argparse
 from datetime import datetime
 import torch
 import os
+import json
 import pandas as pd
 
 from src.data.SplittingManager import SplittingManager
@@ -24,7 +25,7 @@ from src.data.DatasetManagers.LearningDatasetManager import LearningDatasetManag
 from src.utils.helper_functions import print_dict, env_tests
 from src.visualization.inference import coco_evaluate
 from src.models.models import load_model
-from src.utils.constants import *
+from src.utils.constants import CLASS_DICT
 from reports.parsing_utils import get_latex_exp_name, get_latex_ap_table, save_latex
 from reports.constants import AP_DICT
 
@@ -38,29 +39,40 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Processing inputs')
 
     # Dataset Choice
-    parser.add_argument('-ds', '--dataset', action='store', type=str, default='holdout',
+    parser.add_argument('-ds', '--dataset', action='store', type=str, default='learning',
                         choices=['learning', 'holdout'],
                         help='Dataset to use for inference test')
 
     # Model file name argument
+    parser.add_argument('-letter', '--experiment_letter', action='store', type=str,
+                        default='A', choices=['A', 'D'],
+                        help='Experiment letter')
+
+    # Model file name argument
     parser.add_argument('-mp', '--models_path', action='store', type=str,
-                        default='/home/simon/Desktop/Results_Fuses/A/saved_models/',
+                        default='/home/simon/Desktop/Results_Fuses/',
                         help='Directory containing the models')
 
     # LaTeX results file name argument
-    parser.add_argument('-latex', '--latex_file_name', action='store', type=str,
-                        default='reports/latex_phase_A.txt',
-                        help='File name and location of LaTeX results file to save')
+    parser.add_argument('-sv_latex', '--save_latex', action='store', type=bool, default=True,
+                        help='Specify whether to save LaTeX output or not')
+
+    # JSON results file name argument
+    parser.add_argument('-sv_json', '--save_json', action='store', type=bool, default=True,
+                        help='File name and location of JSON results file to save')
 
     # Parse arguments
     args = parser.parse_args()
+
+    models_path = os.path.join(args.models_path, args.experiment_letter, 'saved_models')
+    json_file_name = os.path.join('reports', f'results_phase_{args.experiment_letter}.txt')
 
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
     results_dict = {}
 
-    for filename in os.listdir(args.models_path):
-        save_state = torch.load(args.models_path + filename, map_location=device)
+    for filename in os.listdir(models_path):
+        save_state = torch.load(os.path.join(models_path, filename), map_location=device)
         args_dict = save_state['args_dict']
 
         # Display arguments in console
@@ -76,7 +88,7 @@ if __name__ == '__main__':
             validation_size=args_dict['validation_size'] if args.dataset == 'learning' else 0,
             test_size=args_dict['test_size'] if args.dataset == 'learning' else 1,
             k_cross_valid=1,
-            seed=args_dict['seed_split'],
+            seed=args_dict['seed_split'] if 'seed_split' in args_dict else args_dict['random_seed'],
             google_images=not args_dict['no_google_images'],
             image_size=args_dict['image_size'],
             num_workers=args_dict['num_workers'])
@@ -89,9 +101,9 @@ if __name__ == '__main__':
             test_size=args_dict['test_size'] if args.dataset == 'learning' else 1,
             norm=args_dict['normalize'],
             google_images=not args_dict['no_google_images'],
-            seed=args_dict['seed_init'],
+            seed=args_dict['seed_init'] if 'seed_init' in args_dict else args_dict['random_seed'],
             splitting_manager=splitting_manager,
-            current_fold=1
+            current_fold=0
         )
 
         # Declare data loader manager
@@ -127,21 +139,27 @@ if __name__ == '__main__':
         results_dict[filename] = {'args': args_dict,
                                   'results': metrics_dict}
 
-    experiment_letter = 'D'
-    columns = ['Metric', 'Result']
-    df = pd.DataFrame(columns=columns)
+    if args.save_latex:
+        columns = ['Metric', 'Result']
+        df = pd.DataFrame(columns=columns)
 
-    for key, value in results_dict[filename]['results'].items():
-        if key.startswith('AP'):
-            df = df.append({columns[0]: AP_DICT[key], columns[1]: value}, ignore_index=True)
+        for key, value in results_dict[filename]['results'].items():
+            if key.startswith('AP'):
+                df = df.append({columns[0]: AP_DICT[key], columns[1]: value}, ignore_index=True)
 
-    df[columns[1]] = df[columns[1]].round(4)
-    df[columns[1]] = df[columns[1]].apply('{:.4f}'.format)
+        df[columns[1]] = df[columns[1]].round(4)
+        df[columns[1]] = df[columns[1]].apply('{:.4f}'.format)
 
-    output_str = get_latex_exp_name(experiment_letter)
-    output_str += get_latex_ap_table(df, 200, experiment_letter)
+        output_str = get_latex_exp_name(args.experiment_letter)
+        output_str += get_latex_ap_table(df, index=200, letter=args.experiment_letter)
 
-    save_latex(output_str, letter=experiment_letter, path='reports/')
+        save_latex(output_str, letter=args.experiment_letter, path='reports/')
+
+    if args.save_json:
+        with open(json_file_name, 'w') as fp:
+            json.dump(results_dict, fp)
+
+        print(f'\nResults have been saved to the following JSON file: {json_file_name}')
 
     # Print total time for inference testing
     print(f'\nTotal time for inference testing: {str(datetime.now() - start).split(".")[0]}')
