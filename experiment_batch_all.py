@@ -22,7 +22,7 @@ if __name__ == '__main__':
             'B3_gi_experiment.json',
             'C_sensitivity_experiment.json']
 
-    cmds = [['python', 'experiment_batch.py', '-p'] + ['json/' + cmd] for cmd in cmds]
+    cmds = [['python', 'experiment_batch.py', '-p'] + ['runs/' + cmd] for cmd in cmds]
 
     # Loop through each command
     for cmd in cmds:

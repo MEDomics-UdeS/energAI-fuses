@@ -4,11 +4,12 @@ import torch
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
 from parsing_utils import get_latex_ap_table, get_latex_exp_name, get_digits_precision, save_latex, get_scalars_dict
-from constants import PATH_C, AP_DICT
+from constants import PATH_C, AP_DICT, PHASES_LIST
 
 
 def parse_results(saved_models_path: str,
                   log_path: str,
+                  scalars_dict: dict,
                   round_to_1_sign_digit: bool = False,
                   num_decimals: int = 4) -> pd.DataFrame:
     columns_all_seeds = ['Seed']
@@ -33,15 +34,15 @@ def parse_results(saved_models_path: str,
     for file in files:
         results_dict = {}
 
-        save_state = torch.load(saved_models_path + file, map_location=torch.device('cpu'))
+        save_state = torch.load(os.path.join(saved_models_path, file), map_location=torch.device('cpu'))
         seed_init = save_state['args_dict']['seed_init']
 
         results_dict[columns_all_seeds[0]] = str(seed_init)
 
-        event_acc = EventAccumulator(log_path + file)
+        event_acc = EventAccumulator(os.path.join(log_path, file))
         event_acc.Reload()
 
-        for tag_long, tag_short in get_scalars_dict('Testing').items():
+        for tag_long, tag_short in scalars_dict.items():
             _, _, metric_value = zip(*event_acc.Scalars(tag_long))
             results_dict[tag_short] = metric_value[0]
 
@@ -85,12 +86,33 @@ def parse_results(saved_models_path: str,
 
 if __name__ == '__main__':
     experiment_letter = 'C'
+    output_str = ''
+    index = 99
 
-    df_all_seeds, df_std = parse_results(saved_models_path=PATH_C + '/saved_models/',
-                                         log_path=PATH_C + '/logdir/')
+    for phase in PHASES_LIST:
+        df_all_seeds, df_std = parse_results(saved_models_path=os.path.join(PATH_C, 'saved_models'),
+                                             log_path=os.path.join(PATH_C, 'logdir'),
+                                             scalars_dict=get_scalars_dict(phase))
 
-    output_str = get_latex_exp_name(experiment_letter)
-    output_str += get_latex_ap_table(df_all_seeds, index=99, letter=experiment_letter)
-    output_str += get_latex_ap_table(df_std, index=100, letter=experiment_letter)
+        output_str += get_latex_exp_name(experiment_letter,
+                                         phase=phase)
 
-    save_latex(output_str, letter=experiment_letter, path='../reports/')
+        output_str += get_latex_ap_table(df_all_seeds,
+                                         index=index,
+                                         letter=experiment_letter,
+                                         phase=phase,
+                                         hparam='All seeds')
+
+        index += 1
+
+        output_str += get_latex_ap_table(df_std,
+                                         index=index,
+                                         letter=experiment_letter,
+                                         phase=phase,
+                                         hparam='mean ± std')
+
+        index += 1
+
+    save_latex(output_str,
+               letter=experiment_letter,
+               path='../reports/')
