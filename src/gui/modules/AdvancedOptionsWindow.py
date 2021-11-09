@@ -24,17 +24,16 @@ from src.gui.modules.ImageLoader import ImageLoader
 
 
 class AdvancedOptionsWindow:
-    """
-    Single instance GUI window for advanced options
-    """
+    """Single instance GUI window for advanced options"""
     
     def __init__(self, window: Tk, model: ModelLoader, img_dir: ImageLoader) -> None:
         """Class constructor
 
         Args:
-            window (Tk): Root window of the advanced option window
-            model (ModelLoader): Object containing the trained model file path
-            img_dir (ImageLoader): Object containing the raw image directory path
+            window(Tk): Root window of the advanced option window
+            model(ModelLoader): Object containing the trained model file path
+            img_dir(ImageLoader): Object containing the raw image directory path
+
         """
 
         # Declaring the advanced options window

@@ -22,17 +22,16 @@ from src.gui.modules.ReadOnlyTextBox import ReadOnlyTextBox
 
 
 class ImageViewer:
-    """
-    Small image viewing  tkinter app with embedded Matplotlib visualization canvas
-    """
+    """Small image viewing  tkinter app with embedded Matplotlib visualization canvas"""
     def __init__(self,
                  window: Toplevel,
                  textbox: ReadOnlyTextBox) -> None:
         """Class constructor
 
         Args:
-            window (Toplevel): Root window of the image viewer app
-            textbox (ReadOnlyTextBox): GUI's app read-only text box
+            window(Toplevel): Root window of the image viewer app
+            textbox(ReadOnlyTextBox): GUI's app read-only text box
+
         """
 
         self.__img_list = []
@@ -122,8 +121,9 @@ class ImageViewer:
         """Closes the app
 
         Args:
-            window (Toplevel): Root window of the image viewer app
-            textbox (ReadOnlyTextBox): GUI's app read-only text box
+            window(Toplevel): Root window of the image viewer app
+            textbox(ReadOnlyTextBox): GUI's app read-only text box
+
         """
         
         textbox.insert("Closing the Image Viewer app.\n\n")
@@ -135,11 +135,12 @@ class ImageViewer:
         """Creates a Matplotlib canvas for visualization
 
         Args:
-            image (Image): Annotated image with bounding boxes
-            frame (LabelFrame): Root frame of the Matplotlib canvas
-
+            image(Image): Annotated image with bounding boxes
+            frame(LabelFrame): Root frame of the Matplotlib canvas
+        
         Notes:
             Inspired from: https://matplotlib.org/3.1.0/gallery/user_interfaces/embedding_in_tk_sgskip.html
+
         """
         
         # Deleting the widgets from the screen
@@ -169,8 +170,9 @@ class ImageViewer:
         """Switch to previous image in directory
 
         Args:
-            window (Toplevel): Root window of the image viewer app
-            idx (int): Index of the image to display
+            window(Toplevel): Root window of the image viewer app
+            idx(int): Index of the image to display
+
         """
         
         # Update the image filename
@@ -193,8 +195,9 @@ class ImageViewer:
         """Switch to next image in directory
 
         Args:
-            window (Toplevel): Root window of the image viewer app
-            idx (int): Index of the image to display
+            window(Toplevel): Root window of the image viewer app
+            idx(int): Index of the image to display
+
         """
 
         # Update the image filename

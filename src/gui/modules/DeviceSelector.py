@@ -19,21 +19,19 @@ from src.utils.constants import COLOR_PALETTE, FONT_PATH, GUI_SETTINGS
 
 
 class DeviceSelector:
-    """
-    Class responsible of handling the device for inference
-    """
+    """Class responsible of handling the device for inference"""
     def __init__(self,
                  window: Toplevel) -> None:
         """Class constructor
 
         Args:
-            window (Toplevel): Root window
-
+            window(Toplevel): Root window
+        
         Notes:
             If available, CUDA will always be the default option for the PyTorch device and the user
             will be able to switch for the CPU if desired
-
             When CUDA is not available, the buttons will be disabled with CPU as the only device option
+
         """
 
         self.__device_option = StringVar()
