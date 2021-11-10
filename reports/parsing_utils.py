@@ -6,6 +6,15 @@ from reports.constants import AP_DICT
 
 
 def get_digits_precision(x: float) -> int:
+    """
+
+    Args:
+        x(float): 
+
+    Returns:
+        int: 
+
+    """
     if x == 0:
         return 0
     else:
@@ -15,6 +24,18 @@ def get_digits_precision(x: float) -> int:
 def get_latex_exp_name(letter: str, *,
                        phase: Optional[str] = None,
                        hparam: Optional[str] = None) -> str:
+    """
+
+    Args:
+        letter(str): 
+        *: 
+        phase(Optional[str], optional):  (Default value = None)
+        hparam(Optional[str], optional):  (Default value = None)
+
+    Returns:
+        str: 
+
+    """
     title = f'Experiment {letter}'
 
     if phase:
@@ -32,6 +53,21 @@ def get_latex_ap_table(df: pd.DataFrame, *,
                        phase: Optional[str] = None,
                        hparam: Optional[str] = None,
                        metric: Optional[str] = None) -> str:
+    """
+
+    Args:
+        df(pd.DataFrame): 
+        *: 
+        index(int): 
+        letter(str): 
+        phase(Optional[str], optional):  (Default value = None)
+        hparam(Optional[str], optional):  (Default value = None)
+        metric(Optional[str], optional):  (Default value = None)
+
+    Returns:
+        str: 
+
+    """
     title = f'Experiment {letter}'
 
     if phase:
@@ -53,6 +89,14 @@ def get_latex_ap_table(df: pd.DataFrame, *,
 def save_latex(input_str: str,
                letter: str,
                path: Optional[str] = None) -> None:
+    """
+
+    Args:
+        input_str(str): 
+        letter(str): 
+        path(Optional[str], optional):  (Default value = None)
+
+    """
     file_path = f'{path}latex_phase_{letter}.txt' if path else f'latex_phase_{letter}.txt'
 
     with open(file_path, 'w') as file:
@@ -62,6 +106,15 @@ def save_latex(input_str: str,
 
 
 def get_scalars_dict(phase: str) -> dict:
+    """
+
+    Args:
+      phase(str): 
+
+    Returns:
+        dict: 
+
+    """
     scalars_dict = {}
 
     for key, value in AP_DICT.items():
