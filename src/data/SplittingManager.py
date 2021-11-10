@@ -27,6 +27,7 @@ from src.utils.constants import *
 
 
 class SplittingManager:
+    """Splitting manager class"""
     def __init__(self,
                  dataset: str,
                  validation_size: float,
@@ -36,6 +37,19 @@ class SplittingManager:
                  google_images: bool,
                  image_size: int,
                  num_workers: int) -> None:
+        """
+
+        Args:
+            dataset(str): 
+            validation_size(float): 
+            test_size(float): 
+            k_cross_valid(int): 
+            seed(int): 
+            google_images(bool): 
+            image_size(int): 
+            num_workers(int): 
+
+        """
 
         self.__images_path = RESIZED_LEARNING_PATH if dataset == 'learning' else RESIZED_HOLDOUT_PATH
         self.__raw_images_path = RAW_LEARNING_PATH if dataset == 'learning' else RAW_HOLDOUT_PATH
@@ -113,33 +127,49 @@ class SplittingManager:
 
     @property
     def images_path(self) -> str:
+        """Returns the image paths"""
+
         return self.__images_path
 
     @property
     def image_paths_train(self) -> list:
+        """Returns the training image paths"""
+
         return self.__image_paths_train
 
     @property
     def targets_train(self) -> list:
+        """Returns the training labels"""
+
         return self.__targets_train
 
     @property
     def image_paths_valid(self) -> list:
+        """Returns the validation image paths"""
+
         return self.__image_paths_valid
 
     @property
     def targets_valid(self) -> list:
+        """Returns the validation labels"""
+
         return self.__targets_valid
 
     @property
     def image_paths_test(self) -> list:
+        """Returs the image paths"""
+
         return self.__image_paths_test
 
     @property
     def targets_test(self) -> list:
+        """Returns the test labels"""
+
         return self.__targets_test
 
     def __split_dataset(self) -> None:
+        """Splitting the datasets"""
+
         image_paths = self.__image_paths
         targets = self.__targets
 
@@ -279,6 +309,17 @@ class SplittingManager:
 
     @staticmethod
     def __filter_list(my_list: list, indices: str, logic: bool) -> list:
+        """
+
+        Args:
+            my_list(list): 
+            indices(str): 
+            logic(bool): 
+
+        Returns:
+            list: 
+
+        """
         if logic:
             return [my_list[i] for i in range(len(my_list)) if i in indices]
         else:
@@ -286,6 +327,15 @@ class SplittingManager:
 
     @staticmethod
     def __get_most_frequent_labels(targets: list) -> list:
+        """
+
+        Args:
+            targets(list): 
+
+        Returns:
+            list: 
+
+        """
         return [max(set(target['labels'].tolist()), key=target['labels'].tolist().count)
                 for target in targets]
 
@@ -293,17 +343,17 @@ class SplittingManager:
     def __download_file_from_google_drive(file_id: str,
                                           dest: str,
                                           chunk_size: int = 32768) -> None:
-        """
-        Method to download a file from Google Drive
-
+        """Method to download a file from Google Drive
+        
         Inspired from :
         https://stackoverflow.com/questions/38511444/python-download-files-from-google-drive-using-url
 
-        :param file_id: str, Google Drive file ID hash to download
-        :param dest: str, filepath + filename to save the contents to
-        :param chunk_size: int, chunk size in bytes
-        """
+        Args:
+            file_id(str): Google Drive file ID hash to download
+            dest(str): filepath + filename to save the contents to
+            chunk_size(int, optional): chunk size in bytes (Default value = 32768)
 
+        """
         # Declare URL, session, response and token objects
         URL = "https://docs.google.com/uc?export=download"
         session = requests.Session()
@@ -332,11 +382,12 @@ class SplittingManager:
     def __fetch_data(self,
                      images_id: str,
                      annotations_id: str) -> None:
-        """
-        Method to fetch the images and annotations from Google Drive
+        """Method to fetch the images and annotations from Google Drive
 
-        :param images_id: str, Google Drive file ID hash for the images zip file
-        :param annotations_id: str, Google Drive file ID hash for the annotations file
+        Args:
+            images_id(str): Google Drive file ID hash for the images zip file
+            annotations_id(str): Google Drive file ID hash for the annotations file
+
         """
         # Create the file path for the images zip file
         images_zip = os.path.join(RAW_PATH, 'images.zip')
@@ -362,11 +413,12 @@ class SplittingManager:
     def _resize_images(self,
                        image_size: int,
                        num_workers: int) -> None:
-        """
-        Method to resize all images in the data/raw folder and save them to the data/resized folder
+        """Method to resize all images in the data/raw folder and save them to the data/resized folder
 
-        :param image_size: int, maximum image size in pixels (will be used for height & width)
-        :param num_workers: int, number of workers for multiprocessing
+        Args:
+            image_size(int): int, maximum image size in pixels (will be used for height & width)
+            num_workers(int): int, number of workers for multiprocessing
+
         """
         # Initialize ray
         ray.init(include_dashboard=False)

@@ -26,9 +26,7 @@ from src.data.Datasets.FuseDataset import FuseDataset
 
 
 class LearningDatasetManager(CustomDatasetManager):
-    """
-    Dataset Manager class, handles the creation of the training, validation and testing datasets.
-    """
+    """Dataset Manager class, handles the creation of the training, validation and testing datasets."""
     def __init__(self,
                  num_workers: int,
                  data_aug: float,
@@ -39,18 +37,19 @@ class LearningDatasetManager(CustomDatasetManager):
                  seed: int,
                  splitting_manager: SplittingManager,
                  current_fold: int) -> None:
-        """
-        Class constructor
+        """Class constructor
 
-        :param images_path: str, path to images files
-        :param targets_path: str, path to targets file (ground truths)
-        :param image_size: int, maximum image size in pixels, images are resized to (image_size, image_size)
-        :param num_workers: int, number of workers for multiprocessing
-        :param data_aug: float, intensity of data augmentation transforms
-        :param validation_size: float, size of validation dataset as a subset of the entire dataset
-        :param test_size: float, size of test dataset as a subset of the entire dataset
-        :param mean_std: bool, if True, mean and std values for RGB channel normalization will be calculated
-                               if False, mean and std precalculated values will be used
+        Args:
+            num_workers(int): number of workers for multiprocessing
+            data_aug(float): intensity of data augmentation transforms
+            validation_size(float): size of validation dataset as a subset of the entire dataset
+            test_size(float): size of test dataset as a subset of the entire dataset
+            norm(str): 
+            google_images(bool): 
+            seed(int): 
+            splitting_manager(SplittingManager): 
+            current_fold(int): 
+
         """
         self._google_images = google_images
         self._seed = seed
@@ -104,27 +103,33 @@ class LearningDatasetManager(CustomDatasetManager):
 
     @property
     def dataset_train(self):
+        """ """
         return self._dataset_train
 
     @property
     def dataset_valid(self):
+        """ """
         return self._dataset_valid
 
     @property
     def dataset_test(self):
+        """ """
         return self._dataset_test
 
     @staticmethod
     def __transforms_train(mean: Optional[Tuple[float, float, float]],
                            std: Optional[Tuple[float, float, float]],
                            data_aug: float) -> transforms.Compose:
-        """
-        Method to construct the training dataset transforms
+        """Method to construct the training dataset transforms
 
-        :param mean: tuple of 3 floats, containing the mean (R, G, B) values
-        :param std: tuple of 3 floats, containing the standard deviation of (R, G, B) values
-        :param data_aug: float, intensity of data augmentation transforms
-        :return: transforms.Compose, custom composed transforms list
+        Args:
+            mean(Optional[Tuple[float, float, float]]): tuple of 3 floats, containing the mean (R, G, B) values
+            std(Optional[Tuple[float, float, float]]): tuple of 3 floats, containing the standard deviation of (R, G, B) values
+            data_aug(float): intensity of data augmentation transforms
+
+        Returns:
+            transforms.Compose: custom composed transforms list
+
         """
         transforms_list = [
             # Apply ColorJitter data augmentation transform
@@ -146,11 +151,14 @@ class LearningDatasetManager(CustomDatasetManager):
 
     def _calculate_mean_std(self,
                             num_workers: int) -> Tuple[Tuple[float, float, float], Tuple[float, float, float]]:
-        """
-        Method to calculate the mean and standard deviation for each channel (R, G, B) for each image
+        """Method to calculate the mean and standard deviation for each channel (R, G, B) for each image
 
-        :param num_workers: int, number of workers for multiprocessing
-        :return: tuple, containing the mean and std deviation values for each channel (R, G, B)
+        Args:
+            num_workers(int): number of workers for multiprocessing
+
+        Returns:
+            Tuple[Tuple[float,float,float],Tuple[float,float,float]]: tuple, containing the mean and std deviation values for each channel (R, G, B)
+
         """
         # Initialize ray
         ray.init(include_dashboard=False)
@@ -213,11 +221,12 @@ class LearningDatasetManager(CustomDatasetManager):
 
     @staticmethod
     def _resize_images(image_size: int, num_workers: int) -> None:
-        """
-        Method to resize all images in the data/raw folder and save them to the data/resized folder
+        """Method to resize all images in the data/raw folder and save them to the data/resized folder
 
-        :param image_size: int, maximum image size in pixels (will be used for height & width)
-        :param num_workers: int, number of workers for multiprocessing
+        Args:
+            image_size(int): maximum image size in pixels (will be used for height & width)
+            num_workers(int): number of workers for multiprocessing
+
         """
         # Initialize ray
         ray.init(include_dashboard=False)

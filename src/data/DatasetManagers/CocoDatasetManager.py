@@ -15,11 +15,15 @@ from src.data.Datasets.CocoDataset import CocoDataset
 
 
 class CocoDatasetManager:
-    """
-    Dataset Manager class, handles the creation of the training, validation and testing datasets.
-    """
+    """Dataset Manager class, handles the creation of the training, validation and testing datasets."""
     def __init__(self,
                  ds) -> None:
+        """
+
+        Args:
+            ds: 
+
+        """
         self.__datasets = []
 
         for i in range(len(ds)):
@@ -27,7 +31,9 @@ class CocoDatasetManager:
 
     @property
     def datasets(self):
+        """ """
         return self.__datasets
     
     def __len__(self):
+        """ """
         return len(self.__datasets)

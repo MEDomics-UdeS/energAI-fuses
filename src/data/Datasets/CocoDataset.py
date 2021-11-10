@@ -6,16 +6,19 @@ import torch
 
 
 class CocoDataset(CustomDataset):
+    """ """
     
     def __init__(self,
                  image,
                  target,
                  path) -> None:
-        """
-        Class constructor
+        """Class constructor
 
-        :param images_path: str, path to the images
-        :param num_workers: int, number of workers for multiprocessing
+        Args:
+            image: 
+            target: 
+            path: 
+
         """
         self._images = [image]
         self._targets = [target]
@@ -23,23 +26,30 @@ class CocoDataset(CustomDataset):
     
     @property
     def targets(self):
+        """ """
         return self._targets
 
     def __getitem__(self, index: int) -> Tuple[torch.Tensor, dict]:
-        """
-        Class __getitem__ method, called when object[index] is used
+        """Class __getitem__ method, called when object[index] is used
 
-        :param index: int, actual index to get
-        :return: tuple, transformed current image and current targets
+        Args:
+            index(int): actual index to get
+
+        Returns:
+            Tuple[torch.Tensor,dict]: transformed current image and current targets
+
         """
         return self._images[index], self._targets[index]
 
     def extract_data(self, index_list: List[int]) -> Tuple[List[str], List[Image.Image], List[dict]]:
-        """
-        Extract data from the object
+        """Extract data from the object
 
-        :param index_list: list, indices to extract
-        :return: tuple, extracted elements
+        Args:
+            index_list(List[int]): indices to extract
+
+        Returns:
+            Tuple[List[str],List[Image.Image],List[dict]]: extracted elements
+
         """
         # Sort and reverse the index list
         index_list = sorted(index_list, reverse=True)
@@ -58,12 +68,12 @@ class CocoDataset(CustomDataset):
         return image_paths, images
 
     def add_data(self, image_paths: List[str], images: List[Image.Image]) -> None:
-        """
-        Add data to the object
+        """Add data to the object
 
-        :param image_paths: list, strings of image paths
-        :param images: list, PIL Images
-        :param targets: list, targets dictionaries
+        Args:
+            image_paths(List[str]): strings of image paths
+            images(List[Image.Image]): PIL Images
+
         """
         # Add the data in arguments to the object attributes
         self._image_paths.extend(image_paths)

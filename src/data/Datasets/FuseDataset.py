@@ -25,9 +25,7 @@ from src.utils.constants import RESIZED_LEARNING_PATH
 
 
 class FuseDataset(CustomDataset):
-    """
-    Custom fuse dataset class
-    """
+    """Custom fuse dataset class"""
     def __init__(self,
                  images_path: str,
                  image_paths: str,
@@ -36,12 +34,15 @@ class FuseDataset(CustomDataset):
                  phase: str) -> None: #,
                  # google_images: bool = True,
                  # load_to_ram: bool = True) -> None:
-        """
-        Class constructor
+        """Class constructor
 
-        :param images_path: str, path to the images
-        :param targets_path: str, path to the targets json file
-        :param num_workers: int, number of workers for multiprocessing
+        Args:
+            images_path(str): path to the images
+            image_paths(str): 
+            targets(str): 
+            num_workers(int): number of workers for multiprocessing
+            phase(str): 
+
         """
         # Check if images_path has been specified
         # if images_path is not None:
@@ -123,11 +124,14 @@ class FuseDataset(CustomDataset):
         #     self._targets = []
 
     def __getitem__(self, index: int) -> Tuple[torch.Tensor, dict]:
-        """
-        Class __getitem__ method, called when object[index] is used
+        """Class __getitem__ method, called when object[index] is used
 
-        :param index: int, actual index to get
-        :return: tuple, transformed current image and current targets
+        Args:
+            index(int): actual index to get
+
+        Returns:
+            Tuple[torch.Tensor,dict]: transformed current image and current targets
+
         """
         # When working with small batches
         if self._targets:        
@@ -137,6 +141,7 @@ class FuseDataset(CustomDataset):
 
     @property
     def targets(self):
+        """ """
         return self._targets
 
     # def extract_data(self, index_list: List[int]) -> Tuple[List[str], List[Image.Image], List[dict]]:
