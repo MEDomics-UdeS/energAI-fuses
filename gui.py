@@ -26,12 +26,12 @@ from src.utils.helper_functions import enter_default_json
 
 
 class GUI(Tk):
-    """
-    Small cross platform GUI application to visualize a model's inference results
-
+    """Small cross platform GUI application to visualize a model's inference results
+    
     Notes:
-        Since the settings are stored in src/gui/gui_settings.json, they will be kept 
+        Since the settings are stored in src/gui/gui_settings.json, they will be kept
         across reruns of this script
+
     """
     def __init__(self) -> None:
         """Class constructor"""
@@ -107,12 +107,12 @@ class GUI(Tk):
         """Checks if every mandatory settings are initialized by the user
 
         Args:
-            settings (dict): The current state of the GUI settings JSON dictionnary
+            settings(dict): The current state of the GUI settings JSON dictionnary
 
         Returns:
             str: An error message to be displayed if some settings are missing
+            
         """
-        
         error_message = ""
         
         if "model" not in settings:
