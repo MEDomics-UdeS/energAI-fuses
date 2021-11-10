@@ -35,14 +35,19 @@ def save_test_images(model_file_name: str,
                      img_path: str,
                      image_size: int,
                      device_type: str) -> None:
-    """
-    Main inference testing function to save images with predicted and ground truth bounding boxes
+    """Main inference testing function to save images with predicted and ground truth bounding boxes
 
-    :param score_threshold:
-    :param model_file_name: str, model file name to load
-    :param data_loader: DataLoader, data loader object
-    :param iou_threshold: float, intersection-over-union threshold for predicted bounding boxes filtering
-    :param save_path: str, save path for the inference test images
+    Args:
+        model_file_name(str): model file name to load
+        data_loader(DataLoader): data loader object
+        with_gui(bool): 
+        iou_threshold(float): intersection-over-union threshold for predicted bounding boxes filtering
+        score_threshold(float): 
+        save_path(str): save path for the inference test images
+        img_path(str): 
+        image_size(int): 
+        device_type(str): 
+
     """
     # Load the save state on the cpu for compatibility on non-CUDA systems
     save_state = torch.load(model_file_name, map_location=torch.device('cpu'))
@@ -157,14 +162,15 @@ def draw_annotations(draw: ImageDraw.ImageDraw,
                      target_box_dict: dict,
                      pred_annotations: list,
                      target_annotations: list) -> None:
-    """
-    Function to draw bounding boxes on an image
+    """Function to draw bounding boxes on an image
 
-    :param draw: ImageDraw, ImageDraw PIL object
-    :param pred_box_dict: dict, dictionary containing predicted bounding boxes
-    :param target_box_dict: dict, dictionary containing ground truth bounding boxes
-    :param pred_annotations: list, contains the width and font of every individual predicted bounding boxes
-    :param target_annotations: list, contains the width and font of every individual ground truth bounding boxes
+    Args:
+        draw(ImageDraw.ImageDraw): ImageDraw PIL object
+        pred_box_dict(dict): dictionary containing predicted bounding boxes
+        target_box_dict(dict): dictionary containing ground truth bounding boxes
+        pred_annotations(list): contains the width and font of every individual predicted bounding boxes
+        target_annotations(list):  contains the width and font of every individual ground truth bounding boxes
+
     """
     # Get list of boxes
     pred_boxes = pred_box_dict['boxes'].tolist()
@@ -209,6 +215,17 @@ def resize_box_coord(box_dict: dict,
                      downsize_ratio: float,
                      x_offset: float,
                      y_offset: float) -> dict:
+    """
+
+    Args:
+        box_dict(dict): 
+        downsize_ratio(float): 
+        x_offset(float): 
+        y_offset(float): 
+
+    Returns:
+
+    """
     # Loop through each bounding box
     for i in range(len(box_dict['boxes'])):
         # Loop through each of the 4 coordinates (x_min, y_min, x_max, y_max)
@@ -228,11 +245,18 @@ def resize_box_coord(box_dict: dict,
 def scale_annotation_sizes(img: Image,
                            pred: dict,
                            target: dict) -> Tuple[list, list]:
-    """
-    Function to scale the annotations drawn on an image during inference
-
+    """Function to scale the annotations drawn on an image during inference
+    
     Bounding boxes are scaled with a power function in relation to the area of the box over the area of the picture.
     Font sizes are scaled with a power function in relation to the area of the box alone
+
+    Args:
+        img(Image): 
+        pred(dict): 
+        target(dict): 
+
+    Returns:
+
     """
     img_area = img.size[0] * img.size[1]
 
@@ -273,9 +297,16 @@ def coco_evaluate(model: Any,
                   model_name: str) -> dict:
     """
 
-    :param model:
-    :param data_loader:
-    :return:
+    Args:
+        model(Any): 
+        data_loader(DataLoader): 
+        desc(str): 
+        device(torch.device): 
+        image_size(int): 
+        model_name(str): 
+
+    Returns:
+
     """
     pbar = tqdm(total=len(data_loader), leave=False, desc=desc)
 
