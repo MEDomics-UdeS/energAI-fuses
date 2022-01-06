@@ -30,7 +30,7 @@ class FuseDataset(CustomDataset):
     """
     def __init__(self,
                  images_path: str,
-                 image_paths: str,
+                 images_filenames: str,
                  targets: str,
                  num_workers: int,
                  phase: str) -> None: #,
@@ -56,7 +56,7 @@ class FuseDataset(CustomDataset):
         #
         # Save the image paths as an object attribute
         # self._image_paths = [os.path.join(images_path, img) for img in images]
-        self._image_paths = [images_path + image_path for image_path in image_paths]
+        self._image_paths = [images_path + image_path for image_path in images_filenames]
         self._targets = deepcopy(targets)
 
         # Get the dataset size

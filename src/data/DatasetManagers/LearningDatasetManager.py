@@ -58,7 +58,7 @@ class LearningDatasetManager(CustomDatasetManager):
         # Declare training, validation and testing datasets
         if test_size < 1:
             self._dataset_train = FuseDataset(images_path=splitting_manager.images_path,
-                                              image_paths=splitting_manager.image_paths_train[current_fold],
+                                              images_filenames=splitting_manager.image_paths_train[current_fold],
                                               targets=splitting_manager.targets_train[current_fold],
                                               num_workers=num_workers,
                                               phase='Training')
@@ -67,7 +67,7 @@ class LearningDatasetManager(CustomDatasetManager):
 
         if validation_size > 0:
             self._dataset_valid = FuseDataset(images_path=splitting_manager.images_path,
-                                              image_paths=splitting_manager.image_paths_valid[current_fold],
+                                              images_filenames=splitting_manager.image_paths_valid[current_fold],
                                               targets=splitting_manager.targets_valid[current_fold],
                                               num_workers=num_workers,
                                               phase='Validation')
@@ -76,7 +76,7 @@ class LearningDatasetManager(CustomDatasetManager):
 
         if test_size > 0:
             self._dataset_test = FuseDataset(images_path=splitting_manager.images_path,
-                                             image_paths=splitting_manager.image_paths_test,
+                                             images_filenames=splitting_manager.image_paths_test,
                                              targets=splitting_manager.targets_test,
                                              num_workers=num_workers,
                                              phase='Testing')
