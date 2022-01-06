@@ -196,7 +196,7 @@ def draw_annotations(draw: ImageDraw.ImageDraw,
         for target_box, target_label, target_score, (box_width, font)\
                 in zip(target_boxes, target_labels, target_scores, target_annotations):
             draw.text(
-                (target_box[0], target_box[1] + font.size), text=f'{target_label} {target_score:.4f}', font=font, fill=COLOR_PALETTE["green"], stroke_width=int(font.size / 10), stroke_fill=COLOR_PALETTE["bg"])
+                (target_box[0], target_box[1] + font.size), text=f'{target_label}', font=font, fill=COLOR_PALETTE["green"], stroke_width=int(font.size / 10), stroke_fill=COLOR_PALETTE["bg"])
 
     # Drawing predicted labels over the bounding boxes on the image
     for pred_box, pred_label, pred_score, (box_width, font)\

@@ -41,9 +41,8 @@ class GuiDatasetManager(CustomDatasetManager):
             self._resize_images(image_size, num_workers, images_path, gt_file)
 
         self._dataset = FuseDataset(GUI_RESIZED_PATH,
-                                    targets_path=GUI_TARGETS_PATH if gt_file else None,
-                                    num_workers=num_workers,
-                                    google_images=True)
+                                    targets=GUI_TARGETS_PATH if gt_file else None,
+                                    num_workers=num_workers)
         
         self._dataset.transforms = self._transforms_base(MEAN, STD)
     
