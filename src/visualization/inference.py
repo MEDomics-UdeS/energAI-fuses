@@ -234,7 +234,7 @@ def scale_annotation_sizes(img: Image,
     Bounding boxes are scaled with a power function in relation to the area of the box over the area of the picture.
     Font sizes are scaled with a power function in relation to the area of the box alone
     """
-    img_area = img.size[0] * img.size[1]
+    # img_area = img.size[0] * img.size[1]
 
     pred_annotations = []
     target_annotations = []
@@ -242,7 +242,8 @@ def scale_annotation_sizes(img: Image,
     for box in pred["boxes"]:
         box_area = (box[0] - box[2]) * (box[1] - box[3])
 
-        box_width = int(pow(img_area / box_area * 60, 0.25))
+        box_width = scale_box_width(box_area)
+        # box_width = int(pow(img_area / box_area * 60, 0.25))
         font_size = int(pow(box_area * 1.2, 0.3))
 
         pred_annotations.append(
@@ -252,7 +253,8 @@ def scale_annotation_sizes(img: Image,
         for box in target["boxes"]:
             box_area = (box[0] - box[2]) * (box[1] - box[3])
 
-            box_width = int(pow(img_area / box_area * 60, 0.25))
+            box_width = scale_box_width(box_area)
+            # box_width = int(pow(img_area / box_area * 60, 0.25))
             font_size = int(pow(box_area * 1.2, 0.3))
 
             target_annotations.append(
@@ -262,6 +264,24 @@ def scale_annotation_sizes(img: Image,
 
     # Declare the font object to write the confidence scores on the images
     return pred_annotations, target_annotations
+
+
+def scale_box_width(area):
+    # Scaling formula from : https://math.stackexchange.com/questions/43698/range-scaling-problem
+    # Scales linearly values from range [A, B] in [C, D]
+
+    A, B, C, D = 1000, 2_000_000, 5, 32
+
+    # Forcing extreme values in the expected range
+    if area < A:
+        area = A
+    if area > B:
+        area = B
+
+    term1 = C * (1 - (area - A)/(B - A))
+    term2 = D * ((area - A)/(B - A))
+
+    return int(term1 + term2)
 
 
 @torch.no_grad()
