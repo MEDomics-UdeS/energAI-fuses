@@ -57,7 +57,24 @@ class FuseDataset(CustomDataset):
         # Save the image paths as an object attribute
         # self._image_paths = [os.path.join(images_path, img) for img in images]
         self._image_paths = [images_path + image_path for image_path in images_filenames]
-        self._targets = deepcopy(targets)
+        
+        # Check if targets_path has been specified
+        if phase == "Inference":
+            # Only used for the GUI application
+            if targets is not None:
+                # If we have targets bbox, the order of inference images should be kept
+                self._image_paths = sorted(self._image_paths)
+
+                # Load the targets json into the targets attribute in the object
+                self._targets = json.load(open(targets))
+            
+                # Convert the targets to tensors
+                for target in self._targets:
+                    for key, value in target.items():
+                        target[key] = torch.as_tensor(value, dtype=torch.int64) 
+        else:
+            # Required for SplittingManager maybe
+            self._targets = deepcopy(targets)
 
         # Get the dataset size
         size = len(self._image_paths)
@@ -77,8 +94,8 @@ class FuseDataset(CustomDataset):
             ids = [ray_load_images.remote(
                 self._image_paths, i) for i in range(num_workers)]
 
-            # Calculate initial number of jobs left
-            nb_job_left = size - num_workers
+        # Calculate initial number of jobs left
+        nb_job_left = size - num_workers
 
         # Ray multiprocessing loop
         for _ in trange(size, desc=f'Loading {phase} Images to RAM', leave=False):
