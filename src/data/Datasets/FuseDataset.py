@@ -71,7 +71,9 @@ class FuseDataset(CustomDataset):
                 # Convert the targets to tensors
                 for target in self._targets:
                     for key, value in target.items():
-                        target[key] = torch.as_tensor(value, dtype=torch.int64) 
+                        target[key] = torch.as_tensor(value, dtype=torch.int64)
+            else:
+                self._targets = []
         else:
             # Required for SplittingManager maybe
             self._targets = deepcopy(targets)
