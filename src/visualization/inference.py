@@ -244,7 +244,7 @@ def scale_annotation_sizes(img: Image,
 
         box_width = scale_box_width(box_area)
         # box_width = int(pow(img_area / box_area * 60, 0.25))
-        font_size = int(pow(box_area * 1.2, 0.3))
+        font_size = int((1.2 * box_area) ** 0.3)
 
         pred_annotations.append(
             (box_width, ImageFont.truetype(FONT_PATH, font_size)))
@@ -255,7 +255,7 @@ def scale_annotation_sizes(img: Image,
 
             box_width = scale_box_width(box_area)
             # box_width = int(pow(img_area / box_area * 60, 0.25))
-            font_size = int(pow(box_area * 1.2, 0.3))
+            font_size = int((1.2 * box_area) ** 0.3)
 
             target_annotations.append(
                 (box_width, ImageFont.truetype(FONT_PATH, font_size)))
