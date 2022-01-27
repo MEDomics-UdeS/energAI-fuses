@@ -29,9 +29,12 @@ def label_ocr(img: str,
               box: Tuple[float]) -> str:
     """
 
-    :param img:
-    :param box:
-    :return:
+    Args:
+        img(str): 
+        box(Tuple[float]): 
+
+    Returns:
+
     """
     name = ''.join(chr(i) for i in img)
     path = os.path.join(RAW_PATH, name)

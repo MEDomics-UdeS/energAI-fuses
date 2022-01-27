@@ -22,14 +22,21 @@ from src.utils.constants import IMAGE_EXT, GUI_RESIZED_PATH, MEAN, STD, GUI_TARG
 
 
 class GuiDatasetManager(CustomDatasetManager):
-    """
-    Dataset Manager class, handles the creation of the training, validation and testing datasets.
-    """
+    """Dataset Manager class, handles the creation of the training, validation and testing datasets."""
     def __init__(self,
                  image_size: int,
                  images_path: str = None,
                  num_workers: int = None,
                  gt_file: str = None) -> None:
+        """
+
+        Args:
+            image_size(int): 
+            images_path(str, optional):  (Default value = None)
+            num_workers(int, optional):  (Default value = None)
+            gt_file(str, optional):  (Default value = None)
+
+        """
         # Check if any image exists in the image_path selected
         if any(file.endswith(f'.{IMAGE_EXT}') for file in os.listdir(images_path)):
             # Removes the content of the directory
@@ -50,6 +57,7 @@ class GuiDatasetManager(CustomDatasetManager):
     
     @property
     def dataset(self):
+        """ """
         return self._dataset
 
     @staticmethod
@@ -57,11 +65,14 @@ class GuiDatasetManager(CustomDatasetManager):
                        num_workers: int,
                        img_path: str,
                        annotations_csv: str) -> None:
-        """
-        Method to resize all images in the data/raw folder and save them to the data/resized folder
+        """Method to resize all images in the data/raw folder and save them to the data/resized folder
 
-        :param image_size: int, maximum image size in pixels (will be used for height & width)
-        :param num_workers: int, number of workers for multiprocessing
+        Args:
+            image_size(int): maximum image size in pixels (will be used for height & width)
+            num_workers(int): number of workers for multiprocessing
+            img_path(str): 
+            annotations_csv(str): 
+
         """
         # Initialize ray
         ray.init(include_dashboard=False)

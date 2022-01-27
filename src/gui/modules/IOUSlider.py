@@ -18,18 +18,17 @@ from src.utils.constants import GUI_SETTINGS, FONT_PATH, COLOR_PALETTE
 
 
 class IOUSlider:
-    """
-    Class responsible of handling the IoU value for inference
-    """
+    """Class responsible of handling the IoU value for inference"""
     def __init__(self,
                  window: Toplevel) -> None:
         """Class constructor
 
         Args:
-            window (Toplevel): Root window
-
+            window(Toplevel): Root window
+        
         Notes:
             By default, the IoU will be set to 0.5
+            
         """
 
         # Creating the sliding button widget
@@ -66,7 +65,8 @@ class IOUSlider:
         """Updates the settings JSON file when the user interacts with the slider
 
         Args:
-            value (DoubleVar): Current value of the slider
+            value(DoubleVar): Current value of the slider
+
         """
         
         # Overwriting the settings json file

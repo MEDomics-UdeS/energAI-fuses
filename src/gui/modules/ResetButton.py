@@ -26,9 +26,7 @@ from src.gui.modules.CSVFileLoader import CSVFileLoader
 
 
 class ResetButton:
-    """
-    Class responsible to reset the settings JSON file and the GUI's state
-    """
+    """Class responsible to reset the settings JSON file and the GUI's state"""
     def __init__(self, 
                  window: Toplevel, 
                  model: ModelLoader, 
@@ -40,13 +38,14 @@ class ResetButton:
         """Class constructor
 
         Args:
-            window (Toplevel): Root window
-            model (ModelLoader): Object containing the trained model file path
-            img_dir (ImageLoader): Object containing the raw image directory path
-            iou (IOUSlider): Object containing the IoU value
-            score (ScoreSlider): Object containing the score treshold value
-            device (DeviceSelector): Object containing the selected PyTorch device
-            gt_csv (CSVFileLoader): Object containing the ground truth CSV file
+            window(Toplevel): Root window
+            model(ModelLoader): Object containing the trained model file path
+            img_dir(ImageLoader): Object containing the raw image directory path
+            iou(IOUSlider): Object containing the IoU value
+            score(ScoreSlider): Object containing the score treshold value
+            device(DeviceSelector): Object containing the selected PyTorch device
+            gt_csv(CSVFileLoader): Object containing the ground truth CSV file
+
         """
 
         Button(window,
@@ -70,12 +69,13 @@ class ResetButton:
         """Restores the GUI's widgets to default values
 
         Args:
-            model (ModelLoader): Object containing the trained model file path
-            img_dir (ImageLoader): Object containing the raw image directory path
-            iou (IOUSlider): Object containing the IoU value
-            score (ScoreSlider): Object containing the score treshold value
-            device (DeviceSelector): Object containing the selected PyTorch device
-            gt_csv (CSVFileLoader): Object containing the ground truth CSV file
+            model(ModelLoader): Object containing the trained model file path
+            img_dir(ImageLoader): Object containing the raw image directory path
+            iou(IOUSlider): Object containing the IoU value
+            score(ScoreSlider): Object containing the score treshold value
+            device(DeviceSelector): Object containing the selected PyTorch device
+            gt_csv(CSVFileLoader): Object containing the ground truth CSV file
+
         """
 
         # Asking for user confirmation

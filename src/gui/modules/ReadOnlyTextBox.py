@@ -17,15 +17,14 @@ from src.utils.constants import COLOR_PALETTE
 
 
 class ReadOnlyTextBox:
-    """
-    Custom read-only tkinter text box
-    """
+    """Custom read-only tkinter text box"""
     def __init__(self,
                  window: Tk) -> None:
         """Class constructor
 
         Args:
-            window (Tk): Root window
+            window(Tk): Root window
+
         """
         
         # Create the scrollbar
@@ -58,7 +57,7 @@ class ReadOnlyTextBox:
         """Inserts text in the text box
 
         Args:
-            text (str): Text to be inserted
+            text(str): Text to be inserted
         """
         
         # Modify the state to allow insertion

@@ -12,6 +12,18 @@ def parse_results(saved_models_path: str,
                   scalars_dict: dict,
                   round_to_1_sign_digit: bool = False,
                   num_decimals: int = 4) -> pd.DataFrame:
+    """
+
+    Args:
+        saved_models_path(str): 
+        log_path(str): 
+        scalars_dict(dict): 
+        round_to_1_sign_digit(bool, optional):  (Default value = False)
+        num_decimals(int, optional):  (Default value = 4)
+
+    Returns:
+
+    """
     columns_all_seeds = ['Seed']
     columns_std = ['Metric', 'Mean', 'Std (Absolute)', 'Std (Relative)']
 

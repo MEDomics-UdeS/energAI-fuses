@@ -20,18 +20,17 @@ from src.utils.helper_functions import cp_split
 
 
 class CSVFileLoader:
-    """
-    Class responsible of handling the ground truth CSV file that the user may provide
-    """
+    """Class responsible of handling the ground truth CSV file that the user may provide"""
     def __init__(self,
                  window: Toplevel) -> None:
         """Class constructor
 
         Args:
-            window (Toplevel): Root window
-
+            window(Toplevel): Root window
+        
         Notes:
             By default, no CSV file will be selected
+
         """
 
         Label(window, 
@@ -97,11 +96,12 @@ class CSVFileLoader:
         """Opens a file manager window to select the ground truth CSV file
 
         Args:
-            window (Toplevel): Root window
-
+            window(Toplevel): Root window
+        
         Notes:
-            The file manager will only display directories and CSV files. If a directory 
+            The file manager will only display directories and CSV files. If a directory
             contains other file types, they will be ignored
+
         """
         window.filename = filedialog.askopenfile(
             initialdir=".", title="Select a ground truth CSV file", filetypes=[("CSV files", "*.csv")])

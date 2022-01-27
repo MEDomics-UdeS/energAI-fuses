@@ -24,18 +24,19 @@ from src.utils.helper_functions import cp_split
 
 
 class CustomDatasetManager(ABC):
-    """
-    Parent class for all DatasetManager child classes.
-    """
+    """Parent class for all DatasetManager child classes."""
     @staticmethod
     def _transforms_base(mean: Optional[Tuple[float, float, float]],
                          std: Optional[Tuple[float, float, float]]) -> transforms.Compose:
-        """
-        Method to construct the validation and testing datasets transforms
+        """Method to construct the validation and testing datasets transforms
 
-        :param mean: tuple of 3 floats, containing the mean (R, G, B) values
-        :param std: tuple of 3 floats, containing the standard deviation of (R, G, B) values
-        :return: transforms.Compose, custom composed transforms list
+        Args:
+            mean(Optional[Tuple[float, float, float]]): tuple of 3 floats, containing the mean (R, G, B) values
+            std(Optional[Tuple[float, float, float]]): tuple of 3 floats, containing the standard deviation of (R, G, B) values
+
+        Returns:
+            transforms.Compose: custom composed transforms list
+
         """
         transforms_list = [
             # Convert to tensor
@@ -52,6 +53,13 @@ class CustomDatasetManager(ABC):
     @staticmethod
     @abstractmethod
     def _resize_images(image_size: int, num_workers: int) -> None:
+        """
+
+        Args:
+            image_size(int): 
+            num_workers(int): 
+
+        """
         pass
 
 
@@ -62,17 +70,20 @@ def ray_resize_images(image_paths: List[str],
                       annotations_csv: str,
                       idx: int,
                       show_bounding_boxes: bool = False) -> Tuple[float, int, np.array, dict]:
-    """
-    Ray remote function to parallelize the resizing of images
+    """Ray remote function to parallelize the resizing of images
 
-    :param image_paths: list, contains image paths
-    :param destination_path: str, destination file path
-    :param image_size: int, image size to resize all images to (height & width)
-    :param annotations_csv: str, file path to csv file containing bounding box annotations
-    :param idx: int, current index
-    :param show_bounding_boxes: bool, if True, ground truth bounding boxes are drawn on the resized images
-                                (used to test if bounding boxes are properly resized)
-    :return: resize_ratio, idx, box_array, targets to continue ray paralleling
+    Args:
+        image_paths(List[str]): contains image paths
+        destination_path(str): destination file path
+        image_size(int): image size to resize all images to (height & width)
+        annotations_csv(str): file path to csv file containing bounding box annotations
+        idx(int): current index
+        show_bounding_boxes(bool, optional): if True, ground truth bounding boxes are drawn on the resized images
+                                             (used to test if bounding boxes are properly resized) (Default value = False)
+
+    Returns:
+        Tuple[float,int,np.array,dict]: resize_ratio, idx, box_array, targets to continue ray paralleling
+
     """
     # Convert the annotations csv file to a pandas DataFrame
     if annotations_csv:
@@ -181,12 +192,15 @@ def ray_resize_images(image_paths: List[str],
 @ray.remote
 def ray_get_rgb(image_paths: List[str],
                 idx: int) -> Tuple[np.array, np.array, np.array, int]:
-    """
-    Ray remote function to parallelize the extraction of R, G, B values from images
+    """Ray remote function to parallelize the extraction of R, G, B values from images
 
-    :param image_paths: list, contains the image paths
-    :param idx: int, current index
-    :return: tuple, r, g, b values numpy arrays for the current image and the current index
+    Args:
+        image_paths(List[str]): contains the image paths
+        idx(int): current index
+
+    Returns:
+        Tuple[np.array,np.array,np.array,int]: (R, G, B) values numpy arrays for the current image and the current index
+
     """
     # Open the current image
     image = Image.open(image_paths[idx])

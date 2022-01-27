@@ -16,6 +16,22 @@ def parse_results_k(results_all_df: pd.DataFrame,
                     metric: str,
                     round_to_1_digit: bool = False,
                     num_decimals: int = 4) -> pd.DataFrame:
+    """
+
+    Args:
+        results_all_df(pd.DataFrame): 
+        phase(str): 
+        scalars_dict(dict): 
+        saved_models_path(str): 
+        log_path(str): 
+        hyperparameter(str): 
+        metric(str): 
+        round_to_1_digit(bool, optional):  (Default value = False)
+        num_decimals(int, optional):  (Default value = 4)
+
+    Returns:
+
+    """
     hp_print_name = hyperparameter.replace('_', '\\_')
 
     df = pd.DataFrame(columns=[hp_print_name])

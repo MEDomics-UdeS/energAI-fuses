@@ -16,6 +16,15 @@ def generate_figure(metric: str,
                     curves_dict: dict,
                     save: bool = True,
                     show: bool = False) -> None:
+    """
+
+    Args:
+        metric(str): 
+        curves_dict(dict): 
+        save(bool, optional):  (Default value = True)
+        show(bool, optional):  (Default value = False)
+
+    """
     x_max = 0
     y_max = 0
     y_min = 1e15
@@ -71,6 +80,16 @@ def generate_figure_all(best_ap_curves: dict,
                         best_lr_curves: dict,
                         save: bool = True,
                         show: bool = False) -> None:
+    """
+
+    Args:
+        best_ap_curves(dict): 
+        best_loss_curves(dict): 
+        best_lr_curves(dict): 
+        save(bool, optional):  (Default value = True)
+        show(bool, optional):  (Default value = False)
+
+    """
     fig, axs = plt.subplots(1, 3, figsize=(12, 3))
 
     x_max = 0
@@ -158,6 +177,19 @@ def parse_results(model_name: str, *,
                   logs_path: Optional[str] = None,
                   json_path: Optional[str] = None,
                   num_decimals: int = 4) -> pd.DataFrame:
+    """
+
+    Args:
+        model_name(str): 
+        *: 
+        models_path(Optional[str], optional):  (Default value = None)
+        logs_path(Optional[str], optional):  (Default value = None)
+        json_path(Optional[str], optional):  (Default value = None)
+        num_decimals(int, optional):  (Default value = 4)
+
+    Returns:
+
+    """
     columns = ['Model',
                'LR',
                'WD',
@@ -248,6 +280,17 @@ def parse_results(model_name: str, *,
 
 
 def add_curve_to_dict(acc: EventAccumulator, scalar_key: str, run_key: str, curves_dict: dict) -> dict:
+    """
+
+    Args:
+        acc(EventAccumulator): 
+        scalar_key(str): 
+        run_key(str): 
+        curves_dict(dict): 
+
+    Returns:
+
+    """
     times, steps, vals = zip(*acc.Scalars(scalar_key))
     curves_dict[run_key] = {'x': steps, 'y': vals}
 
@@ -256,6 +299,15 @@ def add_curve_to_dict(acc: EventAccumulator, scalar_key: str, run_key: str, curv
 
 def get_best_results(results_dict: dict,
                      metric: str) -> pd.DataFrame:
+    """
+
+    Args:
+        results_dict(dict): 
+        metric(str): 
+
+    Returns:
+
+    """
     best_results_df = pd.DataFrame()
 
     best_ap_curves = {}

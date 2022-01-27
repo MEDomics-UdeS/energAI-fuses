@@ -30,11 +30,12 @@ from src.utils.constants import REQUIRED_PYTHON, IMAGE_EXT
 
 def count_images(path: str,
                  minimum: int = 20) -> None:
-    """
-    Function to count images in some folders
+    """Function to count images in some folders
 
-    :param path: str, directory in which to seek images
-    :param minimum: int, minimum number of images required for the number of images to be plotted
+    Args:
+        path(str): directory in which to seek images
+        minimum(int, optional): minimum number of images required for the number of images to be plotted (Default value = 20)
+
     """
     fuse_dict = {}
 
@@ -59,9 +60,7 @@ def count_images(path: str,
 
 
 def env_tests() -> None:
-    """
-    Environment tests
-    """
+    """Environment tests"""
     system_major = sys.version_info.major
 
     if REQUIRED_PYTHON == "python":
@@ -82,10 +81,11 @@ def cp_split(filepath: str) -> List[str]:
     """Cross-platform filepath splitting. Supports Windows, OS X and Linux.
 
     Args:
-        filepath (str): The complete windows or posix filepath
+        filepath(str): The complete windows or posix filepath
 
     Returns:
         List[str]: A list of every individual elements in the filepath
+        
     """
     # Check for the system's platform
     if sys.platform == "win32" or sys.platform == "cygwin":
@@ -96,11 +96,14 @@ def cp_split(filepath: str) -> List[str]:
 
 def filter_by_nms(preds_list: List[dict],
                   iou_threshold: float) -> List[dict]:
-    """
-    Function to filter a bounding boxes predictions list by using non-maximum suppression
+    """Function to filter a bounding boxes predictions list by using non-maximum suppression
 
-    :param preds_list: list, predicted bounding boxes
-    :param iou_threshold: float, iou threshold for non-maximum suppression
+    Args:
+        preds_list(List[dict]): redicted bounding boxes
+        iou_threshold(float): iou threshold for non-maximum suppression
+
+    Returns:
+
     """
     keep_nms = [nms(pred['boxes'], pred['scores'], iou_threshold) for pred in preds_list]
 
@@ -114,12 +117,14 @@ def filter_by_nms(preds_list: List[dict],
 
 def filter_by_score(preds_list: List[dict],
                     score_threshold: float) -> List[dict]:
-    """
-    Function to filter a bounding boxes predictions list by using a confidence score threshold
+    """Function to filter a bounding boxes predictions list by using a confidence score threshold
 
-    :param preds_list: list, predicted bounding boxes
-    :param score_threshold: float, confidence score threshold above which predictions are to be saved
-    :return:
+    Args:
+        preds_list(List[dict]): predicted bounding boxes
+        score_threshold(float): confidence score threshold above which predictions are to be saved
+
+    Returns:
+
     """
     preds_filt = []
 
@@ -139,12 +144,13 @@ def filter_by_score(preds_list: List[dict],
 def google_image_scraper(chrome_driver_path: str = '../chromedriver.exe',
                          prefix: str = 'English Electric C',
                          postfix: str = 'J') -> None:
-    """
-    Function to scrape images from Google images
+    """Function to scrape images from Google images
 
-    :param chrome_driver_path: str, chromedriver.exe path
-    :param prefix: str, prefix for fuse search criterion
-    :param postfix: str, postfix for fuse search criterion
+    Args:
+        chrome_driver_path(str, optional): chromedriver.exe path (Default value = '../chromedriver.exe')
+        prefix(str, optional): prefix for fuse search criterion (Default value = 'English Electric C')
+        postfix(str, optional): postfix for fuse search criterion (Default value = 'J')
+
     """
     response = google_images_download.googleimagesdownload()
 
@@ -164,10 +170,13 @@ def google_image_scraper(chrome_driver_path: str = '../chromedriver.exe',
 
 
 def json_to_csv(dir_list: List[str]) -> None:
-    """
-    Function to convert multiple json files into a single csv file
+    """Function to convert multiple json files into a single csv file
 
-    :param dir_list: list, containing the directories in which to fetch the jsons
+    Args:
+        dir_list(List[str]): list containing the directories in which to fetch the jsons
+
+    Returns:
+
     """
     for directory in dir_list:
         files = [f for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))]
@@ -202,10 +211,11 @@ def print_dict(dictionary: dict,
                str_format: str = None) -> None:
     """
 
-    :param dictionary:
-    :param n_spaces:
-    :param str_format:
-    :return:
+    Args:
+        dictionary(dict): 
+        n_spaces(int): 
+        str_format(str, optional): (Default value = None)
+
     """
     max_key_length = max(map(len, dictionary)) + n_spaces
 
@@ -218,10 +228,11 @@ def print_dict(dictionary: dict,
 
 
 def rename_photos(root_dir: str) -> None:
-    """
-    Rename all photos in a folder's subfolders
+    """Rename all photos in a folder's subfolders
 
-    :param root_dir: str, root directory
+    Args:
+        root_dir(str): str, root directory
+
     """
     for subdir, dirs, files in os.walk(root_dir):
         for i, file in enumerate(files, start=1):
@@ -229,6 +240,16 @@ def rename_photos(root_dir: str) -> None:
 
 
 def format_detr_outputs(outputs: List[dict], target_sizes: torch.Tensor, device: torch.device) -> List[dict]:
+    """
+
+    Args:
+        outputs(List[dict]): 
+        target_sizes(torch.Tensor): 
+        device(torch.device): 
+
+    Returns:
+
+    """
 
     out_logits, out_bbox = outputs['pred_logits'], outputs['pred_boxes']
 
@@ -252,6 +273,12 @@ def format_detr_outputs(outputs: List[dict], target_sizes: torch.Tensor, device:
 
 
 def enter_default_json(file) -> None:
+    """
+
+    Args:
+        file: 
+
+    """
     # Loading in the default values for inference
     iou_treshold = "0.5"
     score_treshold = "0.5"

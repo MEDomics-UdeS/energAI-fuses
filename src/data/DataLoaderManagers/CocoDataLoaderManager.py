@@ -16,28 +16,27 @@ from src.data.DataLoaderManagers.CustomDataLoaderManager import CustomDataLoader
 
 
 class CocoDataLoaderManager(CustomDataLoaderManager):
-    """
-    Data Loader Manager class, handles the creation of the training, validation and testing data loaders.
-    """
+    """Data Loader Manager class, handles the creation of the training, validation and testing data loaders."""
     def __init__(self,
                  dataset: CocoDatasetManager,
                  batch_size: int,
                  gradient_accumulation: int,
                  num_workers: int,
                  deterministic: bool) -> None:
-        """
-        Class constructor.
+        """Class constructor
 
-        :param dataset_manager: DatasetManager class, contains the training, validation and testing datasets
-        :param batch_size: int, mini-batch size for data loaders
-        :param gradient_accumulation: int, gradient accumulation size
-        :param num_workers: int, number of workers for multiprocessing
-        :param deterministic: bool, if True, then :
+        Args:
+            dataset(CocoDatasetManager): 
+            batch_size(int): mini-batch size for data loaders
+            gradient_accumulation(int): gradient accumulation size
+            num_workers(int): number of workers for multiprocessing
+            deterministic(bool): if True, then :
                                     - worker_init_fn will be specified for the data loaders
                                     - data won't be shuffled in the data loaders
-                                    if False, then:
+                                 if False, then:
                                     - worker_init_fn will not be specified for the data loaders
                                     - data will be shuffled in the data loaders
+
         """
         self._num_workers = num_workers
         self._deterministic = deterministic
@@ -53,4 +52,5 @@ class CocoDataLoaderManager(CustomDataLoaderManager):
 
     @property
     def data_loaders(self):
+        """ """
         return self._data_loaders

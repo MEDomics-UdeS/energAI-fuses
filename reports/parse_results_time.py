@@ -11,6 +11,16 @@ from parsing_utils import get_latex_exp_name, get_latex_ap_table, save_latex
 def parse_time(path: str,
                min_time_init: float = 1e30,
                max_time_init: float = 0) -> pd.DataFrame:
+    """
+
+    Args:
+        path(str): 
+        min_time_init(float, optional):  (Default value = 1e30)
+        max_time_init(float, optional):  (Default value = 0)
+
+    Returns:
+
+    """
     columns = ['Experiment Phase', 'Total Execution Time']
     df = pd.DataFrame(columns=columns)
 

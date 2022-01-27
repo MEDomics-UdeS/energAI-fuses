@@ -20,19 +20,17 @@ from src.utils.helper_functions import cp_split
 
 
 class ModelLoader:
-    """
-    Class responsible of handling the trained model file path
-    """
+    """Class responsible of handling the trained model file path"""
     def __init__(self,
                  window: Tk) -> None:
         """Class constructor
 
         Args:
-            window (Tk): Root window
-
+            window(Tk): Root window
         Notes:
             A model must be selected by the user in order to visualize the inference results.
             By default, none will be selected.
+            
         """
         
         Label(window,
@@ -82,7 +80,8 @@ class ModelLoader:
         """Opens a file manager window to select the model
 
         Args:
-            window (Tk): Root window
+            window(Tk): Root window
+
         """
         
         window.filename = filedialog.askopenfile(

@@ -39,9 +39,7 @@ from src.models.SummaryWriter import SummaryWriter
 
 
 class PipelineManager:
-    """
-    Training, validation and testing manager.
-    """
+    """Training, validation and testing manager"""
     def __init__(self, data_loader_manager: LearningDataLoaderManager,
                  file_name: str,
                  model_name: str,
@@ -63,23 +61,31 @@ class PipelineManager:
                  bbox_loss_coef: float, 
                  giou_loss_coef: float, 
                  eos_coef: float) -> None:
-        """
-        Class constructor
+        """Class constructor
 
-        :param data_loader_manager: DataLoaderManager, contains the training, validation and testing data loaders
-        :param file_name: str, file name to save tensorboard runs and model
-        :param model_name: str, model name
-        :param learning_rate: float, learning rate for the Adam optimizer
-        :param weight_decay: float, weight decay (L2 penalty) for the Adam optimizer
-        :param es_patience: int, early stopping patience (number of epochs of no improvement)
-        :param es_delta: float, early stopping delta (to evaluate improvement)
-        :param mixed_precision: bool, to use mixed precision in the training
-        :param gradient_accumulation: int, gradient accumulation size
-        :param pretrained: bool, to use a pretrained model
-        :param iou_threshold: float, iou threshold for non-maximum suppression and score filtering the predicted boxes
-        :param gradient_clip: float, value at which to clip the gradient when using gradient accumulation
-        :param args_dict: dict, dictionary of all parameters to log the hyperparameters in tensorboard
-        :param save_model: bool, to save the trained model in the saved_models/ directory
+        Args:
+            data_loader_manager(LearningDataLoaderManager): contains the training, validation and testing data loaders
+            file_name(str): file name to save tensorboard runs and model
+            model_name(str): model name
+            learning_rate(float): learning rate for the Adam optimizer
+            weight_decay(float): weight decay (L2 penalty) for the Adam optimizer
+            es_patience(int): early stopping patience (number of epochs of no improvement)
+            es_delta(float): early stopping delta (to evaluate improvement)
+            mixed_precision(bool): to use mixed precision in the training
+            gradient_accumulation(int): gradient accumulation size
+            pretrained(bool): to use a pretrained model
+            gradient_clip(float): value at which to clip the gradient when using gradient accumulation
+            args_dict(dict): dictionary of all parameters to log the hyperparameters in tensorboard
+            save_model(bool): to save the trained model in the saved_models/ directory
+            image_size(int): 
+            save_last(bool): 
+            log_training_metrics(bool): 
+            log_memory(bool): 
+            class_loss_ceof(float): 
+            bbox_loss_coef(float): 
+            giou_loss_coef(float): 
+            eos_coef(float): 
+
         """
         # Save arguments as object attributes
         self.__file_name = file_name
@@ -172,10 +178,11 @@ class PipelineManager:
             self.__last_metrics_dict = None
 
     def __call__(self, epochs: int) -> None:
-        """
-        Class __call__ method, called when object() is called
+        """Class __call__ method, called when object() is called
 
-        :param epochs: int, number of epochs
+        Args:
+            epochs(int): number of epochs
+
         """
 
         self.__swa_start = int(0.75 * epochs)
@@ -234,10 +241,11 @@ class PipelineManager:
         self.__writer.close()
 
     def __train_model(self, epochs: int) -> None:
-        """
-        Train the model
+        """Train the model
 
-        :param epochs: int, number of epochs
+        Args:
+            epochs(int): number of epochs
+
         """
         # Loop through each epoch
         for epoch in range(1, epochs + 1):
@@ -283,13 +291,17 @@ class PipelineManager:
                    data_loader: DataLoader,
                    phase: str,
                    epoch: int) -> float:
-        """
-        To perform forward passes, compute the losses and perform backward passes on the model
+        """To perform forward passes, compute the losses and perform backward passes on the model
 
-        :param data_loader: DataLoader, data loader object
-        :param phase: str, current phase, either 'Training' or 'Validation'
-        :param epoch: int, current epoch
-        :return: float, mean loss for the current epoch
+        Args:
+            model(Any): 
+            data_loader(DataLoader): data loader object
+            phase(str): current phase, either 'Training' or 'Validation'
+            epoch(int): current epoch
+
+        Returns:
+            float: mean loss for the current epoch
+            
         """
         # Declare tqdm progress bar
         pbar = tqdm(total=len(data_loader), leave=False, desc=f'{phase} Epoch {epoch}')
@@ -355,11 +367,12 @@ class PipelineManager:
     def __update_model(self,
                        losses: torch.Tensor,
                        i: int) -> None:
-        """
+        """Updates the model's weights
 
-        :param losses:
-        :param i:
-        :return:
+        Args:
+            losses(torch.Tensor): 
+            i(int): 
+
         """
         # Backward pass for no gradient accumulation + no mixed precision
         if not self.__gradient_accumulation and not self.__mixed_precision:
@@ -397,11 +410,15 @@ class PipelineManager:
     def __validate_model(self,
                          model: Any,
                          epoch: int) -> float:
-        """
-        Validate the model for the current epoch
+        """Validate the model for the current epoch
 
-        :param epoch: int, current epoch
-        :return: float, mean recall per image metric
+        Args:
+            model(Any): 
+            epoch(int): current epoch
+
+        Returns:
+            float: mean recall per image metric
+
         """
         # Deactivate the autograd engine
         with torch.no_grad():
@@ -428,9 +445,7 @@ class PipelineManager:
         return metrics_dict[EVAL_METRIC]
 
     def __test_model(self) -> None:
-        """
-        Test the trained model
-        """
+        """Test the trained model"""
         model = self.__swa_model if self.__save_last else self.__best_model
 
         # Update bn statistics for the swa_model at the end
@@ -450,9 +465,13 @@ class PipelineManager:
                         desc: str) -> dict:
         """
 
-        :param model:
-        :param data_loader:
-        :return:
+        Args:
+            model(Any): 
+            data_loader(DataLoader): 
+            desc(str): 
+
+        Returns:
+
         """
         pbar = tqdm(total=len(data_loader), leave=False, desc=desc)
 
@@ -492,11 +511,12 @@ class PipelineManager:
     def __save_batch(self,
                      phase: str,
                      loss: float) -> None:
-        """
-        Save batch losses to tensorboard
+        """Save batch losses to tensorboard
 
-        :param phase: str, phase, either 'Training' or 'Validation'
-        :param loss: float, total loss per batch
+        Args:
+            phase(str): phase, either 'Training' or 'Validation'
+            loss(float): total loss per batch
+
         """
         if phase == 'Training':
             self.__writer.add_scalar(f'Loss/{phase} (total per batch)', loss, self.__train_step)
@@ -510,13 +530,14 @@ class PipelineManager:
                      loss: float,
                      metrics_dict: Optional[dict],
                      epoch: int) -> None:
-        """
-        Save epoch results to tensorboard
+        """Save epoch results to tensorboard
 
-        :param phase: str, either 'Training' or 'Validation'
-        :param loss: float, mean loss per epoch
-        :param metrics_dict: dict, contains the object detection evaluation metrics
-        :param epoch: int, current epoch
+        Args:
+            phase(str): either 'Training' or 'Validation'
+            loss(float): mean loss per epoch
+            metrics_dict(Optional[dict]): contains the object detection evaluation metrics
+            epoch(int): current epoch
+
         """
         self.__writer.add_scalar(f'Loss/{phase} (mean per epoch)', loss, epoch)
 
@@ -533,10 +554,11 @@ class PipelineManager:
 
     def __save_memory(self,
                       scale: float = 1e-9) -> None:
-        """
-        Save current memory usage to tensorboard
+        """Save current memory usage to tensorboard
 
-        :param scale: float, scale to apply to the memory values (1e-9 : giga)
+        Args:
+            scale(float, optional): scale to apply to the memory values (1e-9 : giga) (Default value = 1e-9)
+
         """
         mem_reserved = memory_reserved(0) * scale
         mem_allocated = memory_allocated(0) * scale
@@ -551,6 +573,15 @@ class PipelineManager:
     def __rank_images(self,
                       model: Any,
                       metrics: str = 'loss') -> dict:
+        """
+
+        Args:
+            model(Any): 
+            metrics(str, optional):  (Default value = 'loss')
+
+        Returns:
+
+        """
         
         performance_dict = {
             "training": [],
@@ -595,6 +626,16 @@ class PipelineManager:
                             data_type: str,
                             performance_dict: dict,
                             desc: str) -> None:
+        """
+
+        Args:
+            model(Any): 
+            data_loader(DataLoader): 
+            data_type(str): 
+            performance_dict(dict): 
+            desc(str): 
+
+        """
         # Declare tqdm progress bar
         pbar = tqdm(total=len(data_loader), leave=False, desc=desc)
         
@@ -660,6 +701,16 @@ class PipelineManager:
                             data_type: str,
                             performance_dict: dict,
                             desc: str) -> None:
+        """
+
+        Args:
+            model(Any): 
+            ds: 
+            data_type(str): 
+            performance_dict(dict): 
+            desc(str): 
+
+        """
         # Declare tqdm progress bar
         pbar = tqdm(total=len(ds), leave=False, desc=desc)
 

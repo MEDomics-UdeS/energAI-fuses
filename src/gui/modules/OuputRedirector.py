@@ -25,9 +25,7 @@ from src.utils.constants import COLOR_PALETTE
 
 
 class OutputRedirector:
-    """
-    Class that creates a thread that reads a subprocess' output and dumps it in a read-only text box
-    """
+    """Class that creates a thread that reads a subprocess' output and dumps it in a read-only text box"""
     def __init__(self,
                  window: Tk,
                  target: ReadOnlyTextBox,
@@ -35,9 +33,10 @@ class OutputRedirector:
         """Class constructor
 
         Args:
-            window (Tk): Root window
-            target (ReadOnlyTextBox): Output's target destination
-            cmd (list(str)): List of every flags used for the subprocess
+            window(Tk): Root window
+            target(ReadOnlyTextBox): Output's target destination
+            cmd(list): List of every flags used for the subprocess
+
         """
         
         # Declare the parent window of the OutputRedirector
@@ -68,7 +67,8 @@ class OutputRedirector:
         """Read subprocess output and put it into the queue
 
         Args:
-            q (Queue): Queue that stores the subprocess' output
+            q(Queue): Queue that stores the subprocess' output
+
         """
         
         try:
@@ -83,7 +83,8 @@ class OutputRedirector:
         """Update GUI with items from the queue
 
         Args:
-            q (Queue): Queue that stores the subprocess' output
+            q(Queue): Queue that stores the subprocess' output
+
         """
 
         for line in iter_except(q.get_nowait, Empty):
@@ -113,11 +114,9 @@ def iter_except(function: Callable,
     """Works like builtin 2-argument `iter()`, but stops on `exception`
 
     Args:
-        function (Callable): Function called until the exception is raised
-        exception (Exception): Stopping condition exception
+        function(Callable): Callable
+        exception(Exception): Exception
 
-    Yields:
-        Callable: Function called until the exception is raised
     """
 
     try:

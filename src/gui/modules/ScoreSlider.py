@@ -18,18 +18,17 @@ from src.utils.constants import GUI_SETTINGS, FONT_PATH, COLOR_PALETTE
 
 
 class ScoreSlider:
-    """
-    Class responsible of handling the score threshold value for inference
-    """
+    """Class responsible of handling the score threshold value for inference"""
     def __init__(self,
                  window: Toplevel) -> None:
         """Class constructor
 
         Args:
-            window (Toplevel): Root window
-
+            window(Toplevel): Root window
+        
         Notes:
             By default, the score treshold will be set to 0.5
+
         """
         
         Label(window, 
@@ -65,7 +64,8 @@ class ScoreSlider:
         """Updates the settings JSON file when the user interacts with the slider
 
         Args:
-            value (DoubleVar): Current value of the slider
+            value(DoubleVar): Current value of the slider
+
         """
         
         # Overwriting the settings json file
