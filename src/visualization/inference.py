@@ -202,7 +202,7 @@ def draw_annotations(draw: ImageDraw.ImageDraw,
         for target_box, target_label, target_score, (box_width, font)\
                 in zip(target_boxes, target_labels, target_scores, target_annotations):
             draw.text(
-                (target_box[0], target_box[1] + font.size), text=f'{target_label} {target_score:.4f}', font=font, fill=COLOR_PALETTE["green"], stroke_width=int(font.size / 10), stroke_fill=COLOR_PALETTE["bg"])
+                (target_box[0], target_box[1] + font.size), text=f'{target_label}', font=font, fill=COLOR_PALETTE["green"], stroke_width=int(font.size / 10), stroke_fill=COLOR_PALETTE["bg"])
 
     # Drawing predicted labels over the bounding boxes on the image
     for pred_box, pred_label, pred_score, (box_width, font)\
@@ -258,7 +258,7 @@ def scale_annotation_sizes(img: Image,
     Returns:
 
     """
-    img_area = img.size[0] * img.size[1]
+    # img_area = img.size[0] * img.size[1]
 
     pred_annotations = []
     target_annotations = []
@@ -266,8 +266,9 @@ def scale_annotation_sizes(img: Image,
     for box in pred["boxes"]:
         box_area = (box[0] - box[2]) * (box[1] - box[3])
 
-        box_width = int(pow(img_area / box_area * 60, 0.25))
-        font_size = int(pow(box_area * 1.2, 0.3))
+        box_width = scale_box_width(box_area)
+        # box_width = int(pow(img_area / box_area * 60, 0.25))
+        font_size = int((1.2 * box_area) ** 0.3)
 
         pred_annotations.append(
             (box_width, ImageFont.truetype(FONT_PATH, font_size)))
@@ -276,8 +277,9 @@ def scale_annotation_sizes(img: Image,
         for box in target["boxes"]:
             box_area = (box[0] - box[2]) * (box[1] - box[3])
 
-            box_width = int(pow(img_area / box_area * 60, 0.25))
-            font_size = int(pow(box_area * 1.2, 0.3))
+            box_width = scale_box_width(box_area)
+            # box_width = int(pow(img_area / box_area * 60, 0.25))
+            font_size = int((1.2 * box_area) ** 0.3)
 
             target_annotations.append(
                 (box_width, ImageFont.truetype(FONT_PATH, font_size)))
@@ -286,6 +288,24 @@ def scale_annotation_sizes(img: Image,
 
     # Declare the font object to write the confidence scores on the images
     return pred_annotations, target_annotations
+
+
+def scale_box_width(area):
+    # Scaling formula from : https://math.stackexchange.com/questions/43698/range-scaling-problem
+    # Scales linearly values from range [A, B] in [C, D]
+
+    A, B, C, D = 1000, 2_000_000, 5, 32
+
+    # Forcing extreme values in the expected range
+    if area < A:
+        area = A
+    if area > B:
+        area = B
+
+    term1 = C * (1 - (area - A)/(B - A))
+    term2 = D * ((area - A)/(B - A))
+
+    return int(term1 + term2)
 
 
 @torch.no_grad()

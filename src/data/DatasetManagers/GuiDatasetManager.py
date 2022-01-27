@@ -47,10 +47,11 @@ class GuiDatasetManager(CustomDatasetManager):
             # Resize all images
             self._resize_images(image_size, num_workers, images_path, gt_file)
 
-        self._dataset = FuseDataset(GUI_RESIZED_PATH,
-                                    targets_path=GUI_TARGETS_PATH if gt_file else None,
+        self._dataset = FuseDataset(images_path=GUI_RESIZED_PATH,
+                                    images_filenames=[f for f in os.listdir(GUI_RESIZED_PATH) if f.startswith('.') is False],
+                                    targets=GUI_TARGETS_PATH if gt_file else None,
                                     num_workers=num_workers,
-                                    google_images=True)
+                                    phase="Inference")
         
         self._dataset.transforms = self._transforms_base(MEAN, STD)
     
