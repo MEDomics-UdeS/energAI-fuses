@@ -1,3 +1,16 @@
+"""
+File:
+    reports/parsing_utils.py
+
+Authors:
+    - Simon Giard-Leroux
+    - Guillaume Cléroux
+    - Shreyas Sunil Kulkarni
+
+Description:
+    Parsing utility functions
+"""
+
 import pandas as pd
 from math import log10, floor
 from typing import Optional
@@ -6,13 +19,13 @@ from reports.constants import AP_DICT
 
 
 def get_digits_precision(x: float) -> int:
-    """
+    """Function to get number of digits to round at for significant digit purposes
 
     Args:
-        x(float): 
+        x(float): floating point value
 
     Returns:
-        int: 
+        int: digits of precision to round at
 
     """
     if x == 0:
@@ -24,16 +37,15 @@ def get_digits_precision(x: float) -> int:
 def get_latex_exp_name(letter: str, *,
                        phase: Optional[str] = None,
                        hparam: Optional[str] = None) -> str:
-    """
+    """Function to generate LaTeX code for an experiment name section title
 
     Args:
-        letter(str): 
-        *: 
-        phase(Optional[str], optional):  (Default value = None)
-        hparam(Optional[str], optional):  (Default value = None)
+        letter(str): experiment letter for current experiment
+        phase(Optional[str], optional): phase for current experiment (Validation or Testing) (Default value = None)
+        hparam(Optional[str], optional): hyperparameter for current experiment (Default value = None)
 
     Returns:
-        str: 
+        str: LaTeX code
 
     """
     title = f'Experiment {letter}'
@@ -53,19 +65,18 @@ def get_latex_ap_table(df: pd.DataFrame, *,
                        phase: Optional[str] = None,
                        hparam: Optional[str] = None,
                        metric: Optional[str] = None) -> str:
-    """
+    """Function to get LaTeX code for an AP results table
 
     Args:
-        df(pd.DataFrame): 
-        *: 
-        index(int): 
-        letter(str): 
-        phase(Optional[str], optional):  (Default value = None)
-        hparam(Optional[str], optional):  (Default value = None)
-        metric(Optional[str], optional):  (Default value = None)
+        df(pd.DataFrame): pandas DataFrame containing AP results
+        index(int): table index
+        letter(str): experiment letter
+        phase(Optional[str], optional): experiment phase (Validation or Testing) (Default value = None)
+        hparam(Optional[str], optional): hyperparameter for current experiment (Default value = None)
+        metric(Optional[str], optional): metric being evaluated for current experiment (Default value = None)
 
     Returns:
-        str: 
+        str: LaTeX code
 
     """
     title = f'Experiment {letter}'
@@ -89,12 +100,12 @@ def get_latex_ap_table(df: pd.DataFrame, *,
 def save_latex(input_str: str,
                letter: str,
                path: Optional[str] = None) -> None:
-    """
+    """Function to save LaTeX code for a specific experiment to a file
 
     Args:
-        input_str(str): 
-        letter(str): 
-        path(Optional[str], optional):  (Default value = None)
+        input_str(str): LaTeX code string
+        letter(str): experiment letter
+        path(Optional[str], optional): saved file path (Default value = None)
 
     """
     file_path = f'{path}latex_phase_{letter}.txt' if path else f'latex_phase_{letter}.txt'
@@ -106,13 +117,13 @@ def save_latex(input_str: str,
 
 
 def get_scalars_dict(phase: str) -> dict:
-    """
+    """Function to create a scalar dictionary
 
     Args:
-      phase(str): 
+      phase(str): experiment phase
 
     Returns:
-        dict: 
+        dict: scalar dictionary
 
     """
     scalars_dict = {}

@@ -8,7 +8,7 @@ Authors:
     - Shreyas Sunil Kulkarni
 
 Description:
-    Allows to perform multiple src/saved_models/experiment.py runs with different parameters
+    Allows to perform multiple experiment.py runs with different parameters
 """
 
 from itertools import product
@@ -37,8 +37,10 @@ if __name__ == '__main__':
             fixed_params = json_dict["fixed"]
             variable_params = json_dict["variable"]
             f_obj.close()
+
     except FileNotFoundError:
         print("No valid JSON file entered for experiments. Please verify in project directory.")
+
     else:
         # Declare list of commands to be executed
         if variable_params:

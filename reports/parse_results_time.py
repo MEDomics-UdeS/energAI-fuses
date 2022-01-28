@@ -1,3 +1,16 @@
+"""
+File:
+    reports/parse_results_time.py
+
+Authors:
+    - Simon Giard-Leroux
+    - Guillaume Cléroux
+    - Shreyas Sunil Kulkarni
+
+Description:
+    Parsing script for experiment times for all phases
+"""
+
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 import os
 import pandas as pd
@@ -11,14 +24,14 @@ from parsing_utils import get_latex_exp_name, get_latex_ap_table, save_latex
 def parse_time(path: str,
                min_time_init: float = 1e30,
                max_time_init: float = 0) -> pd.DataFrame:
-    """
+    """Function to parse experiment times for tensorboard runs
 
     Args:
-        path(str): 
-        min_time_init(float, optional):  (Default value = 1e30)
-        max_time_init(float, optional):  (Default value = 0)
+        path(str): path to tensorboard runs
+        min_time_init(float, optional): minimum time found (Default value = 1e30)
+        max_time_init(float, optional): maximum time found (Default value = 0)
 
-    Returns:
+    Returns: pandas DataFrame containing experiment times
 
     """
     columns = ['Experiment Phase', 'Total Execution Time']
@@ -49,9 +62,6 @@ def parse_time(path: str,
 
             if min_time != min_time_init and max_time != max_time_init:
                 total_time += max_time - min_time
-            #     print(f'{experiment}: {str(timedelta(seconds=max_time - min_time)).split(".")[0]}')
-            # else:
-            #     print(f'Invalid time found @ experiment: {experiment}')
 
         df = df.append({columns[0]: phase,
                         columns[1]: str(timedelta(seconds=total_time)).split('.')[0]},

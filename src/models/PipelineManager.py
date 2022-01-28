@@ -77,14 +77,14 @@ class PipelineManager:
             gradient_clip(float): value at which to clip the gradient when using gradient accumulation
             args_dict(dict): dictionary of all parameters to log the hyperparameters in tensorboard
             save_model(bool): to save the trained model in the saved_models/ directory
-            image_size(int): 
-            save_last(bool): 
-            log_training_metrics(bool): 
-            log_memory(bool): 
-            class_loss_ceof(float): 
-            bbox_loss_coef(float): 
-            giou_loss_coef(float): 
-            eos_coef(float): 
+            image_size(int): image resizing parameter
+            save_last(bool): choose whether to save the last epoch or save the best epoch
+            log_training_metrics(bool): choose whether to log training metrics
+            log_memory(bool): choose whether to log memory usage
+            class_loss_ceof(float): DETR class loss parameter
+            bbox_loss_coef(float): DETR bounding box loss parameter
+            giou_loss_coef(float): DETR iou loss parameter
+            eos_coef(float): DETR eos coefficient parameter
 
         """
         # Save arguments as object attributes
@@ -294,7 +294,7 @@ class PipelineManager:
         """To perform forward passes, compute the losses and perform backward passes on the model
 
         Args:
-            model(Any): 
+            model(Any): model object
             data_loader(DataLoader): data loader object
             phase(str): current phase, either 'Training' or 'Validation'
             epoch(int): current epoch
@@ -370,8 +370,8 @@ class PipelineManager:
         """Updates the model's weights
 
         Args:
-            losses(torch.Tensor): 
-            i(int): 
+            losses(torch.Tensor): losses tensor from forward pass
+            i(int): step index
 
         """
         # Backward pass for no gradient accumulation + no mixed precision
@@ -413,11 +413,11 @@ class PipelineManager:
         """Validate the model for the current epoch
 
         Args:
-            model(Any): 
+            model(Any): model object
             epoch(int): current epoch
 
         Returns:
-            float: mean recall per image metric
+            float: validation metric result
 
         """
         # Deactivate the autograd engine
@@ -463,14 +463,14 @@ class PipelineManager:
                         model: Any,
                         data_loader: DataLoader,
                         desc: str) -> dict:
-        """
+        """Method to evaluate the model's performance with COCO metrics
 
         Args:
-            model(Any): 
-            data_loader(DataLoader): 
-            desc(str): 
+            model(Any): model object
+            data_loader(DataLoader): data loader object
+            desc(str): description string for tqdm progress bar
 
-        Returns:
+        Returns: COCO metrics results dictionary
 
         """
         pbar = tqdm(total=len(data_loader), leave=False, desc=desc)
@@ -573,13 +573,13 @@ class PipelineManager:
     def __rank_images(self,
                       model: Any,
                       metrics: str = 'loss') -> dict:
-        """
+        """Method to rank images based on obtained performance
 
         Args:
-            model(Any): 
-            metrics(str, optional):  (Default value = 'loss')
+            model(Any): model object
+            metrics(str, optional): metric to rank images on (Default value = 'loss')
 
-        Returns:
+        Returns: dictionary with ranked images
 
         """
         
@@ -626,14 +626,14 @@ class PipelineManager:
                             data_type: str,
                             performance_dict: dict,
                             desc: str) -> None:
-        """
+        """Method to rank images performance based on loss
 
         Args:
-            model(Any): 
-            data_loader(DataLoader): 
-            data_type(str): 
-            performance_dict(dict): 
-            desc(str): 
+            model(Any): model object
+            data_loader(DataLoader): data loader object
+            data_type(str): data type
+            performance_dict(dict): performance dictionary
+            desc(str): description string for tqdm progress bar
 
         """
         # Declare tqdm progress bar
@@ -701,14 +701,14 @@ class PipelineManager:
                             data_type: str,
                             performance_dict: dict,
                             desc: str) -> None:
-        """
+        """Method to rank images performance based on COCO metrics
 
         Args:
-            model(Any): 
-            ds: 
-            data_type(str): 
-            performance_dict(dict): 
-            desc(str): 
+            model(Any): model object
+            ds: COCO dataset
+            data_type(str): data type
+            performance_dict(dict): performance dictionary
+            desc(str): description string for tqdm progress bar
 
         """
         # Declare tqdm progress bar

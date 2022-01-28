@@ -1,6 +1,6 @@
 """
 File:
-    src/data/FuseDataset.py
+    src/data/Datasets/FuseDataset.py
 
 Authors:
     - Simon Giard-Leroux
@@ -12,51 +12,35 @@ Description:
 """
 
 import torch
-import os
 from tqdm import trange
 import json
-from PIL import Image
 import ray
 from typing import Tuple, List
 from copy import deepcopy
 
 from src.data.Datasets.CustomDataset import CustomDataset, ray_load_images
-from src.utils.constants import RESIZED_LEARNING_PATH
 
 
 class FuseDataset(CustomDataset):
     """Custom fuse dataset class"""
     def __init__(self,
                  images_path: str,
-                 images_filenames: str,
+                 images_filenames: List[str],
                  targets: str,
                  num_workers: int,
-                 phase: str) -> None: #,
-                 # google_images: bool = True,
-                 # load_to_ram: bool = True) -> None:
+                 phase: str) -> None:
         """Class constructor
 
         Args:
             images_path(str): path to the images
-            image_paths(str): 
-            targets(str): 
+            images_filenames(List[str]): list of individual file names for all images
+            targets(str): targets file name
             num_workers(int): number of workers for multiprocessing
-            phase(str): 
+            phase(str): phase, 'Training' or 'Inference'
 
         """
-        # Check if images_path has been specified
-        # if images_path is not None:
 
-        # Get all survey images paths and ignore the .gitkeep file
-        # images = [img for img in sorted(os.listdir(images_path)) if img.startswith('.') is False]
-        #
-        # if not google_images:
-        #     google_imgs = [image for image in images if image.startswith('G')]
-        #     google_indices = [images.index(google_image) for google_image in google_imgs]
-        #     images = [e for i, e in enumerate(images) if i not in google_indices]
-        #
         # Save the image paths as an object attribute
-        # self._image_paths = [os.path.join(images_path, img) for img in images]
         self._image_paths = [images_path + image_path for image_path in images_filenames]
         
         # Check if targets_path has been specified
@@ -82,7 +66,6 @@ class FuseDataset(CustomDataset):
         # Get the dataset size
         size = len(self._image_paths)
 
-        # if load_to_ram:
         # Initialize ray
         ray.init(include_dashboard=False)
 
@@ -121,26 +104,6 @@ class FuseDataset(CustomDataset):
 
         # Shutdown ray
         ray.shutdown()
-        # else:
-        #     # Specify blank image_paths and images lists
-        #     self._image_paths = []
-        #     self._images = []
-
-        # Check if targets_path has been specified
-        # if targets_path is not None:
-        #     # Load the targets json into the targets attribute in the object
-        #     self._targets = json.load(open(targets_path))
-        #
-        #     if not google_images:
-        #         self._targets = [e for i, e in enumerate(self._targets) if i not in google_indices]
-        #
-        #     # Convert the targets to tensors
-        #     for target in self._targets:
-        #         for key, value in target.items():
-        #             target[key] = torch.as_tensor(value, dtype=torch.int64)
-        # else:
-        #     # Declare empty targets list
-        #     self._targets = []
 
     def __getitem__(self, index: int) -> Tuple[torch.Tensor, dict]:
         """Class __getitem__ method, called when object[index] is used
@@ -162,41 +125,3 @@ class FuseDataset(CustomDataset):
     def targets(self):
         """ """
         return self._targets
-
-    # def extract_data(self, index_list: List[int]) -> Tuple[List[str], List[Image.Image], List[dict]]:
-    #     """
-    #     Extract data from the object
-    #
-    #     :param index_list: list, indices to extract
-    #     :return: tuple, extracted elements
-    #     """
-    #     # Sort and reverse the index list
-    #     index_list = sorted(index_list, reverse=True)
-    #
-    #     # Declare empty lists for the extracted elements
-    #     image_paths = []
-    #     images = []
-    #     targets = []
-    #
-    #     # Loop through the index list
-    #     for index in index_list:
-    #         # Pop the elements from the object and append to the extracted elements' lists
-    #         image_paths.append(self._image_paths.pop(index))
-    #         images.append(self._images.pop(index))
-    #         targets.append(self._targets.pop(index))
-    #
-    #     # Return the extracted elements
-    #     return image_paths, images, targets
-    #
-    # def add_data(self, image_paths: List[str], images: List[Image.Image], targets: List[dict]) -> None:
-    #     """
-    #     Add data to the object
-    #
-    #     :param image_paths: list, strings of image paths
-    #     :param images: list, PIL Images
-    #     :param targets: list, targets dictionaries
-    #     """
-    #     # Add the data in arguments to the object attributes
-    #     self._image_paths.extend(image_paths)
-    #     self._images.extend(images)
-    #     self._targets.extend(targets)

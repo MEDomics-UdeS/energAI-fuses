@@ -99,10 +99,10 @@ def filter_by_nms(preds_list: List[dict],
     """Function to filter a bounding boxes predictions list by using non-maximum suppression
 
     Args:
-        preds_list(List[dict]): redicted bounding boxes
+        preds_list(List[dict]): predicted bounding boxes
         iou_threshold(float): iou threshold for non-maximum suppression
 
-    Returns:
+    Returns: filtered predictions list
 
     """
     keep_nms = [nms(pred['boxes'], pred['scores'], iou_threshold) for pred in preds_list]
@@ -123,7 +123,7 @@ def filter_by_score(preds_list: List[dict],
         preds_list(List[dict]): predicted bounding boxes
         score_threshold(float): confidence score threshold above which predictions are to be saved
 
-    Returns:
+    Returns: filtered predictions list
 
     """
     preds_filt = []
@@ -175,8 +175,6 @@ def json_to_csv(dir_list: List[str]) -> None:
     Args:
         dir_list(List[str]): list containing the directories in which to fetch the jsons
 
-    Returns:
-
     """
     for directory in dir_list:
         files = [f for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))]
@@ -209,12 +207,12 @@ def json_to_csv(dir_list: List[str]) -> None:
 def print_dict(dictionary: dict,
                n_spaces: int,
                str_format: str = None) -> None:
-    """
+    """Function to print dictionary keys and values
 
     Args:
-        dictionary(dict): 
-        n_spaces(int): 
-        str_format(str, optional): (Default value = None)
+        dictionary(dict): dictionary
+        n_spaces(int): number of spaces between keys and values
+        str_format(str, optional): format string for floating point values (Default value = None)
 
     """
     max_key_length = max(map(len, dictionary)) + n_spaces
@@ -240,14 +238,14 @@ def rename_photos(root_dir: str) -> None:
 
 
 def format_detr_outputs(outputs: List[dict], target_sizes: torch.Tensor, device: torch.device) -> List[dict]:
-    """
+    """Function to format DETR outputs
 
     Args:
-        outputs(List[dict]): 
-        target_sizes(torch.Tensor): 
-        device(torch.device): 
+        outputs(List[dict]): DETR outputs
+        target_sizes(torch.Tensor): target sizes
+        device(torch.device): device (cpu or CUDA)
 
-    Returns:
+    Returns: formatted DETR outputs
 
     """
 
@@ -273,10 +271,10 @@ def format_detr_outputs(outputs: List[dict], target_sizes: torch.Tensor, device:
 
 
 def enter_default_json(file) -> None:
-    """
+    """Function to enter default JSON
 
     Args:
-        file: 
+        file: file name
 
     """
     # Loading in the default values for inference

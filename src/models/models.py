@@ -24,9 +24,9 @@ def load_model(model_name: str,
     """Method to load a model from PyTorch
 
     Args:
-        model_name(str): 
-        pretrained(bool): 
-        num_classes(int): 
+        model_name(str): model name
+        pretrained(bool): choose whether to load a pretrained model or a model from scratch
+        num_classes(int): number of classes for last fully-connected layer
         progress(bool, optional): if True, displays a progress bar of the download to stderr (Default value = True)
         trainable_backbone_layers(Optional[int], optional): number of trainable (not frozen) resnet layers starting from final block.
                                                             Valid values are between 0 and 5, with 5 meaning all backbone layers are
@@ -83,9 +83,9 @@ def replace_model_head(model: Any,
     """Replace model head with the right number of classes (for transfer learning)
 
     Args:
-        model(Any): 
-        model_name(str): 
-        num_classes(int): 
+        model(Any): model
+        model_name(str): model name
+        num_classes(int): number of classes for last fully-connected layer
 
     Returns:
 
@@ -111,11 +111,11 @@ def replace_model_head(model: Any,
     return model
 
 
-def load_detr_state_dict(model):  # Type: models.detr.DETR
+def load_detr_state_dict(model):
     """Load pretrained weights for DE:TR model
 
     Args:
-        model: 
+        model: DETR model
 
     """
     checkpoint = torch.hub.load_state_dict_from_url(

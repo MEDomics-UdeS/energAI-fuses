@@ -1,3 +1,16 @@
+"""
+File:
+    reports/constants.py
+
+Authors:
+    - Simon Giard-Leroux
+    - Guillaume Cléroux
+    - Shreyas Sunil Kulkarni
+
+Description:
+    File containing constants used for results parsing
+"""
+
 from os.path import join
 
 PATH = '/home/simon/Desktop/Results_Fuses'

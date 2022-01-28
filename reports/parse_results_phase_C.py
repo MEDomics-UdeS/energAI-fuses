@@ -1,3 +1,16 @@
+"""
+File:
+    reports/parse_results_phase_C.py
+
+Authors:
+    - Simon Giard-Leroux
+    - Guillaume Cléroux
+    - Shreyas Sunil Kulkarni
+
+Description:
+    Parsing script for phase C results
+"""
+
 import os
 import pandas as pd
 import torch
@@ -11,17 +24,17 @@ def parse_results(saved_models_path: str,
                   log_path: str,
                   scalars_dict: dict,
                   round_to_1_sign_digit: bool = False,
-                  num_decimals: int = 4) -> pd.DataFrame:
-    """
+                  num_decimals: int = 4) -> (pd.DataFrame, pd.DataFrame):
+    """Function to parse results for phase C
 
     Args:
-        saved_models_path(str): 
-        log_path(str): 
-        scalars_dict(dict): 
-        round_to_1_sign_digit(bool, optional):  (Default value = False)
-        num_decimals(int, optional):  (Default value = 4)
+        saved_models_path(str): saved models path
+        log_path(str): logdir path
+        scalars_dict(dict): scalars dictionary
+        round_to_1_sign_digit(bool, optional): choose whether to round to 1 significant digit or not (Default value = False)
+        num_decimals(int, optional): number of decimals (Default value = 4)
 
-    Returns:
+    Returns: pandas DataFrame for all seeds, pandas DataFrame for standard deviations
 
     """
     columns_all_seeds = ['Seed']

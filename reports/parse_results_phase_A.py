@@ -1,3 +1,17 @@
+"""
+File:
+    reports/parse_results_phase_A.py
+
+Authors:
+    - Simon Giard-Leroux
+    - Guillaume Cléroux
+    - Shreyas Sunil Kulkarni
+
+Description:
+    Parsing script for phase A results
+"""
+
+
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 from math import floor, ceil, log10
 import torch
@@ -8,7 +22,7 @@ import matplotlib.pyplot as plt
 import json
 from typing import Optional
 
-from reports.parsing_utils import get_latex_ap_table, get_latex_exp_name, save_latex, get_digits_precision
+from reports.parsing_utils import get_latex_ap_table, get_latex_exp_name, save_latex
 from reports.constants import PATH_A, PHASES_LIST
 
 
@@ -16,13 +30,13 @@ def generate_figure(metric: str,
                     curves_dict: dict,
                     save: bool = True,
                     show: bool = False) -> None:
-    """
+    """Function to generate individual AP, loss or learning rate figure for phase A
 
     Args:
-        metric(str): 
-        curves_dict(dict): 
-        save(bool, optional):  (Default value = True)
-        show(bool, optional):  (Default value = False)
+        metric(str): metric to plot, either 'AP', 'Mean Loss' or 'Learning Rate'
+        curves_dict(dict): curves dictionary
+        save(bool, optional): choose whether to save the figure (Default value = True)
+        show(bool, optional): choose whether to show the figure  (Default value = False)
 
     """
     x_max = 0
@@ -80,14 +94,14 @@ def generate_figure_all(best_ap_curves: dict,
                         best_lr_curves: dict,
                         save: bool = True,
                         show: bool = False) -> None:
-    """
+    """Function to plot all figures for phase A: AP, mean loss and learning rate
 
     Args:
-        best_ap_curves(dict): 
-        best_loss_curves(dict): 
-        best_lr_curves(dict): 
-        save(bool, optional):  (Default value = True)
-        show(bool, optional):  (Default value = False)
+        best_ap_curves(dict): Dictionary of AP curves for best performing model for each architecture
+        best_loss_curves(dict): Dictionary of mean loss curves for best performing model for each architecture
+        best_lr_curves(dict): Dictionary of learning rate curves for best performing model for each architecture
+        save(bool, optional): Choose whether to save the figure (Default value = True)
+        show(bool, optional): Choose whether to show the figure (Default value = False)
 
     """
     fig, axs = plt.subplots(1, 3, figsize=(12, 3))
@@ -177,17 +191,16 @@ def parse_results(model_name: str, *,
                   logs_path: Optional[str] = None,
                   json_path: Optional[str] = None,
                   num_decimals: int = 4) -> pd.DataFrame:
-    """
+    """Function to parse the results for phase A from the tensorboard results
 
     Args:
-        model_name(str): 
-        *: 
-        models_path(Optional[str], optional):  (Default value = None)
-        logs_path(Optional[str], optional):  (Default value = None)
-        json_path(Optional[str], optional):  (Default value = None)
-        num_decimals(int, optional):  (Default value = 4)
+        model_name(str): model name
+        models_path(Optional[str], optional): models path (Default value = None)
+        logs_path(Optional[str], optional): logdir path (Default value = None)
+        json_path(Optional[str], optional): json path (Default value = None)
+        num_decimals(int, optional): number of decimals for results printing (Default value = 4)
 
-    Returns:
+    Returns: pandas dataframe with parsed results
 
     """
     columns = ['Model',
@@ -253,7 +266,6 @@ def parse_results(model_name: str, *,
 
                 event_acc = EventAccumulator(logs_path + file)
                 event_acc.Reload()
-                # scalars = event_acc.Tags()['scalars']
 
                 results_list = []
 
@@ -280,15 +292,15 @@ def parse_results(model_name: str, *,
 
 
 def add_curve_to_dict(acc: EventAccumulator, scalar_key: str, run_key: str, curves_dict: dict) -> dict:
-    """
+    """Function to add curve from tensorboard EventAccumulator to curves dictionary
 
     Args:
-        acc(EventAccumulator): 
-        scalar_key(str): 
-        run_key(str): 
-        curves_dict(dict): 
+        acc(EventAccumulator): Tensorboard EventAccumulator object instance
+        scalar_key(str): scalar key in tensorboard
+        run_key(str): run key in tensorboard
+        curves_dict(dict): curves dictionary
 
-    Returns:
+    Returns: curves dictionary
 
     """
     times, steps, vals = zip(*acc.Scalars(scalar_key))
@@ -298,14 +310,15 @@ def add_curve_to_dict(acc: EventAccumulator, scalar_key: str, run_key: str, curv
 
 
 def get_best_results(results_dict: dict,
-                     metric: str) -> pd.DataFrame:
-    """
+                     metric: str) -> (pd.DataFrame, dict, dict, dict):
+    """Function to find the best results inside a results dictionary
 
     Args:
-        results_dict(dict): 
-        metric(str): 
+        results_dict(dict): results dictionary
+        metric(str): metric chosen to evaluate the best results
 
-    Returns:
+    Returns: pandas DataFrame with best results, best ap curves dictionary, best loss curves dictionary and
+             best learning rate curves dictionary
 
     """
     best_results_df = pd.DataFrame()

@@ -1,3 +1,16 @@
+"""
+File:
+    reports/parse_results_phase_B.py
+
+Authors:
+    - Simon Giard-Leroux
+    - Guillaume Cléroux
+    - Shreyas Sunil Kulkarni
+
+Description:
+    Parsing script for phase B results
+"""
+
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 import torch
 import os
@@ -15,21 +28,21 @@ def parse_results_k(results_all_df: pd.DataFrame,
                     hyperparameter: str,
                     metric: str,
                     round_to_1_digit: bool = False,
-                    num_decimals: int = 4) -> pd.DataFrame:
-    """
+                    num_decimals: int = 4) -> (pd.DataFrame, pd.DataFrame):
+    """Function to parse results for k-cross validation runs
 
     Args:
-        results_all_df(pd.DataFrame): 
-        phase(str): 
-        scalars_dict(dict): 
-        saved_models_path(str): 
-        log_path(str): 
-        hyperparameter(str): 
-        metric(str): 
-        round_to_1_digit(bool, optional):  (Default value = False)
-        num_decimals(int, optional):  (Default value = 4)
+        results_all_df(pd.DataFrame): pandas DataFrame containing all results
+        phase(str): Phase, either 'Validation' or 'Testing'
+        scalars_dict(dict): scalars dictionary
+        saved_models_path(str): saved models path
+        log_path(str): logdir path for tensorboard runs
+        hyperparameter(str): hyperparameter being varied for the specified run
+        metric(str): results metric to parse
+        round_to_1_digit(bool, optional): choose whether to round results to 1 significant digit (Default value = False)
+        num_decimals(int, optional): number of decimals (Default value = 4)
 
-    Returns:
+    Returns: pandas DataFrame for the current k, pandas DataFrame for all k's
 
     """
     hp_print_name = hyperparameter.replace('_', '\\_')
@@ -52,7 +65,6 @@ def parse_results_k(results_all_df: pd.DataFrame,
         for file_run in files_run:
             event_acc = EventAccumulator(os.path.join(log_path, file_run))
             event_acc.Reload()
-            # scalars = event_acc.Tags()['scalars']
 
             _, _, metric_value = zip(*event_acc.Scalars(metric))
 

@@ -1,6 +1,6 @@
 """
 File:
-    test_inference.py
+    reports/test_saved_model.py
 
 Authors:
     - Simon Giard-Leroux
@@ -8,8 +8,7 @@ Authors:
     - Shreyas Sunil Kulkarni
 
 Description:
-    Main file to run an inference test on a saved model and show
-    model predictions and ground truths boxes on the images
+    File to test a saved model and obtain results in LaTeX code
 """
 
 import argparse

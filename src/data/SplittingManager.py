@@ -19,6 +19,7 @@ import sys
 import zipfile
 import requests
 from tqdm import tqdm, trange
+from typing import List
 from PIL import Image
 import ray
 
@@ -37,17 +38,17 @@ class SplittingManager:
                  google_images: bool,
                  image_size: int,
                  num_workers: int) -> None:
-        """
+        """Class constructor
 
         Args:
-            dataset(str): 
-            validation_size(float): 
-            test_size(float): 
-            k_cross_valid(int): 
-            seed(int): 
-            google_images(bool): 
-            image_size(int): 
-            num_workers(int): 
+            dataset(str): dataset string, either 'learning' or 'holdout'
+            validation_size(float): validation set size in float [0, 1]
+            test_size(float): test set size in float [0, 1]
+            k_cross_valid(int): number of folds for k-fold cross-validation
+            seed(int): splitting seed
+            google_images(bool): choose whether to include google images or not
+            image_size(int): image size for image resizing purposes
+            num_workers(int): number of workers for multiprocessing
 
         """
 
@@ -78,8 +79,6 @@ class SplittingManager:
                 # Resize all images
                 self._resize_images(image_size, num_workers)
         else:
-            # Check if any image exists in the data/raw folder
-            # if any(file.endswith(f'.{IMAGE_EXT}') for file in os.listdir(self.__raw_images_path)):
             if os.path.isdir(self.__raw_images_path):
                 # Resize all images
                 self._resize_images(image_size, num_workers)
@@ -308,16 +307,16 @@ class SplittingManager:
                     self.__targets_test = self.__filter_list(targets, indices_test, True)
 
     @staticmethod
-    def __filter_list(my_list: list, indices: str, logic: bool) -> list:
-        """
+    def __filter_list(my_list: List[str], indices: List[int], logic: bool) -> List[str]:
+        """Method to filter a list based on a number of indices, either in direct or inverse logic
 
         Args:
-            my_list(list): 
-            indices(str): 
-            logic(bool): 
+            my_list(List[str]): input list
+            indices(List[int]): list of indices
+            logic(bool): choose whether to filter the list based on if the indices are in or not in the list
 
         Returns:
-            list: 
+            list: filtered list
 
         """
         if logic:
@@ -327,13 +326,13 @@ class SplittingManager:
 
     @staticmethod
     def __get_most_frequent_labels(targets: list) -> list:
-        """
+        """Function to find the most frequent labels in the ground truth file
 
         Args:
-            targets(list): 
+            targets(list): input targets list
 
         Returns:
-            list: 
+            list: list of most frequent labels
 
         """
         return [max(set(target['labels'].tolist()), key=target['labels'].tolist().count)

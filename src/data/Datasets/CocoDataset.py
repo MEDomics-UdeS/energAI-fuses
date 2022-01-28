@@ -1,3 +1,15 @@
+"""
+File:
+    src/data/Datasets/CocoDataset.py
+
+Authors:
+    - Simon Giard-Leroux
+    - Guillaume Cléroux
+    - Shreyas Sunil Kulkarni
+
+Description:
+    Generate COCO dataset
+"""
 
 from src.data.Datasets.CustomDataset import CustomDataset
 from PIL import Image

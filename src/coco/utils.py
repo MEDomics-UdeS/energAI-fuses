@@ -299,6 +299,7 @@ def init_distributed_mode(args):
     torch.distributed.barrier()
     setup_for_distributed(args.rank == 0)
 
+
 class HiddenPrints:
     def __enter__(self):
         self._original_stdout = sys.stdout

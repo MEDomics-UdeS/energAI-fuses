@@ -44,11 +44,11 @@ class LearningDatasetManager(CustomDatasetManager):
             data_aug(float): intensity of data augmentation transforms
             validation_size(float): size of validation dataset as a subset of the entire dataset
             test_size(float): size of test dataset as a subset of the entire dataset
-            norm(str): 
-            google_images(bool): 
-            seed(int): 
-            splitting_manager(SplittingManager): 
-            current_fold(int): 
+            norm(str): RGB pixel normalization parameter, either 'precalculated', 'calculated' or 'none'
+            google_images(bool): choose whether to include images from google
+            seed(int): initialization seed
+            splitting_manager(SplittingManager): splitting manager for k-cross validation + train, valid, test splitting
+            current_fold(int): current k-fold cross validation fold
 
         """
         self._google_images = google_images

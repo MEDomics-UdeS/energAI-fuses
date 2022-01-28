@@ -40,13 +40,13 @@ def save_test_images(model_file_name: str,
     Args:
         model_file_name(str): model file name to load
         data_loader(DataLoader): data loader object
-        with_gui(bool): 
+        with_gui(bool): choose whether to use the GUI for inference
         iou_threshold(float): intersection-over-union threshold for predicted bounding boxes filtering
-        score_threshold(float): 
+        score_threshold(float): objectness score for predicted bounding boxes filtering
         save_path(str): save path for the inference test images
-        img_path(str): 
-        image_size(int): 
-        device_type(str): 
+        img_path(str): image path
+        image_size(int): image resizing size
+        device_type(str): device type ('cpu' or 'cuda')
 
     """
     # Load the save state on the cpu for compatibility on non-CUDA systems
@@ -215,15 +215,15 @@ def resize_box_coord(box_dict: dict,
                      downsize_ratio: float,
                      x_offset: float,
                      y_offset: float) -> dict:
-    """
+    """Function to resize bounding box coordinates
 
     Args:
-        box_dict(dict): 
-        downsize_ratio(float): 
-        x_offset(float): 
-        y_offset(float): 
+        box_dict(dict): bounding box coordinates dictionary
+        downsize_ratio(float): downsize ratio floating point value [0, 1]
+        x_offset(float): x offset for bounding boxes
+        y_offset(float): y offset for bounding boxes
 
-    Returns:
+    Returns: resized bounding box coordinates dictionary
 
     """
     # Loop through each bounding box
@@ -251,14 +251,13 @@ def scale_annotation_sizes(img: Image,
     Font sizes are scaled with a power function in relation to the area of the box alone
 
     Args:
-        img(Image): 
-        pred(dict): 
-        target(dict): 
+        img(Image): PIL image
+        pred(dict): predictions dictionary
+        target(dict): targets dictionary
 
-    Returns:
+    Returns: two lists of scaled annotations
 
     """
-    # img_area = img.size[0] * img.size[1]
 
     pred_annotations = []
     target_annotations = []
@@ -267,7 +266,7 @@ def scale_annotation_sizes(img: Image,
         box_area = (box[0] - box[2]) * (box[1] - box[3])
 
         box_width = scale_box_width(box_area)
-        # box_width = int(pow(img_area / box_area * 60, 0.25))
+
         font_size = int((1.2 * box_area) ** 0.3)
 
         pred_annotations.append(
@@ -278,7 +277,7 @@ def scale_annotation_sizes(img: Image,
             box_area = (box[0] - box[2]) * (box[1] - box[3])
 
             box_width = scale_box_width(box_area)
-            # box_width = int(pow(img_area / box_area * 60, 0.25))
+
             font_size = int((1.2 * box_area) ** 0.3)
 
             target_annotations.append(
@@ -315,17 +314,17 @@ def coco_evaluate(model: Any,
                   device: torch.device,
                   image_size: int,
                   model_name: str) -> dict:
-    """
+    """Function to evaluate COCO AP results for inference
 
     Args:
-        model(Any): 
-        data_loader(DataLoader): 
-        desc(str): 
-        device(torch.device): 
-        image_size(int): 
-        model_name(str): 
+        model(Any): model object
+        data_loader(DataLoader): data loader object
+        desc(str): description string for tqdm progress bar
+        device(torch.device): PyTorch device 'cpu' or 'cuda'
+        image_size(int): image resizing size
+        model_name(str): model name
 
-    Returns:
+    Returns: dictionary of COCO AP results
 
     """
     pbar = tqdm(total=len(data_loader), leave=False, desc=desc)

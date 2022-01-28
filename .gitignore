@@ -109,3 +109,4 @@ scratch.py
 /reports/*.pdf
 /reports/*.svg
 /reports/*.json
+/reports/*.png
