@@ -18,9 +18,11 @@ if __name__ == '__main__':
             'A2_retinanet_experiment.json',
             'A3_detr_experiment.json',
             'B1_size_experiment.json',
+            'B1_size_experiment_2048.json',
             'B2_pretrained_experiment.json',
             'B3_gi_experiment.json',
-            'C_sensitivity_experiment.json']
+            'C_sensitivity_experiment.json',
+            'D_final_training.json']
 
     cmds = [['python', 'experiment_batch.py', '-p'] + ['runs/' + cmd] for cmd in cmds]
 

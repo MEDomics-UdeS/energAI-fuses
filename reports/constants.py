@@ -13,7 +13,7 @@ Description:
 
 from os.path import join
 
-PATH = '/home/simon/Desktop/Results_Fuses'
+PATH = '/Results_Fuses'
 
 PATH_A = join(PATH, 'A')
 PATH_C = join(PATH, 'C')

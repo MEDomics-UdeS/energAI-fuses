@@ -49,16 +49,15 @@ if __name__ == '__main__':
 
     # Model file name argument
     parser.add_argument('-mp', '--models_path', action='store', type=str,
-                        default='/home/simon/Desktop/Results_Fuses/',
                         help='Directory containing the models')
 
-    # LaTeX results file name argument
+    # Save LaTeX results argument
     parser.add_argument('-sv_latex', '--save_latex', action='store', type=bool, default=True,
                         help='Specify whether to save LaTeX output or not')
 
-    # JSON results file name argument
+    # Save JSON results argument
     parser.add_argument('-sv_json', '--save_json', action='store', type=bool, default=True,
-                        help='File name and location of JSON results file to save')
+                        help='Specify whether to save JSON output or not')
 
     # Parse arguments
     args = parser.parse_args()
