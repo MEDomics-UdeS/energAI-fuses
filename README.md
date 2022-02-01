@@ -82,6 +82,7 @@ If the model architecture chosen is `detr`, the following arguments are included
 | `--set_cost_giou`           	  | float | `2`    	            | giou box coefficient in the matching cost                                       |
 | `--eos_coef`           	       | float | `0.1`    	          | Relative classification weight of the no-object class                           |
 
+
 ``-h``, ``--help``
 show this help message and exit
 
@@ -251,16 +252,105 @@ This file enables users to test a saved model, either on a subset of the 'learni
 | `-mp`       | `--models_path`       | str     	  | 	           |                          | Directory containing the models             |
 | `-sv_latex` | `--save_latex`        | bool     	 | `True`	     |                          | Specify whether to save LaTeX output or not |
 | `-sv_json`  | `--save_json`         | bool     	 | `True`	     |                          | Specify whether to save JSON output or not  |
+
 ``-h``, ``--help``
 show this help message and exit
 
-## Module Details: results parsing scripts
+## Module Details: reports/parse_results_[...].py
+
+### Description
+
+The following scripts can be used to parse the results generated
+when executing phases A, B and C experiments:
+
+- parse_results_phase_A.py
+- parse_results_phase_B.py
+- parse_results_phase_C.py
+
+The following script can be used to parse the results of all phases 
+and create a table with the total execution time per experiment phase:
+
+- parse_results_time.py
+
+The results parsed are formatted in LaTeX tables with proper section 
+titles and headers and saved into a text file which can be 
+directly copied and pasted into a LaTeX compiler, such as Overleaf.
+
+### Examples of basic use:
+
+To parse results from phase A:
+```
+python reports/parse_results_phase_A.py
+```
+
 
 ## Module Details: gui.py
 
+### Description
+
+A graphical user interface (GUI) has been created to allow users to 
+locate and classify fuses in new pictures. The following window 
+is the main GUI window:
+
+![gui_main.png](src/gui/images/gui_main.png)
+
+The left *Select* button can be pressed to select which trained model to use
+for inference. When pressed, the following model selection window 
+appears:
+
+![gui_model_select.png](src/gui/images/gui_model_select.png)
+
+The upper right *Select* button can be pressed to select the directory containing
+the images on which to perform inference using the selected model. 
+Inference will be performed on every picture found in the selected
+folder. When pressed, the following image directory window appears:
+ 
+![gui_image_select.png](src/gui/images/gui_image_select.png)
+
+The lower right *Advanced options* button is for advanced options. When pressed, 
+the following options window appears: 
+
+![gui_options.png](src/gui/images/gui_options.png)
+
+The user can choose to add
+additional filtering to the bounding boxes being predicted by the model.
+If the model chosen is too sensitive or not sensitive enough, an IoU
+threshold or *objectness* score threshold can be adjusted with different
+effects. For thresholds of 1, all model predictions will be shown. For 
+threshold lower than 1, model predictions will be filtered based on the
+chosen threshold values. Additionaly, users can choose whether to perform
+inference on a CUDA-capable GPU or on a CPU. Furthermore, users can
+also select a ground-truth CSV file to show ground truths as well as
+predicted bounding boxes at the same time as needed. When
+the ground truth file *Select* button is pressed, 
+the following options window appears: 
+
+![gui_ground_truth.png](src/gui/images/gui_ground_truth.png)
+
+### Examples of basic use:
+
+To start the GUI:
+```
+python gui.py
+```
+
+Select the desired model, image directory and options, then press
+on the center *Start* button to start the inference. After the inference
+has been performed, an image viewer with zoom and pan options will 
+appear to allow users to view predicted fuses directly on the images:
+
+![gui_image_viewer.png](src/gui/images/gui_image_viewer.png)
+
 ## best model
 
+Best trained model hosted somewhere and downloadable
+
+
 ## datasets
+
+- Zenodo
+- Auto download
+- Split holdout / learning
 
 ## Project Organization
 ```
@@ -316,14 +406,21 @@ show this help message and exit
 │   │   │   ├── CustomDataset.py
 │   │   │   └── FuseDataset.py
 │   │   └── SplittingManager.py
-│   ├── detr
+│   ├── detr                               
 │   │   ├── box_ops.py
 │   │   ├── criterion.py
 │   │   └── matcher.py
 │   ├── gui
-│   │   ├── ImageViewer.py
-│   │   └── modules
-│   │       ├── AdvancedOptionsWindow.py
+│   │   ├── ImageViewer.py     
+│   │   ├── images                       
+│   │   │   ├── gui_ground_truth.png    
+│   │   │   ├── gui_image_select.png    
+│   │   │   ├── gui_image_viewer.png    
+│   │   │   ├── gui_main.png    
+│   │   │   ├── gui_model_select.png    
+│   │   │   └── gui_options.png    
+│   │   └── modules                       
+│   │       ├── AdvancedOptionsWindow.py    
 │   │       ├── CSVFileLoader.py
 │   │       ├── DeviceSelector.py
 │   │       ├── ImageLoader.py
