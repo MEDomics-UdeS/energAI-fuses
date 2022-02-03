@@ -341,16 +341,32 @@ appear to allow users to view predicted fuses directly on the images:
 
 ![gui_image_viewer.png](src/gui/images/gui_image_viewer.png)
 
-## best model
+## Best Model
 
 Best trained model hosted somewhere and downloadable
 
 
-## datasets
+## Datasets
 
+The datasets have been split into two parts: learning
+and holdout. The learning dataset is used
+to train the neural networks and perform the experiments
+required to obtain the final optimized model hyperparameters, 
+while the holdout dataset is used to test the final 
+trained model on a new dataset of fuse pictures it has never 
+encountered before to make sure the model can generalize 
+on new data.
+
+**Survey Dataset** (n = 3,189)
+- S0001.jpg to S3189.jpg
+
+**Google Images Dataset** (n = 1,116)
+- G0001.jpg to G1116.jpg
+
+**TO-DO**
 - Zenodo
 - Auto download
-- Split holdout / learning
+
 
 ## Project Organization
 ```
