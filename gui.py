@@ -119,10 +119,10 @@ class GUI(Tk):
             error_message += "No model selected.\n"
         if "imgdir" not in settings:
             error_message += "No image directory selected.\n"
-        if "iou_treshold" not in settings:
-            error_message += "No IoU treshold selected. Please see advanced options.\n"
-        if "score_treshold" not in settings:
-            error_message += "No score treshold selected. Please see advanced options.\n"
+        if "iou_threshold" not in settings:
+            error_message += "No IoU threshold selected. Please see advanced options.\n"
+        if "score_threshold" not in settings:
+            error_message += "No score threshold selected. Please see advanced options.\n"
         if "device" not in settings:
             error_message += "No device selected. Please see advanced options.\n"
         
@@ -145,8 +145,8 @@ class GUI(Tk):
                    '--with_gui',
                    '--image_path', settings_dict["imgdir"],
                    '--model_file_name', settings_dict["model"],
-                   '--iou_threshold', settings_dict["iou_treshold"],
-                   '--score_threshold', settings_dict["score_treshold"],
+                   '--iou_threshold', settings_dict["iou_threshold"],
+                   '--score_threshold', settings_dict["score_threshold"],
                    '--device', settings_dict["device"]]
 
             # Adding the ground truth json file if one is entered by the user

@@ -35,7 +35,7 @@ class IOUSlider:
         Label(window,
               background=COLOR_PALETTE["bg"],
               foreground=COLOR_PALETTE["fg"],
-              text="Select the IoU treshold",
+              text="Select the IoU threshold",
               font=(FONT_PATH, 14),
               width=30
               ).grid(row=0, column=0, padx=10, pady=10)
@@ -55,7 +55,7 @@ class IOUSlider:
 
         # Loading the current saved value for score threshold
         with open(GUI_SETTINGS, "r") as f_obj:
-            self.__slider.set(json.load(f_obj)["iou_treshold"])
+            self.__slider.set(json.load(f_obj)["iou_threshold"])
 
         # Putting the widget on screen
         self.__slider.grid(row=1, column=0)
@@ -75,7 +75,7 @@ class IOUSlider:
             f_obj.seek(0)
             f_obj.truncate()
 
-            settings_dict["iou_treshold"] = value
+            settings_dict["iou_threshold"] = value
             json.dump(settings_dict, f_obj)
 
     @property

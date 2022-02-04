@@ -27,14 +27,14 @@ class ScoreSlider:
             window(Toplevel): Root window
         
         Notes:
-            By default, the score treshold will be set to 0.5
+            By default, the score threshold will be set to 0.5
 
         """
         
         Label(window, 
               background=COLOR_PALETTE["bg"],
               foreground=COLOR_PALETTE["fg"],
-              text="Select the score treshold",
+              text="Select the score threshold",
               font=(FONT_PATH, 14)
               ).grid(row=2, column=0, padx=10, pady=10)
 
@@ -52,9 +52,9 @@ class ScoreSlider:
                               resolution=0.1,
                               command=self.__slide)
 
-        # Loading the current saved value for score treshold
+        # Loading the current saved value for score threshold
         with open(GUI_SETTINGS, "r") as f_obj:
-            self.__slider.set(json.load(f_obj)["score_treshold"])
+            self.__slider.set(json.load(f_obj)["score_threshold"])
 
         # Putting the widget on screen
         self.__slider.grid(row=3, column=0, pady=10)
@@ -74,7 +74,7 @@ class ScoreSlider:
             f_obj.seek(0)
             f_obj.truncate()
             
-            settings_dict["score_treshold"] = value
+            settings_dict["score_threshold"] = value
             json.dump(settings_dict, f_obj)
 
     @property

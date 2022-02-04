@@ -42,7 +42,7 @@ class ResetButton:
             model(ModelLoader): Object containing the trained model file path
             img_dir(ImageLoader): Object containing the raw image directory path
             iou(IOUSlider): Object containing the IoU value
-            score(ScoreSlider): Object containing the score treshold value
+            score(ScoreSlider): Object containing the score threshold value
             device(DeviceSelector): Object containing the selected PyTorch device
             gt_csv(CSVFileLoader): Object containing the ground truth CSV file
 
@@ -72,7 +72,7 @@ class ResetButton:
             model(ModelLoader): Object containing the trained model file path
             img_dir(ImageLoader): Object containing the raw image directory path
             iou(IOUSlider): Object containing the IoU value
-            score(ScoreSlider): Object containing the score treshold value
+            score(ScoreSlider): Object containing the score threshold value
             device(DeviceSelector): Object containing the selected PyTorch device
             gt_csv(CSVFileLoader): Object containing the ground truth CSV file
 
@@ -101,7 +101,7 @@ class ResetButton:
                                          text="No image directory selected")
 
             # Restoring the defaults advanced options
-            iou.slider.set(settings_dict["iou_treshold"])
-            score.slider.set(settings_dict["score_treshold"])
+            iou.slider.set(settings_dict["iou_threshold"])
+            score.slider.set(settings_dict["score_threshold"])
             device.device_option.set(settings_dict["device"])
             gt_csv.reset()

@@ -278,13 +278,13 @@ def enter_default_json(file) -> None:
 
     """
     # Loading in the default values for inference
-    iou_treshold = "0.5"
-    score_treshold = "0.5"
+    iou_threshold = "0.5"
+    score_threshold = "0.5"
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     # Creating the settings dictionnary
-    settings_dict = {"iou_treshold": iou_treshold,
-                     "score_treshold": score_treshold,
+    settings_dict = {"iou_threshold": iou_threshold,
+                     "score_threshold": score_threshold,
                      "device": device}
 
     # Saving the settings in json file
