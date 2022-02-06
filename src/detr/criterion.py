@@ -15,19 +15,21 @@ from .matcher import build_matcher
 
 
 class SetCriterion(nn.Module):
-    """ This class computes the loss for DETR.
+    """This class computes the loss for DETR.
     The process happens in two steps:
         1) we compute hungarian assignment between ground truth boxes and the outputs of the model
         2) we supervise each pair of matched ground-truth / prediction (supervise class and box)
     """
     def __init__(self, num_classes, matcher, weight_dict, eos_coef, losses):
-        """ Create the criterion.
-        Parameters:
-            num_classes: number of object categories, omitting the special no-object category
+        """Create the criterion.
+
+        Args:
+            num_classes: number of object categories
             matcher: module able to compute a matching between targets and proposals
-            weight_dict: dict containing as key the names of the losses and as values their relative weight.
-            eos_coef: relative classification weight applied to the no-object category
-            losses: list of all the losses to be applied. See get_loss for list of available losses.
+            weight_dict: dict containing as key the names of the losses and as values their relative weight
+            eos_coef: relative classification weight applied to the no
+            losses: list of all the losses to be applied
+
         """
         super().__init__()
         self.num_classes = num_classes
@@ -42,6 +44,16 @@ class SetCriterion(nn.Module):
     def loss_labels(self, outputs, targets, indices, num_boxes, log=True):
         """Classification loss (NLL)
         targets dicts must contain the key "labels" containing a tensor of dim [nb_target_boxes]
+
+        Args:
+            outputs: 
+            targets: 
+            indices: 
+            num_boxes: 
+            log: (Default value = True)
+
+        Returns:
+
         """
         assert 'pred_logits' in outputs
         src_logits = outputs['pred_logits']
@@ -62,8 +74,17 @@ class SetCriterion(nn.Module):
 
     @torch.no_grad()
     def loss_cardinality(self, outputs, targets, indices, num_boxes):
-        """ Compute the cardinality error, ie the absolute error in the number of predicted non-empty boxes
+        """Compute the cardinality error, ie the absolute error in the number of predicted non-empty boxes
         This is not really a loss, it is intended for logging purposes only. It doesn't propagate gradients
+
+        Args:
+            outputs: 
+            targets: 
+            indices: 
+            num_boxes: 
+
+        Returns:
+
         """
         pred_logits = outputs['pred_logits']
         device = pred_logits.device
@@ -78,6 +99,15 @@ class SetCriterion(nn.Module):
         """Compute the losses related to the bounding boxes, the L1 regression loss and the GIoU loss
            targets dicts must contain the key "boxes" containing a tensor of dim [nb_target_boxes, 4]
            The target boxes are expected in format (center_x, center_y, w, h), normalized by the image size.
+
+        Args:
+            outputs: 
+            targets: 
+            indices: 
+            num_boxes: 
+
+        Returns:
+
         """
         assert 'pred_boxes' in outputs
         idx = self._get_src_permutation_idx(indices)
@@ -97,18 +127,47 @@ class SetCriterion(nn.Module):
         return losses
 
     def _get_src_permutation_idx(self, indices):
+        """
+
+        Args:
+            indices: 
+
+        Returns:
+
+        """
         # permute predictions following indices
         batch_idx = torch.cat([torch.full_like(src, i) for i, (src, _) in enumerate(indices)])
         src_idx = torch.cat([src for (src, _) in indices])
         return batch_idx, src_idx
 
     def _get_tgt_permutation_idx(self, indices):
+        """
+
+        Args:
+            indices: 
+
+        Returns:
+
+        """
         # permute targets following indices
         batch_idx = torch.cat([torch.full_like(tgt, i) for i, (_, tgt) in enumerate(indices)])
         tgt_idx = torch.cat([tgt for (_, tgt) in indices])
         return batch_idx, tgt_idx
 
     def get_loss(self, loss, outputs, targets, indices, num_boxes, **kwargs):
+        """
+
+        Args:
+            loss: 
+            outputs: 
+            targets: 
+            indices: 
+            num_boxes: 
+            **kwargs: 
+
+        Returns:
+
+        """
         loss_map = {
             'labels': self.loss_labels,
             'cardinality': self.loss_cardinality,
@@ -118,11 +177,14 @@ class SetCriterion(nn.Module):
         return loss_map[loss](outputs, targets, indices, num_boxes, **kwargs)
 
     def forward(self, outputs, targets):
-        """ This performs the loss computation.
-        Parameters:
-             outputs: dict of tensors, see the output specification of the model for the format
-             targets: list of dicts, such that len(targets) == batch_size.
-                      The expected keys in each dict depends on the losses applied, see each loss' doc
+        """This performs the loss computation.
+
+        Args:
+            outputs: dict of tensors
+            targets: list of dicts
+
+        Returns:
+        
         """
         
         outputs_without_aux = {k: v for k, v in outputs.items() if k != 'aux_outputs'}
@@ -160,6 +222,18 @@ class SetCriterion(nn.Module):
 
 
 def build_criterion(class_loss_coef: float, bbox_loss_coef: float, giou_loss_coef: float, eos_coef: float, num_classes: int):
+    """
+
+    Args:
+        class_loss_coef(float): 
+        bbox_loss_coef(float): 
+        giou_loss_coef(float): 
+        eos_coef(float): 
+        num_classes(int): 
+
+    Returns:
+
+    """
 
     matcher = build_matcher(class_loss_coef, bbox_loss_coef, giou_loss_coef)
     
@@ -185,7 +259,16 @@ def build_criterion(class_loss_coef: float, bbox_loss_coef: float, giou_loss_coe
 
 @torch.no_grad()
 def accuracy(output, target, topk=(1,)):
-    """Computes the precision@k for the specified values of k"""
+    """Computes the precision@k for the specified values of k
+
+    Args:
+        output: 
+        target: 
+        topk: (Default value = (1,))
+
+    Returns:
+    
+    """
     if target.numel() == 0:
         return [torch.zeros([], device=output.device)]
     maxk = max(topk)

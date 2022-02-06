@@ -22,19 +22,20 @@ from google_images_download import google_images_download
 from torchvision.ops import nms
 from typing import List
 import torch.nn.functional as F
-from src.detr.box_ops import box_cxcywh_to_xyxy
+from pathlib import PurePosixPath, PureWindowsPath
 
+from src.detr.box_ops import box_cxcywh_to_xyxy
 from src.utils.constants import REQUIRED_PYTHON, IMAGE_EXT
 
 
-def count_images(path: str = "C:/Users/gias2402/Google Drive/"
-                             "Maîtrise SGL CIMA+/General/Fuses Survey Dataset 2",
+def count_images(path: str,
                  minimum: int = 20) -> None:
-    """
-    Function to count images in some folders
+    """Function to count images in some folders
 
-    :param path: str, directory in which to seek images
-    :param minimum: int, minimum number of images required for the number of images to be plotted
+    Args:
+        path(str): directory in which to seek images
+        minimum(int, optional): minimum number of images required for the number of images to be plotted (Default value = 20)
+
     """
     fuse_dict = {}
 
@@ -59,9 +60,7 @@ def count_images(path: str = "C:/Users/gias2402/Google Drive/"
 
 
 def env_tests() -> None:
-    """
-    Environment tests
-    """
+    """Environment tests"""
     system_major = sys.version_info.major
 
     if REQUIRED_PYTHON == "python":
@@ -76,16 +75,35 @@ def env_tests() -> None:
         raise TypeError(
             "This project requires Python {}. Found: Python {}".format(
                 required_major, sys.version))
-    else:
-        print(">>> Development environment passes all tests!")
 
 
-def filter_by_nms(preds_list: List[dict], iou_threshold: float) -> List[dict]:
+def cp_split(filepath: str) -> List[str]:
+    """Cross-platform filepath splitting. Supports Windows, OS X and Linux.
+
+    Args:
+        filepath(str): The complete windows or posix filepath
+
+    Returns:
+        List[str]: A list of every individual elements in the filepath
+        
     """
-    Function to filter a bounding boxes predictions list by using non-maximum suppression
+    # Check for the system's platform
+    if sys.platform == "win32" or sys.platform == "cygwin":
+        return PureWindowsPath(filepath).parts
+    else:
+        return PurePosixPath(filepath).parts
 
-    :param preds_list: list, predicted bounding boxes
-    :param iou_threshold: float, iou threshold for non-maximum suppression
+
+def filter_by_nms(preds_list: List[dict],
+                  iou_threshold: float) -> List[dict]:
+    """Function to filter a bounding boxes predictions list by using non-maximum suppression
+
+    Args:
+        preds_list(List[dict]): predicted bounding boxes
+        iou_threshold(float): iou threshold for non-maximum suppression
+
+    Returns: filtered predictions list
+
     """
     keep_nms = [nms(pred['boxes'], pred['scores'], iou_threshold) for pred in preds_list]
 
@@ -97,13 +115,16 @@ def filter_by_nms(preds_list: List[dict], iou_threshold: float) -> List[dict]:
     return preds_nms
 
 
-def filter_by_score(preds_list: List[dict], score_threshold: float) -> List[dict]:
-    """
-    Function to filter a bounding boxes predictions list by using a confidence score threshold
+def filter_by_score(preds_list: List[dict],
+                    score_threshold: float) -> List[dict]:
+    """Function to filter a bounding boxes predictions list by using a confidence score threshold
 
-    :param preds_list: list, predicted bounding boxes
-    :param score_threshold: float, confidence score threshold above which predictions are to be saved
-    :return:
+    Args:
+        preds_list(List[dict]): predicted bounding boxes
+        score_threshold(float): confidence score threshold above which predictions are to be saved
+
+    Returns: filtered predictions list
+
     """
     preds_filt = []
 
@@ -120,16 +141,16 @@ def filter_by_score(preds_list: List[dict], score_threshold: float) -> List[dict
     return preds_filt
 
 
-def google_image_scraper(chrome_driver_path: str = 'C:/Users/simon.giard-leroux/Google Drive/'
-                                                   'Maîtrise/Python/fuseFinder/chromedriver.exe',
+def google_image_scraper(chrome_driver_path: str = '../chromedriver.exe',
                          prefix: str = 'English Electric C',
                          postfix: str = 'J') -> None:
-    """
-    Function to scrape images from Google images
+    """Function to scrape images from Google images
 
-    :param chrome_driver_path: str, chromedriver.exe path
-    :param prefix: str, prefix for fuse search criterion
-    :param postfix: str, postfix for fuse search criterion
+    Args:
+        chrome_driver_path(str, optional): chromedriver.exe path (Default value = '../chromedriver.exe')
+        prefix(str, optional): prefix for fuse search criterion (Default value = 'English Electric C')
+        postfix(str, optional): postfix for fuse search criterion (Default value = 'J')
+
     """
     response = google_images_download.googleimagesdownload()
 
@@ -149,10 +170,11 @@ def google_image_scraper(chrome_driver_path: str = 'C:/Users/simon.giard-leroux/
 
 
 def json_to_csv(dir_list: List[str]) -> None:
-    """
-    Function to convert multiple json files into a single csv file
+    """Function to convert multiple json files into a single csv file
 
-    :param dir_list: list, containing the directories in which to fetch the jsons
+    Args:
+        dir_list(List[str]): list containing the directories in which to fetch the jsons
+
     """
     for directory in dir_list:
         files = [f for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))]
@@ -182,13 +204,16 @@ def json_to_csv(dir_list: List[str]) -> None:
                 csv_file.close()
 
 
-def print_dict(dictionary: dict, n_spaces: int, str_format: str = None) -> None:
-    """
+def print_dict(dictionary: dict,
+               n_spaces: int,
+               str_format: str = None) -> None:
+    """Function to print dictionary keys and values
 
-    :param dictionary:
-    :param n_spaces:
-    :param str_format:
-    :return:
+    Args:
+        dictionary(dict): dictionary
+        n_spaces(int): number of spaces between keys and values
+        str_format(str, optional): format string for floating point values (Default value = None)
+
     """
     max_key_length = max(map(len, dictionary)) + n_spaces
 
@@ -200,12 +225,12 @@ def print_dict(dictionary: dict, n_spaces: int, str_format: str = None) -> None:
             print(f'{key}:{" " * (max_key_length - len(key))}{value:{str_format}}')
 
 
-def rename_photos(root_dir: str = 'C:/Users/simon.giard-leroux/Google Drive/'
-                                  'Maîtrise SGL CIMA+/General/Fuses Survey Dataset 2') -> None:
-    """
-    Rename all photos in a folder's subfolders
+def rename_photos(root_dir: str) -> None:
+    """Rename all photos in a folder's subfolders
 
-    :param root_dir: str, root directory
+    Args:
+        root_dir(str): str, root directory
+
     """
     for subdir, dirs, files in os.walk(root_dir):
         for i, file in enumerate(files, start=1):
@@ -213,6 +238,16 @@ def rename_photos(root_dir: str = 'C:/Users/simon.giard-leroux/Google Drive/'
 
 
 def format_detr_outputs(outputs: List[dict], target_sizes: torch.Tensor, device: torch.device) -> List[dict]:
+    """Function to format DETR outputs
+
+    Args:
+        outputs(List[dict]): DETR outputs
+        target_sizes(torch.Tensor): target sizes
+        device(torch.device): device (cpu or CUDA)
+
+    Returns: formatted DETR outputs
+
+    """
 
     out_logits, out_bbox = outputs['pred_logits'], outputs['pred_boxes']
 
@@ -233,3 +268,24 @@ def format_detr_outputs(outputs: List[dict], target_sizes: torch.Tensor, device:
                 for b, l, s in zip(boxes, labels, scores)]
 
     return results
+
+
+def enter_default_json(file) -> None:
+    """Function to enter default JSON
+
+    Args:
+        file: file name
+
+    """
+    # Loading in the default values for inference
+    iou_threshold = "0.5"
+    score_threshold = "0.5"
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+
+    # Creating the settings dictionnary
+    settings_dict = {"iou_threshold": iou_threshold,
+                     "score_threshold": score_threshold,
+                     "device": device}
+
+    # Saving the settings in json file
+    json.dump(settings_dict, file)

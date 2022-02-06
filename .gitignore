@@ -92,7 +92,11 @@ target/
 /logdir/
 
 # Scratchpad
-# scratch.py
+scratch.py
+
+# GUI related files
+/src/gui/*.json
+/src/gui/*.log
 
 # Trained saved_models
 /saved_models/
@@ -100,3 +104,9 @@ target/
 # ODS LibreOffice Calc Files
 *.ods
 
+# LaTeX and figures outputs
+/reports/*.txt
+/reports/*.pdf
+/reports/*.svg
+/reports/*.json
+/reports/*.png

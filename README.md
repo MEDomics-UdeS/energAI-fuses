@@ -1,143 +1,223 @@
 # EnergAI : Fuse Detection
 
-This repository contains the fuse detection code for the EnergAI project.
+## Table of Contents
+  * [1. Introduction](#1-introduction)
+  * [2. Authors](#2-authors)
+  * [3. Acknowledgements](#3-acknowledgements)
+  * [4. Installation](#4-installation)
+  * [5. Data](#5-data)
+  * [6. Python Module Details](#6-python-module-details)
+  * [7. Project Files Organization](#7-project-files-organization)
 
-## Authors
-* [Simon Giard-Leroux](https://github.com/sgiardl) (Université de Sherbrooke / CIMA+)
-* [Shreyas Sunil Kulkarni](https://github.com/Kuyas) (Birla Institute of Technology and Science, Pilani)
-* [Martin Vallières](https://github.com/mvallieres) (Université de Sherbrooke)
+## 1. Introduction
+This repository contains the fuse detection code for the EnergAI 
+project and the following article published in **IEEE Transactions on
+Industral Informatics**: 
 
-## Introduction
+[***Electric Power Fuse Identification with Deep Learning***](about:blank)
+
 This project implements a supervised learning PyTorch-based end-to-end object detection pipeline for the purpose of detecting and
 classifying fuses in low-voltage electrical installations.
 
-## Installation
-Install dependencies on a python environment
+## 2. Authors
+* [Simon Giard-Leroux](https://github.com/sgiardl) (Université de Sherbrooke / CIMA+)
+* [Guillaume Cléroux](https://github.com/gcleroux) (Université de Sherbrooke)
+* [Shreyas Sunil Kulkarni](https://github.com/Kuyas) (Birla Institute of Technology and Science, Pilani / Amazon)
+* [François Bouffard](https://www.mcgill.ca/ece/francois-bouffard) (McGill University)
+* [Martin Vallières](https://github.com/mvallieres) (Université de Sherbrooke)
+
+## 3. Acknowledgements
+
+The authors would like to thank all partner organizations 
+that were involved during this project: CIMA+, HEXACODE Solutions, 
+Université de Sherbrooke and Université McGill, as well as the 
+organizations that supplied the funding for this project: 
+CIMA+, HEXACODE Solutions, InnovÉÉ, Mitacs and the 
+Natural Sciences and Engineering Research Council of Canada 
+(NSERC). Martin Vallières also acknowledges funding from the 
+Canada CIFAR AI Chairs Program.
+
+## 4. Installation
+Install dependencies in a Python environment:
 ```
-$ pip3 install -r requirements.txt
+$ pip install -r requirements.txt
 ```
+The use of a CUDA GPU with at least 24 GB of VRAM is required to run the experiments
+in this repository. To enable users with lower specifications to train a model and obtain
+a trained model quickly, a 'quick run' script has been created, see [here](docs/readme/README_experiment_batch.md) for
+details on how to run this script.
 
-## Module Details: experiment.py & batch_experiment.py
+## 5. Data
 
-### Description
+### Datasets
 
-This file enables users to run different experiments using the developed pipeline.
+The datasets have been split into two parts: learning
+and holdout. The learning dataset is used
+to train the neural networks and perform the experiments
+required to obtain the final optimized model hyperparameters, 
+while the holdout dataset is used to test the final 
+trained model on a new dataset of fuse pictures it has never 
+encountered before to make sure the model can generalize 
+on new data.
 
-### Arguments
+**Survey Dataset** (n = 3,189)
+- S0001.jpg to S3189.jpg
 
-| Short 	| Long              	    | Type  | Default           	      | Choices                                                                       	                                                                                            | Description                                                                   	|
-|-----------|---------------------------|-------|-----------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------	|
-| `-s`    	| `--size`           	    | int   | `1024`    	              |                                                 	                                                                                                                        | Resize the images to size * size                                                  |
-| `-da`    	| `--data_aug`         	    | float | `0.25`         	          |                                                         	                                                                                                                | Value of data augmentation for training dataset                                   |
-| `-vs`   	| `--validation_size`       | float | `0.1`               	      |                                                                               	                                                                                            | Size of validation set (float as proportion of dataset) 	                        |
-| `-ts`   	| `--test_size`           	| float | `0.1`               	      |                                                                               	                                                                                            | Size of test set (float as proportion of dataset)	                                |
-| `-e`    	| `--epochs`          	    | int   | `1`                	      |                                                                               	                                                                                            | Number of epochs                        	                                        |
-| `-b`   	| `--batch`  	            | int   | `20` 	                      | 	                                                                                                                                                                        | Batch size                                                  	                    |
-| `-esp`   	| `--es_patience` 	        | int   | `None`            	      |                                                                               	                                                                                            | Early stopping patience (number of epochs without improvement)                    |
-| `-esd`    | `--es_delta`        	    | float | `0`                 	      |                                                                               	                                                                                            | Early stopping delta (tolerance to evaluate improvement)                     	    |
-| `-mp`    	| `--mixed_precision`  	    | bool  | `False`                     |                                                                               	                                                                                            | Boolean to use mixed precision                  	                                |
-| `-g`   	| `--gradient_accumulation` | int   | `1`            	          |                                                                               	                                                                                            | Gradient accumulation size (1 : no gradient accumulation)                         |
-| `-gc`   	| `--gradient_clip`    	    | float | `5`                 	      |                                                                               	                                                                                            | Gradient clipping value                                                          	|
-| `-rs`   	| `--random_seed`      	    | int 	| `42`            	          |                                                                               	                                                                                            | Random seed, only set if deterministic is set to True           	                |
-| `-dt`   	| `--deterministic`        	| bool 	| `False`             	      |                                                                               	                                                                                            | Boolean to force deterministic behavior           	                            |
-| `-ms`   	| `--mean_std`        	    | bool  | `False`                     |                                                                               	                                                                                            | Boolean to compute mean & standard deviation RGB normalization values            	|
-| `-iou`   	| `--iou_threshold`         | float | `0.5`                       |                                                                               	                                                                                            | Intersection-over-union (IOU) threshold to filter bounding box predictions        |
-| `-lr`   	| `--learning_rate`         | float | `0.0003`                    |                                                                               	                                                                                            | Learning rate for Adam optimizer                                                  |
-| `-wd`   	| `--weight_decay`          | float | `0`                         |                                                                               	                                                                                            | Weight decay (L2 penalty) for Adam optimizer                                      |
-| `-mo`   	| `--model`                 | str   | `'fasterrcnn_resnet50_fpn'` | `'fasterrcnn_resnet50_fpn'`<br>`'fasterrcnn_mobilenet_v3_large_fpn'`<br>`'fasterrcnn_mobilenet_v3_large_320_fpn'`<br>`'retinanet_resnet50_fpn'`<br>`'detr'`<br>`'perceiver'`| Object detection model                                                            |
-| `-pt`   	| `--pretrained`            | bool  | `True`                      |                                                                               	                                                                                            | Boolean to specify to load a pretrained model                                     |
-| `-sv`   	| `--save_model`            | bool  | `True`                      |                                                                               	                                                                                            | Boolean to specify to save the trained model                                      |
+**Google Images Dataset** (n = 1,116)
+- G0001.jpg to G1116.jpg
 
-``-h``, ``--help``
-show this help message and exit
+**TO-DO**
+- Zenodo
+- Auto download
 
-### Examples of basic use:
+### Best Model
 
-To run a single experiment:
+Best trained model hosted somewhere and downloadable
+
+**TO-DO**
+- Zenodo
+- Auto download
+
+## 6. Python Module Details
+
+### experiment.py
+
+This file enables users to run a single experiment with the specified parameters using the developed pipeline.
+
+More details can be found [here](docs/readme/README_experiment.md).
+
+### experiment_batch.py
+
+This file enables users to run a batch of different experiments using the 
+developed pipeline. 
+
+More details can be found [here](docs/readme/README_experiment_batch.md).
+
+### experiment_batch_all.py
+
+This file enables users to run all experiments for phases A, B, C and D from
+a single file. 
+
+More details can be found [here](docs/readme/README_experiment_batch_all.md).
+
+### inference_test.py
+
+This file enables users to run an inference test on a saved model and show model 
+predictions and ground truths boxes on the images.
+
+More details can be found [here](docs/readme/README_inference_test.md).
+
+### reports/test_saved_model.py
+
+This file enables users to test a saved model, either on a subset of the 'learning' or the
+'holdout' dataset.
+
+More details can be found [here](docs/readme/README_test_saved_model.md).
+
+### reports/parse_results_[...].py
+
+The following scripts can be used to parse the results generated
+when executing phases A, B and C experiments.
+
+More details can be found [here](docs/readme/README_parse_results.md).
+
+### gui.py
+
+A graphical user interface (GUI) has been created to allow users to 
+locate and classify fuses in new pictures.
+
+More details can be found [here](docs/readme/README_gui.md).
+
+## 7. Project Files Organization
 ```
-python src/models/experiment.py --epochs 3
+├── data                                 <- Main folder containing raw & processed data (images & bounding box annotations)
+│   ├── annotations                      <- Bounding box ground truth annotations are automatically downloaded here, as well as resized annotations
+│   ├── gui_resized                      <- Resized images for GUI inference
+│   ├── inference                        <- Inference test images are saved here
+│   ├── raw                              <- Raw images are automatically downloaded here
+│   └── resized                          <- Resized images are saved here
+├── docs                                 <- Contains markdown README & documentation files
+├── logdir                               <- Tensorboard logs are saved here for each run in subfolders
+├── reports                              <- Contains results parsing scripts for each phase (see module details for more info)
+│   ├── constants.py
+│   ├── parse_results_phase_A.py
+│   ├── parse_results_phase_B.py
+│   ├── parse_results_phase_C.py
+│   ├── parse_results_time.py
+│   ├── parsing_utils.py
+│   └── test_saved_model.py
+├── runs                                 <- JSON settings scripts for each experiment (see module details for 'experiment_batch.py' for more info)
+│   ├── A1_fasterrcnn_experiment.json
+│   ├── A2_retinanet_experiment.json
+│   ├── A3_detr_experiment.json
+│   ├── B1_size_experiment_2048.json
+│   ├── B1_size_experiment.json
+│   ├── B2_pretrained_experiment.json
+│   ├── B3_gi_experiment.json
+│   ├── C_sensitivity_experiment_1.json
+│   ├── C_sensitivity_experiment_2.json
+│   ├── C_sensitivity_experiment.json
+│   ├── D_final_training.json
+│   └── quick_run.json
+├── saved_models                         <- Trained models are saved here
+├── src                                  <- Python source scripts
+│   ├── coco                             <- COCO metrics files (copy from 'torchvision' repo)
+│   │   ├── coco_eval.py
+│   │   ├── coco_utils.py
+│   │   └── utils.py
+│   ├── data                             <- Custom classes for data, dataset and data loader handling
+│   │   ├── DataLoaderManagers           
+│   │   │   ├── CocoDataLoaderManager.py
+│   │   │   ├── CustomDataLoaderManager.py
+│   │   │   ├── GuiDataLoaderManager.py
+│   │   │   └── LearningDataLoaderManager.py
+│   │   ├── DatasetManagers              
+│   │   │   ├── CocoDatasetManager.py
+│   │   │   ├── CustomDatasetManager.py
+│   │   │   ├── GuiDatasetManager.py
+│   │   │   └── LearningDatasetManager.py
+│   │   ├── Datasets
+│   │   │   ├── CocoDataset.py
+│   │   │   ├── CustomDataset.py
+│   │   │   └── FuseDataset.py
+│   │   └── SplittingManager.py
+│   ├── detr                             <- Scripts imported from DETR repo (Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved)                
+│   │   ├── box_ops.py
+│   │   ├── criterion.py
+│   │   └── matcher.py
+│   ├── gui                              <- Graphical User Interface (GUI) scripts
+│   │   ├── ImageViewer.py     
+│   │   └── modules                       
+│   │       ├── AdvancedOptionsWindow.py    
+│   │       ├── CSVFileLoader.py
+│   │       ├── DeviceSelector.py
+│   │       ├── ImageLoader.py
+│   │       ├── IOUSlider.py
+│   │       ├── ModelLoader.py
+│   │       ├── OuputRedirector.py
+│   │       ├── ReadOnlyTextBox.py
+│   │       ├── ResetButton.py
+│   │       └── ScoreSlider.py
+│   ├── models                           <- Main model loading & training scripts
+│   │   ├── EarlyStopper.py
+│   │   ├── models.py
+│   │   ├── PipelineManager.py           <- Main script for model training
+│   │   └── SummaryWriter.py
+│   ├── utils                            <- Various utility functions & constants
+│   │   ├── constants.py
+│   │   ├── helper_functions.py
+│   │   └── reproducibility.py
+│   └── visualization                    <- Visualization scripts for inference
+│       └── inference.py
+├── experiment.py                        <- Script to perform a single experiment (see module details README for more info)
+├── experiment_batch.py                  <- Script to perform a batch of multiple experiments with different settings (see module details README for more info)
+├── experiment_batch_all.py              <- Script to run all experiments for phases A, B, C and D (see module details README for more info)
+├── gui.py                               <- Script to run the Graphical User Interface (GUI) (see module details README for more info)
+├── inference_test.py                    <- Script to perform an inference test using a saved model (see module details README for more info)
+├── LICENSE                              <- GPLv3 license details
+├── README.md                            <- File you are currently reading
+└── requirements.txt                     <- Python packages & versions requirements
 ```
-
-To run a batch of multiple experiments that are specified in `batch_experiment.py`:
-```
-python batch_experiment.py
-```
-
-To view log runs and hyperparameters in tensorboard:
-```
-tensorboard --logdir=logdir
-```
-## Module Details: test_inference.py
-
-### Description
-
-This file enables users to run an inference test on a saved model and show model predictions and ground truths boxes on the images.
-
-### Arguments
-
-| Short 	| Long              	    | Type    	| Default           	| Description                                                   |
-|-----------|-----------------------	|---------	|-----------------------|---------------------------------------------------------------|
-| `-mfn`    | `--model_file_name`       | str     	|     	                | File name of the saved model to load                          |
-| `-ms`    	| `--mean_std`              | bool     	| `False`               | Boolean to compute mean & standard deviation RGB normalization values       |
-| `-b`   	| `--batch`         	    | int     	| `20`                  | Batch size
-| `-iou`   	| `--iou_threshold`         | float     | `0.5`                 | Intersection-over-union (IOU) threshold to filter bounding box predictions        |
-
-``-h``, ``--help``
-show this help message and exit
-
-### Examples of basic use:
-
-To plot the active learning curve for a particular experiments batch:
-```
-python test_inference.py --model_file_name 2021-04-27_16-34-27
-```
-
-## Project Organization
-
-    ├── data
-    │   └── annotations            	 	<- The original annotations .csv and rezised targets .json are saved here.
-    │   └── inference            	 	<- Inference test images showing the predicted vs ground truth bounding boxes are saved here.
-    │   └── raw            	 	        <- The original, immutable data dump, where the data gets downloaded.
-    │   └── resized            	 	<- Resized images are saved here.
-    ├── logir                               <- Tensorboard run logs are saved here.
-    │
-    ├── models             	 	        <- Trained models are saved here.
-    │
-    ├── src                	 	        <- Source code for use in this project.
-    │   ├── data           	 	        <- Scripts to download or generate data.
-    │   │   ├── DataLoaderManager.py
-    │   │   ├── DatasetManager.py
-    │   │   └── FuseDataset.py
-    │   │
-    │   ├── models         	 	        <- Scripts to train models and then use trained models to make predictions.
-    │   │   ├── EarlyStopper.py
-    │   │   ├── experiment.py
-    │   │   ├── SummaryWriter.py
-    │   │   └── PipelineManager.py
-    │   │
-    │   ├── utils         	 	        <- Utility scripts.
-    │   │   ├── constants.py
-    │   │   ├── helper_functions.py
-    │   │   ├── OCR.py
-    │   │   └── reproducibility.py
-    │   │
-    │   └── visualization  	 	        <- Scripts to create exploratory and results oriented visualizations
-    │       └── inference.py
-    │
-    ├── .gitignore			        <- File that lists which files git can ignore.
-    │
-    ├── batch_experiment.py      	 	<- File to run a batch of experiments.
-    │
-    ├── LICENSE        	 	        <- License file.
-    │
-    ├── README.md          	 	        <- The top-level README for developers using this project.
-    │
-    ├── requirements.txt   	 	        <- The requirements file for reproducing the analysis environment,
-    │					   generated with `pipreqs path/to/folder`
-    │
-    └── test_inference.py      	        <- File to test a trained model and save inference results on images.
-
---------
 
 <p><small>Project based on the <a target="_blank" href="https://drivendata.github.io/cookiecutter-data-science/">cookiecutter data science project template</a>. </small></p>
 

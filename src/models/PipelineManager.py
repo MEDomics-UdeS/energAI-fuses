@@ -11,40 +11,36 @@ Description:
     Training, validation and testing pipeline manager
 """
 
+from copy import deepcopy
 import numpy as np
 import torch
 from torch.nn.utils import clip_grad_norm_
 from torch.cuda.amp import autocast
 from torch.cuda.amp.grad_scaler import GradScaler
 from torch.cuda import memory_reserved, memory_allocated
-from src.data.DataLoaderManagers.CocoDataLoaderManager import CocoDataLoaderManager
-from src.data.DatasetManagers.CocoDatasetManager import CocoDatasetManager
-from src.detr.criterion import build_criterion
-from src.models.SummaryWriter import SummaryWriter
-from tqdm import tqdm
-from torch.utils.data import DataLoader
-from typing import Optional
-from copy import deepcopy
-
 from torch.optim.swa_utils import AveragedModel, SWALR
 from torch.optim.lr_scheduler import CosineAnnealingLR
+from torch.utils.data import DataLoader
+from tqdm import tqdm
+from typing import Optional, Any
 
 from src.utils.constants import CLASS_DICT, LOG_PATH, MODELS_PATH, EVAL_METRIC, COCO_PARAMS_LIST
-from src.data.DataLoaderManagers.DataLoaderManager import DataLoaderManager
+from src.data.DataLoaderManagers.LearningDataLoaderManager import LearningDataLoaderManager
 from src.models.EarlyStopper import EarlyStopper
 from src.models.models import load_model
 from src.coco.coco_utils import get_coco_api_from_dataset
 from src.coco.coco_eval import CocoEvaluator
 from src.utils.helper_functions import print_dict, format_detr_outputs
 from src.detr.box_ops import batch_box_xyxy_to_cxcywh
+from src.data.DataLoaderManagers.CocoDataLoaderManager import CocoDataLoaderManager
+from src.data.DatasetManagers.CocoDatasetManager import CocoDatasetManager
+from src.detr.criterion import build_criterion
+from src.models.SummaryWriter import SummaryWriter
 
 
 class PipelineManager:
-    """
-    Training, validation and testing manager.
-    """
-
-    def __init__(self, data_loader_manager: DataLoaderManager,
+    """Training, validation and testing manager"""
+    def __init__(self, data_loader_manager: LearningDataLoaderManager,
                  file_name: str,
                  model_name: str,
                  learning_rate: float,
@@ -65,23 +61,31 @@ class PipelineManager:
                  bbox_loss_coef: float, 
                  giou_loss_coef: float, 
                  eos_coef: float) -> None:
-        """
-        Class constructor
+        """Class constructor
 
-        :param data_loader_manager: DataLoaderManager, contains the training, validation and testing data loaders
-        :param file_name: str, file name to save tensorboard runs and model
-        :param model_name: str, model name
-        :param learning_rate: float, learning rate for the Adam optimizer
-        :param weight_decay: float, weight decay (L2 penalty) for the Adam optimizer
-        :param es_patience: int, early stopping patience (number of epochs of no improvement)
-        :param es_delta: float, early stopping delta (to evaluate improvement)
-        :param mixed_precision: bool, to use mixed precision in the training
-        :param gradient_accumulation: int, gradient accumulation size
-        :param pretrained: bool, to use a pretrained model
-        :param iou_threshold: float, iou threshold for non-maximum suppression and score filtering the predicted boxes
-        :param gradient_clip: float, value at which to clip the gradient when using gradient accumulation
-        :param args_dict: dict, dictionary of all parameters to log the hyperparameters in tensorboard
-        :param save_model: bool, to save the trained model in the saved_models/ directory
+        Args:
+            data_loader_manager(LearningDataLoaderManager): contains the training, validation and testing data loaders
+            file_name(str): file name to save tensorboard runs and model
+            model_name(str): model name
+            learning_rate(float): learning rate for the Adam optimizer
+            weight_decay(float): weight decay (L2 penalty) for the Adam optimizer
+            es_patience(int): early stopping patience (number of epochs of no improvement)
+            es_delta(float): early stopping delta (to evaluate improvement)
+            mixed_precision(bool): to use mixed precision in the training
+            gradient_accumulation(int): gradient accumulation size
+            pretrained(bool): to use a pretrained model
+            gradient_clip(float): value at which to clip the gradient when using gradient accumulation
+            args_dict(dict): dictionary of all parameters to log the hyperparameters in tensorboard
+            save_model(bool): to save the trained model in the saved_models/ directory
+            image_size(int): image resizing parameter
+            save_last(bool): choose whether to save the last epoch or save the best epoch
+            log_training_metrics(bool): choose whether to log training metrics
+            log_memory(bool): choose whether to log memory usage
+            class_loss_ceof(float): DETR class loss parameter
+            bbox_loss_coef(float): DETR bounding box loss parameter
+            giou_loss_coef(float): DETR iou loss parameter
+            eos_coef(float): DETR eos coefficient parameter
+
         """
         # Save arguments as object attributes
         self.__file_name = file_name
@@ -128,9 +132,9 @@ class PipelineManager:
         print(f'\n=== Dataset & Data Loader Sizes ===\n\n'
               f'Training:\t\t{len(self.__data_loader_train.dataset)} images\t\t'
               f'{len(self.__data_loader_train)} batches\n'
-              f'Validation:\t\t{len(self.__data_loader_valid.dataset)} images\t\t'
+              f'Validation:\t\t{len(self.__data_loader_valid.dataset) if len(self.__data_loader_valid) > 0 else 0} images\t\t'
               f'{len(self.__data_loader_valid)} batches\n'
-              f'Testing:\t\t{len(self.__data_loader_test.dataset)} images\t\t'
+              f'Testing:\t\t{len(self.__data_loader_test.dataset) if len(self.__data_loader_test) > 0 else 0} images\t\t'
               f'{len(self.__data_loader_test)} batches\n')
 
         # Get model and set last fully-connected layer with the right number of classes
@@ -174,10 +178,11 @@ class PipelineManager:
             self.__last_metrics_dict = None
 
     def __call__(self, epochs: int) -> None:
-        """
-        Class __call__ method, called when object() is called
+        """Class __call__ method, called when object() is called
 
-        :param epochs: int, number of epochs
+        Args:
+            epochs(int): number of epochs
+
         """
 
         self.__swa_start = int(0.75 * epochs)
@@ -194,12 +199,12 @@ class PipelineManager:
         if self.__save_model:
             # Save the model in the saved_models/ folder
             filename = f'{MODELS_PATH}{self.__file_name}'
-            
-            if self.__best_epoch >= self.__swa_start:
-                ranking_model = self.__swa_model.module if self.__save_last else self.__best_model.module
+
+            if not self.__save_last:
+                ranking_model = self.__best_model.module if self.__best_epoch >= self.__swa_start else self.__best_model
             else:
-                ranking_model = self.__model if self.__save_last else self.__best_model
-            
+                ranking_model = self.__swa_model.module if epochs >= self.__swa_start else self.__model
+
             # Storing the model and meta data in the save state
             save_state = {
                 "model": ranking_model.state_dict(),
@@ -210,28 +215,37 @@ class PipelineManager:
 
             print(f'{"Last" if self.__save_last else "Best"} model saved to:\t\t\t\t{filename}\n')
 
-        # Save best or last epoch validation metrics dict to tensorboard
-        metrics_dict = self.__last_metrics_dict if self.__save_last else self.__best_metrics_dict
+        if len(self.__data_loader_valid) > 0:
+            # Save best or last epoch validation metrics dict to tensorboard
+            metrics_dict = self.__last_metrics_dict if self.__save_last else self.__best_metrics_dict
+        else:
+            metrics_dict = {}
 
-        # Append 'hparams/' to the start of each metrics dictionary key to log in tensorboard
-        for key in metrics_dict.fromkeys(metrics_dict):
-            metrics_dict[f'hparams/{key}'] = metrics_dict.pop(key)
+        if len(self.__data_loader_test) > 0:
+            # Test the trained model
+            self.__test_model()
 
-        # Save the hyperparameters with tensorboard
-        self.__writer.add_hparams(self.__args_dict, metric_dict=metrics_dict)
+            # Append test results to validation results
+            metrics_dict.update(self.__test_metrics_dict)
 
-        # Test the trained model
-        self.__test_model()
+        if len(self.__data_loader_valid) > 0 or len(self.__data_loader_test) > 0:
+            # Append 'hparams/' to the start of each metrics dictionary key to log in tensorboard
+            for key in metrics_dict.fromkeys(metrics_dict):
+                metrics_dict[f'hparams/{key}'] = metrics_dict.pop(key)
+
+            # Save the hyperparameters with tensorboard
+            self.__writer.add_hparams(self.__args_dict, metric_dict=metrics_dict)
 
         # Flush and close the tensorboard writer
         self.__writer.flush()
         self.__writer.close()
 
     def __train_model(self, epochs: int) -> None:
-        """
-        Train the model
+        """Train the model
 
-        :param epochs: int, number of epochs
+        Args:
+            epochs(int): number of epochs
+
         """
         # Loop through each epoch
         for epoch in range(1, epochs + 1):
@@ -261,7 +275,8 @@ class PipelineManager:
             # Save the current epoch loss for tensorboard
             self.__save_epoch('Training', loss, metrics_dict, epoch)
 
-            metric = self.__validate_model(model, epoch)
+            if len(self.__data_loader_valid) > 0:
+                metric = self.__validate_model(model, epoch)
 
             # Check if early stopping is enabled
             if self.__es_patience:
@@ -271,14 +286,22 @@ class PipelineManager:
                     print(f'Early stopping criterion has been reached after {self.__es_patience} epochs\n')
                     break
 
-    def __evaluate(self, model, data_loader: DataLoader, phase: str, epoch: int) -> float:
-        """
-        To perform forward passes, compute the losses and perform backward passes on the model
+    def __evaluate(self,
+                   model: Any,
+                   data_loader: DataLoader,
+                   phase: str,
+                   epoch: int) -> float:
+        """To perform forward passes, compute the losses and perform backward passes on the model
 
-        :param data_loader: DataLoader, data loader object
-        :param phase: str, current phase, either 'Training' or 'Validation'
-        :param epoch: int, current epoch
-        :return: float, mean loss for the current epoch
+        Args:
+            model(Any): model object
+            data_loader(DataLoader): data loader object
+            phase(str): current phase, either 'Training' or 'Validation'
+            epoch(int): current epoch
+
+        Returns:
+            float: mean loss for the current epoch
+            
         """
         # Declare tqdm progress bar
         pbar = tqdm(total=len(data_loader), leave=False, desc=f'{phase} Epoch {epoch}')
@@ -341,12 +364,15 @@ class PipelineManager:
         # Return the mean loss for the current epoch
         return float(np.mean(loss_list_epoch))
 
-    def __update_model(self, losses: torch.Tensor, i: int) -> None:
-        """
+    def __update_model(self,
+                       losses: torch.Tensor,
+                       i: int) -> None:
+        """Updates the model's weights
 
-        :param losses:
-        :param i:
-        :return:
+        Args:
+            losses(torch.Tensor): losses tensor from forward pass
+            i(int): step index
+
         """
         # Backward pass for no gradient accumulation + no mixed precision
         if not self.__gradient_accumulation and not self.__mixed_precision:
@@ -381,12 +407,18 @@ class PipelineManager:
                 self.__scaler.update()
                 self.__optimizer.zero_grad(set_to_none=True)
 
-    def __validate_model(self, model, epoch: int) -> float:
-        """
-        Validate the model for the current epoch
+    def __validate_model(self,
+                         model: Any,
+                         epoch: int) -> float:
+        """Validate the model for the current epoch
 
-        :param epoch: int, current epoch
-        :return: float, mean recall per image metric
+        Args:
+            model(Any): model object
+            epoch(int): current epoch
+
+        Returns:
+            float: validation metric result
+
         """
         # Deactivate the autograd engine
         with torch.no_grad():
@@ -413,28 +445,33 @@ class PipelineManager:
         return metrics_dict[EVAL_METRIC]
 
     def __test_model(self) -> None:
-        """
-        Test the trained model
-        """
+        """Test the trained model"""
         model = self.__swa_model if self.__save_last else self.__best_model
 
         # Update bn statistics for the swa_model at the end
         torch.optim.swa_utils.update_bn(self.__data_loader_train, model)
 
         # COCO Evaluation
-        metrics_dict = self.__coco_evaluate(model, self.__data_loader_test, 'Testing Metrics')
+        self.__test_metrics_dict = self.__coco_evaluate(model, self.__data_loader_test, 'Testing Metrics')
 
         # Print the testing object detection metrics results
         print('=== Testing Results ===\n')
-        print_dict(metrics_dict, 6, '.2%')
+        print_dict(self.__test_metrics_dict, 6, '.2%')
 
     @torch.no_grad()
-    def __coco_evaluate(self, model, data_loader: DataLoader, desc: str) -> dict:
-        """
+    def __coco_evaluate(self,
+                        model: Any,
+                        data_loader: DataLoader,
+                        desc: str) -> dict:
+        """Method to evaluate the model's performance with COCO metrics
 
-        :param model:
-        :param data_loader:
-        :return:
+        Args:
+            model(Any): model object
+            data_loader(DataLoader): data loader object
+            desc(str): description string for tqdm progress bar
+
+        Returns: COCO metrics results dictionary
+
         """
         pbar = tqdm(total=len(data_loader), leave=False, desc=desc)
 
@@ -466,14 +503,20 @@ class PipelineManager:
         coco_evaluator.accumulate()
         coco_evaluator.summarize()
 
-        return dict(zip(COCO_PARAMS_LIST, coco_evaluator.coco_eval['bbox'].stats.tolist()))
+        phase = desc.split(" ")[0]
+        params_list = [f'{phase}/{param}' for param in COCO_PARAMS_LIST]
 
-    def __save_batch(self, phase: str, loss: float) -> None:
-        """
-        Save batch losses to tensorboard
+        return dict(zip(params_list, coco_evaluator.coco_eval['bbox'].stats.tolist()))
 
-        :param phase: str, phase, either 'Training' or 'Validation'
-        :param loss: float, total loss per batch
+    def __save_batch(self,
+                     phase: str,
+                     loss: float) -> None:
+        """Save batch losses to tensorboard
+
+        Args:
+            phase(str): phase, either 'Training' or 'Validation'
+            loss(float): total loss per batch
+
         """
         if phase == 'Training':
             self.__writer.add_scalar(f'Loss/{phase} (total per batch)', loss, self.__train_step)
@@ -482,20 +525,26 @@ class PipelineManager:
             self.__writer.add_scalar(f'Loss/{phase} (total per batch)', loss, self.__valid_step)
             self.__valid_step += 1
 
-    def __save_epoch(self, phase: str, loss: float, metrics_dict: Optional[dict], epoch: int) -> None:
-        """
-        Save epoch results to tensorboard
+    def __save_epoch(self,
+                     phase: str,
+                     loss: float,
+                     metrics_dict: Optional[dict],
+                     epoch: int) -> None:
+        """Save epoch results to tensorboard
 
-        :param phase: str, either 'Training' or 'Validation'
-        :param loss: float, mean loss per epoch
-        :param metrics_dict: dict, contains the object detection evaluation metrics
-        :param epoch: int, current epoch
+        Args:
+            phase(str): either 'Training' or 'Validation'
+            loss(float): mean loss per epoch
+            metrics_dict(Optional[dict]): contains the object detection evaluation metrics
+            epoch(int): current epoch
+
         """
         self.__writer.add_scalar(f'Loss/{phase} (mean per epoch)', loss, epoch)
 
         if metrics_dict is not None:
             for i, (key, value) in enumerate(metrics_dict.items(), start=1):
-                self.__writer.add_scalar(f'{key[:2]} ({phase})/{i}. {key[6:-1]}', value, epoch)
+                self.__writer.add_scalar(f'{key.split("/")[-1][:2]} ({phase})/{i}. {key[6 + len(key.split("/")[0]):]}',
+                                         value, epoch)
 
         if phase == 'Training':
             if self.__swa_started:
@@ -503,11 +552,13 @@ class PipelineManager:
             else:
                 self.__writer.add_scalar('Learning Rate', self.__scheduler.get_last_lr()[0], epoch)
 
-    def __save_memory(self, scale: float = 1e-9) -> None:
-        """
-        Save current memory usage to tensorboard
+    def __save_memory(self,
+                      scale: float = 1e-9) -> None:
+        """Save current memory usage to tensorboard
 
-        :param scale: float, scale to apply to the memory values (1e-9 : giga)
+        Args:
+            scale(float, optional): scale to apply to the memory values (1e-9 : giga) (Default value = 1e-9)
+
         """
         mem_reserved = memory_reserved(0) * scale
         mem_allocated = memory_allocated(0) * scale
@@ -519,37 +570,78 @@ class PipelineManager:
 
         self.__total_step += 1
 
-    def __rank_images(self, model, metrics: str = 'loss') -> dict:
+    def __rank_images(self,
+                      model: Any,
+                      metrics: str = 'loss') -> dict:
+        """Method to rank images based on obtained performance
+
+        Args:
+            model(Any): model object
+            metrics(str, optional): metric to rank images on (Default value = 'loss')
+
+        Returns: dictionary with ranked images
+
+        """
         
         performance_dict = {
             "training": [],
             "validation": [],
             "testing": []
         }
+
         if metrics == 'coco':
             # Maybe use deepcopy for coco ranking
-            # self.__coco_ranking_pass(model, ds=self.__data_loader_train.dataset,
-            #                     data_type="training", performance_dict=performance_dict, desc="Ranking training images by AP")
-            self.__coco_ranking_pass(model, ds=self.__data_loader_valid.dataset,
-                                data_type="validation", performance_dict=performance_dict, desc="Ranking validation images by AP")
-            self.__coco_ranking_pass(model, ds=self.__data_loader_test.dataset,
-                                data_type="testing", performance_dict=performance_dict, desc="Ranking test images by AP")
+            self.__coco_ranking_pass(model,
+                                     ds=self.__data_loader_valid.dataset,
+                                     data_type="validation",
+                                     performance_dict=performance_dict,
+                                     desc="Ranking validation images by AP")
+            self.__coco_ranking_pass(model,
+                                     ds=self.__data_loader_test.dataset,
+                                     data_type="testing",
+                                     performance_dict=performance_dict,
+                                     desc="Ranking test images by AP")
         elif metrics == 'loss':
-            self.__loss_ranking_pass(model, data_loader=self.__data_loader_train,
-                                     data_type="training", performance_dict=performance_dict, desc="Ranking training images by loss")
-            self.__loss_ranking_pass(model, data_loader=self.__data_loader_valid,
-                                     data_type="validation", performance_dict=performance_dict, desc="Ranking validation images by loss")
-            self.__loss_ranking_pass(model, data_loader=self.__data_loader_test,
-                                     data_type="testing", performance_dict=performance_dict, desc="Ranking test images by loss")
+            self.__loss_ranking_pass(model,
+                                     data_loader=self.__data_loader_train,
+                                     data_type="training",
+                                     performance_dict=performance_dict,
+                                     desc="Ranking training images by loss")
+            self.__loss_ranking_pass(model,
+                                     data_loader=self.__data_loader_valid,
+                                     data_type="validation",
+                                     performance_dict=performance_dict,
+                                     desc="Ranking validation images by loss")
+            self.__loss_ranking_pass(model,
+                                     data_loader=self.__data_loader_test,
+                                     data_type="testing",
+                                     performance_dict=performance_dict,
+                                     desc="Ranking test images by loss")
         return performance_dict
 
     @torch.no_grad()
-    def __loss_ranking_pass(self, model, data_loader: DataLoader, data_type: str, performance_dict: dict, desc: str) -> None:
+    def __loss_ranking_pass(self,
+                            model: Any,
+                            data_loader: DataLoader,
+                            data_type: str,
+                            performance_dict: dict,
+                            desc: str) -> None:
+        """Method to rank images performance based on loss
+
+        Args:
+            model(Any): model object
+            data_loader(DataLoader): data loader object
+            data_type(str): data type
+            performance_dict(dict): performance dictionary
+            desc(str): description string for tqdm progress bar
+
+        """
         # Declare tqdm progress bar
         pbar = tqdm(total=len(data_loader), leave=False, desc=desc)
         
         # Specify that the model will be trained
         model.train()
+
         if self.__model_name == 'detr':
             self.__criterion.train()
 
@@ -595,7 +687,7 @@ class PipelineManager:
             # Updating the progress bar
             pbar.update()
 
-        # Sorting the values in the dictionnary from highest to lowest
+        # Sorting the values in the dictionary from highest to lowest
         performance_dict[data_type] = sorted(performance_dict[data_type], key=lambda x: x["metrics"]["total_loss"])
 
         # Closing the progress bar
@@ -603,7 +695,22 @@ class PipelineManager:
     
     # FIXME do not use, function doesn't work yet  
     @torch.no_grad()
-    def __coco_ranking_pass(self, model, ds, data_type: str, performance_dict: dict, desc: str) -> None:
+    def __coco_ranking_pass(self,
+                            model: Any,
+                            ds,
+                            data_type: str,
+                            performance_dict: dict,
+                            desc: str) -> None:
+        """Method to rank images performance based on COCO metrics
+
+        Args:
+            model(Any): model object
+            ds: COCO dataset
+            data_type(str): data type
+            performance_dict(dict): performance dictionary
+            desc(str): description string for tqdm progress bar
+
+        """
         # Declare tqdm progress bar
         pbar = tqdm(total=len(ds), leave=False, desc=desc)
 
@@ -626,7 +733,8 @@ class PipelineManager:
                 outputs = model(images)
 
                 if self.__model_name == 'detr':
-                    target_sizes = torch.stack([torch.tensor([self.__image_size, self.__image_size]) for _ in targets], dim=0)
+                    target_sizes = torch.stack([torch.tensor([self.__image_size, self.__image_size]) for _ in targets],
+                                               dim=0)
                     outputs = format_detr_outputs(outputs, target_sizes, self.__device)
 
                 outputs = [{k: v.to(self.__device)

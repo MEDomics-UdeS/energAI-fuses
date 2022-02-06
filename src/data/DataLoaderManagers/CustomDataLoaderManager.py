@@ -1,11 +1,34 @@
+"""
+File:
+    src/data/DataLoaderManagers/CustomDataLoaderManager.py
+
+Authors:
+    - Simon Giard-Leroux
+    - Guillaume Cléroux
+    - Shreyas Sunil Kulkarni
+
+Description:
+    Contains the CustomDataLoaderManager class, parent class for all other DataLoaderManager classes.
+"""
+
 from abc import ABC
 from src.data.Datasets.CustomDataset import CustomDataset
 from src.utils.reproducibility import seed_worker
 from torch.utils.data import DataLoader
 
-class CustomDataLoaderManager(ABC):
 
-    def _get_data_loader(self, dataset: CustomDataset) -> DataLoader:
+class CustomDataLoaderManager(ABC):
+    """Parent Data Loader Manager class, handles the creation of the training, validation and testing data loaders."""
+    def _get_data_loader(self,
+                         dataset: CustomDataset) -> DataLoader:
+        """
+
+        Args:
+            dataset(CustomDataset): 
+
+        Returns:
+
+        """
         return DataLoader(dataset,
                           batch_size=self._batch_size_ga,
                           shuffle=not self._deterministic,
@@ -15,10 +38,13 @@ class CustomDataLoaderManager(ABC):
 
     @staticmethod
     def _collate_fn(batch: list) -> tuple:
-        """
-        Custom batching collation function.
+        """Custom batching collation function.
 
-        :param batch: list, containing the current batch
-        :return: tuple
+        Args:
+            batch(list): list containing the current batch
+
+        Returns:
+            tuple: tuple
+
         """
         return tuple(zip(*batch))

@@ -13,24 +13,27 @@ Description:
 
 import torch
 import torchvision.models.detection as detection
-from typing import Optional
+from typing import Optional, Any
 
 
 def load_model(model_name: str,
                pretrained: bool,
                num_classes: int,
                progress: bool = True,
-               trainable_backbone_layers: Optional[int] = None):
-    """
-    Method to load a model from PyTorch
+               trainable_backbone_layers: Optional[int] = None) -> Any:
+    """Method to load a model from PyTorch
 
-    :param model_name:
-    :param pretrained:
-    :param num_classes:
-    :param progress: bool, if True, displays a progress bar of the download to stderr
-    :param trainable_backbone_layers: int, number of trainable (not frozen) resnet layers starting from final block.
-                                      Valid values are between 0 and 5, with 5 meaning all backbone layers are
-                                      trainable.
+    Args:
+        model_name(str): model name
+        pretrained(bool): choose whether to load a pretrained model or a model from scratch
+        num_classes(int): number of classes for last fully-connected layer
+        progress(bool, optional): if True, displays a progress bar of the download to stderr (Default value = True)
+        trainable_backbone_layers(Optional[int], optional): number of trainable (not frozen) resnet layers starting from final block.
+                                                            Valid values are between 0 and 5, with 5 meaning all backbone layers are
+                                                            trainable. (Default value = None)
+
+    Returns:
+
     """
     # Check for specified model name, load corresponding model and replace model head with right number of classes
     if model_name == 'fasterrcnn_resnet50_fpn':
@@ -74,13 +77,18 @@ def load_model(model_name: str,
     return model
 
 
-def replace_model_head(model, model_name: str, num_classes: int):
-    """
-    Replace model head with the right number of classes (for transfer learning)
+def replace_model_head(model: Any,
+                       model_name: str,
+                       num_classes: int) -> Any:
+    """Replace model head with the right number of classes (for transfer learning)
 
-    :param model:
-    :param model_name:
-    :param num_classes:
+    Args:
+        model(Any): model
+        model_name(str): model name
+        num_classes(int): number of classes for last fully-connected layer
+
+    Returns:
+
     """
     if 'fasterrcnn' in model_name:
         in_channels = model.roi_heads.box_predictor.cls_score.in_features
@@ -104,8 +112,11 @@ def replace_model_head(model, model_name: str, num_classes: int):
 
 
 def load_detr_state_dict(model):
-    """
-    Load pretrained weights for DE:TR model
+    """Load pretrained weights for DE:TR model
+
+    Args:
+        model: DETR model
+
     """
     checkpoint = torch.hub.load_state_dict_from_url(
         url='https://dl.fbaipublicfiles.com/detr/detr-r50-e632da11.pth',
