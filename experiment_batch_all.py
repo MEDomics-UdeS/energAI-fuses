@@ -8,7 +8,7 @@ Authors:
     - Shreyas Sunil Kulkarni
 
 Description:
-
+    Allows to perform all experiments for phases A, B, C and D from a single script.
 """
 
 import subprocess as sp
