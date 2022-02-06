@@ -1,6 +1,27 @@
 # EnergAI : Fuse Detection
 
-## 1. Introduction
+## Table of Contents
+ * [1 - Introduction](#1---introduction)
+  * [2. Authors](#2-authors)
+  * [3. Acknowledgements](#3-acknowledgements)
+  * [4. Installation](#4-installation)
+  * [5. Data](#5-data)
+    + [Datasets](#datasets)
+    + [Best Model](#best-model)
+  * [6. Python Module Details](#6-python-module-details)
+    + [experiment.py](#experimentpy)
+    + [experiment_batch.py](#experiment-batchpy)
+    + [experiment_batch_all.py](#experiment-batch-allpy)
+    + [inference_test.py](#inference-testpy)
+    + [reports/test_saved_model.py](#reports-test-saved-modelpy)
+    + [reports/parse_results_[...].py](#reports-parse-results---py)
+    + [gui.py](#guipy)
+  * [7. Project Files Organization](#7-project-files-organization)
+
+<small><i><a href='http://ecotrust-canada.github.io/markdown-toc/'>Table of contents generated with markdown-toc</a></i></small>
+
+
+## 1 - Introduction
 This repository contains the fuse detection code for the EnergAI 
 project and the following article published in **IEEE Transactions on
 Industral Informatics**: 
