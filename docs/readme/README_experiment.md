@@ -47,7 +47,7 @@ If the model architecture chosen is `detr`, the following arguments are included
 ``-h``, ``--help``
 show this help message and exit
 
-### Examples of basic use:
+### Example of basic use
 
 To run a single experiment:
 ```
