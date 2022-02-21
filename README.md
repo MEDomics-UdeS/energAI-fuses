@@ -152,17 +152,14 @@ More details on each window, option and button and an example of basic use can b
 │   │   └── utils.py
 │   ├── data                             <- Custom classes for data, dataset and data loader handling
 │   │   ├── DataLoaderManagers           
-│   │   │   ├── CocoDataLoaderManager.py
 │   │   │   ├── CustomDataLoaderManager.py
 │   │   │   ├── GuiDataLoaderManager.py
 │   │   │   └── LearningDataLoaderManager.py
 │   │   ├── DatasetManagers              
-│   │   │   ├── CocoDatasetManager.py
 │   │   │   ├── CustomDatasetManager.py
 │   │   │   ├── GuiDatasetManager.py
 │   │   │   └── LearningDatasetManager.py
 │   │   ├── Datasets
-│   │   │   ├── CocoDataset.py
 │   │   │   ├── CustomDataset.py
 │   │   │   └── FuseDataset.py
 │   │   └── SplittingManager.py
