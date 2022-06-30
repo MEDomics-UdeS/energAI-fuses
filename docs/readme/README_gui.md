@@ -48,9 +48,12 @@ To start the GUI:
 python gui.py
 ```
 
-Select the desired model, image directory and options, then press
+First, select the desired model, image directory and options, then press
 on the center *Start* button to start the inference. After the inference
 has been performed, an image viewer with zoom and pan options will 
-appear to allow users to view predicted fuses directly on the images:
+appear to allow users to view predicted fuses directly on the images. The
+following figure shows the inference results obtained on the sample
+image available in the repository under 'data/sample/image' (ground truth
+boxes are shown in green and model predictions are shown in yellow) :
 
 ![gui_image_viewer.png](../images/gui_image_viewer.png)

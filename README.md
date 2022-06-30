@@ -135,7 +135,8 @@ More details can be found [here](docs/readme/README_gui.md).
 │   ├── gui_resized                      <- Resized images for GUI inference
 │   ├── inference                        <- Inference test images are saved here
 │   ├── raw                              <- Raw images are automatically downloaded here
-│   └── resized                          <- Resized images are saved here
+│   ├── resized                          <- Resized images are saved here
+│   └── sample                           <- Sample image and annotations (used to test the GUI without downloading all the data)
 ├── docs                                 <- Contains markdown README & documentation files
 ├── logdir                               <- Tensorboard logs are saved here for each run in subfolders
 ├── reports                              <- Contains results parsing scripts for each phase (see module details for more info)
