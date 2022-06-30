@@ -1,6 +1,9 @@
-# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 """
 Utilities for bounding box manipulation and GIoU.
+
+  - Copyright Holder: Facebook, Inc. and its affiliates
+  - Source: https://github.com/facebookresearch/detr
+  - License: Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
 """
 import torch
 from torchvision.ops.boxes import box_area

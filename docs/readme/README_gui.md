@@ -41,7 +41,7 @@ the following options window appears:
 
 ![gui_ground_truth.png](../images/gui_ground_truth.png)
 
-### Examples of basic use:
+### Example of basic use
 
 To start the GUI:
 ```

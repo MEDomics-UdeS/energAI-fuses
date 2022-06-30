@@ -22,7 +22,7 @@ predictions and ground truths boxes on the images.
 ``-h``, ``--help``
 show this help message and exit
 
-### Examples of basic use:
+### Example of basic use
 
 To perform inference test on a saved model:
 ```

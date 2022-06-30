@@ -1,6 +1,9 @@
-# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 """
 Modules to compute the matching cost and solve the corresponding LSAP.
+
+  - Copyright Holder: Facebook, Inc. and its affiliates
+  - Source: https://github.com/facebookresearch/detr
+  - License: Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
 """
 import torch
 from scipy.optimize import linear_sum_assignment

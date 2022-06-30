@@ -2,12 +2,13 @@
 
 ## Table of Contents
   * [1. Introduction](#1-introduction)
-  * [2. Authors](#2-authors)
-  * [3. Acknowledgements](#3-acknowledgements)
-  * [4. Installation](#4-installation)
-  * [5. Data](#5-data)
-  * [6. Python Module Details](#6-python-module-details)
-  * [7. Project Files Organization](#7-project-files-organization)
+  * [2. Installation](#2-installation)
+  * [3. Data](#3-data)
+  * [4. Python Module Details](#4-python-module-details)
+  * [5. Project Files Organization](#5-project-files-organization)
+  * [6. Authors](#6-authors)
+  * [7. Acknowledgements](#7-acknowledgements)
+  * [8. Statement](#8-statement)
 
 ## 1. Introduction
 This repository contains the fuse detection code for the EnergAI 
@@ -19,25 +20,7 @@ Industral Informatics**:
 This project implements a supervised learning PyTorch-based end-to-end object detection pipeline for the purpose of detecting and
 classifying fuses in low-voltage electrical installations.
 
-## 2. Authors
-* [Simon Giard-Leroux](https://github.com/sgiardl) (Université de Sherbrooke / CIMA+)
-* [Guillaume Cléroux](https://github.com/gcleroux) (Université de Sherbrooke)
-* [Shreyas Sunil Kulkarni](https://github.com/Kuyas) (Birla Institute of Technology and Science, Pilani / Amazon)
-* [François Bouffard](https://www.mcgill.ca/ece/francois-bouffard) (McGill University)
-* [Martin Vallières](https://github.com/mvallieres) (Université de Sherbrooke)
-
-## 3. Acknowledgements
-
-The authors would like to thank all partner organizations 
-that were involved during this project: CIMA+, HEXACODE Solutions, 
-Université de Sherbrooke and Université McGill, as well as the 
-organizations that supplied the funding for this project: 
-CIMA+, HEXACODE Solutions, InnovÉÉ, Mitacs and the 
-Natural Sciences and Engineering Research Council of Canada 
-(NSERC). Martin Vallières also acknowledges funding from the 
-Canada CIFAR AI Chairs Program.
-
-## 4. Installation
+## 2. Installation
 Install dependencies in a Python environment:
 ```
 $ pip install -r requirements.txt
@@ -47,7 +30,7 @@ in this repository. To enable users with lower specifications to train a model a
 a trained model quickly, a 'quick run' script has been created, see [here](docs/readme/README_experiment_batch.md) for
 details on how to run this script.
 
-## 5. Data
+## 3. Data
 
 ### Datasets
 
@@ -78,57 +61,59 @@ Best trained model hosted somewhere and downloadable
 - Zenodo
 - Auto download
 
-## 6. Python Module Details
+## 4. Python Module Details
 
 ### experiment.py
 
 This file enables users to run a single experiment with the specified parameters using the developed pipeline.
 
-More details can be found [here](docs/readme/README_experiment.md).
+More details on how to specify experiment arguments and an example of basic use can be found [here](docs/readme/README_experiment.md).
 
 ### experiment_batch.py
 
 This file enables users to run a batch of different experiments using the 
 developed pipeline. 
 
-More details can be found [here](docs/readme/README_experiment_batch.md).
+More details on how to specify fixed or variable experiment parameters for each run,
+an example of basic use and how to execute the quick run script can be found [here](docs/readme/README_experiment_batch.md).
 
 ### experiment_batch_all.py
 
 This file enables users to run all experiments for phases A, B, C and D from
 a single file. 
 
-More details can be found [here](docs/readme/README_experiment_batch_all.md).
+More details on which experiments are performed when running this script and an
+example of basic use can be found [here](docs/readme/README_experiment_batch_all.md).
 
 ### inference_test.py
 
 This file enables users to run an inference test on a saved model and show model 
 predictions and ground truths boxes on the images.
 
-More details can be found [here](docs/readme/README_inference_test.md).
+More details on the arguments and an example of basic use can be found [here](docs/readme/README_inference_test.md).
 
 ### reports/test_saved_model.py
 
 This file enables users to test a saved model, either on a subset of the 'learning' or the
 'holdout' dataset.
 
-More details can be found [here](docs/readme/README_test_saved_model.md).
+More details on the arguments and an example of basic use can be found [here](docs/readme/README_test_saved_model.md).
 
 ### reports/parse_results_[...].py
 
 The following scripts can be used to parse the results generated
 when executing phases A, B and C experiments.
 
-More details can be found [here](docs/readme/README_parse_results.md).
+More details on the purpose of each parsing script and an example of basic use can be found [here](docs/readme/README_parse_results.md).
 
 ### gui.py
 
 A graphical user interface (GUI) has been created to allow users to 
 locate and classify fuses in new pictures.
 
-More details can be found [here](docs/readme/README_gui.md).
+More details on each window, option and button and an example of basic use can be found [here](docs/readme/README_gui.md).
 
-## 7. Project Files Organization
+## 5. Project Files Organization
 ```
 ├── data                                 <- Main folder containing raw & processed data (images & bounding box annotations)
 │   ├── annotations                      <- Bounding box ground truth annotations are automatically downloaded here, as well as resized annotations
@@ -168,17 +153,14 @@ More details can be found [here](docs/readme/README_gui.md).
 │   │   └── utils.py
 │   ├── data                             <- Custom classes for data, dataset and data loader handling
 │   │   ├── DataLoaderManagers           
-│   │   │   ├── CocoDataLoaderManager.py
 │   │   │   ├── CustomDataLoaderManager.py
 │   │   │   ├── GuiDataLoaderManager.py
 │   │   │   └── LearningDataLoaderManager.py
 │   │   ├── DatasetManagers              
-│   │   │   ├── CocoDatasetManager.py
 │   │   │   ├── CustomDatasetManager.py
 │   │   │   ├── GuiDatasetManager.py
 │   │   │   └── LearningDatasetManager.py
 │   │   ├── Datasets
-│   │   │   ├── CocoDataset.py
 │   │   │   ├── CustomDataset.py
 │   │   │   └── FuseDataset.py
 │   │   └── SplittingManager.py
@@ -220,5 +202,60 @@ More details can be found [here](docs/readme/README_gui.md).
 └── requirements.txt                     <- Python packages & versions requirements
 ```
 
-<p><small>Project based on the <a target="_blank" href="https://drivendata.github.io/cookiecutter-data-science/">cookiecutter data science project template</a>. </small></p>
+## 6. Authors
+* [Simon Giard-Leroux](https://github.com/sgiardl) (Université de Sherbrooke / CIMA+)
+* [Guillaume Cléroux](https://github.com/gcleroux) (Université de Sherbrooke)
+* [Shreyas Sunil Kulkarni](https://github.com/Kuyas) (Birla Institute of Technology and Science, Pilani / Amazon)
+* [François Bouffard](https://www.mcgill.ca/ece/francois-bouffard) (McGill University)
+* [Martin Vallières](https://github.com/mvallieres) (Université de Sherbrooke)
 
+## 7. Acknowledgements
+
+The authors would like to thank all partner organizations 
+that were involved during this project: CIMA+, HEXACODE Solutions, 
+Université de Sherbrooke and Université McGill, as well as the 
+organizations that supplied the funding for this project: 
+CIMA+, HEXACODE Solutions, InnovÉÉ, Mitacs and the 
+Natural Sciences and Engineering Research Council of Canada 
+(NSERC). Martin Vallières also acknowledges funding from the 
+Canada CIFAR AI Chairs Program.
+
+## 8. Statement
+
+This project's code and data are published under the GPLv3 license.
+
+```
+  Energ-AI : Fuse Detection
+    Copyright (C) 2022, CIMA+, HEXACODE Solutions, Université de Sherbrooke, 
+    McGill University
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+```
+
+The following scripts have been imported from other repositories
+which are subject to their own specific copyright and licenses:
+- **src/coco/coco_eval.py, src/coco/coco_utils.py, src/coco/utils.py**
+  - Copyright Holder: Facebook, Inc. and its affiliates
+  - Source: https://github.com/pytorch/vision/tree/main/references/detection
+  - License: BSD-3-Clause: https://opensource.org/licenses/BSD-3-Clause
+- **src/detr/box_ops.py, src/detr/criterion.py** (modified)**, src/detr/matcher.py**
+  - Copyright Holder: Facebook, Inc. and its affiliates
+  - Source: https://github.com/facebookresearch/detr
+  - License: Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+- **src/models/EarlyStopper.py** (modified)
+  - Copyright Holder: Stefano Nardo
+  - Source: https://gist.github.com/stefanonardo/693d96ceb2f531fa05db530f3e21517d
+  - License: MIT: https://opensource.org/licenses/MIT
+
+<p><small>Project based on the <a target="_blank" href="https://drivendata.github.io/cookiecutter-data-science/">cookiecutter data science project template</a>. </small></p>

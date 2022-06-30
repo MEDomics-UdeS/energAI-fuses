@@ -1,9 +1,11 @@
-# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 """
 Criterion class builder.
 
-All the code in this file is a copy/paste from facebookresearch/detr/models/detr.py
 Small modifications were made by cutting out the unused code parts in our pipeline.
+
+  - Copyright Holder: Facebook, Inc. and its affiliates
+  - Source: https://github.com/facebookresearch/detr
+  - License: Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
 """
 import torch
 import torch.nn.functional as F

@@ -59,7 +59,7 @@ directory contains the following '.json' files:
 ``-h``, ``--help``
 show this help message and exit
 
-### Examples of basic use:
+### Example of basic use
 
 To run a batch of experiments for which the fixed & variable parameters are
 specified in a '.json' file:
@@ -67,7 +67,7 @@ specified in a '.json' file:
 python experiment_batch.py --path runs/A1_fasterrcnn_experiment.json
 ```
 
-### Quick Run
+### Quick run
 
 A quick run script has been created to allow users with low VRAM GPU's to train
 a model with a batch size of 2 for 10 epochs that will produce results in a 

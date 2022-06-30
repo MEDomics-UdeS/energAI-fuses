@@ -15,7 +15,7 @@ sequentially:
 - C_sensitivity_experiment.json
 - D_final_training.json
 
-### Examples of basic use:
+### Example of basic use
 
 To run all experiments in one line:
 ```

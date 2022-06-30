@@ -18,7 +18,7 @@ The results parsed are formatted in LaTeX tables with proper section
 titles and headers and saved into a text file which can be 
 directly copied and pasted into a LaTeX compiler, such as Overleaf.
 
-### Examples of basic use:
+### Example of basic use
 
 To parse results from phase A:
 ```

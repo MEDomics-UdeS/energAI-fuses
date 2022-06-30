@@ -17,3 +17,10 @@ This file enables users to test a saved model, either on a subset of the 'learni
 
 ``-h``, ``--help``
 show this help message and exit
+
+### Example of basic use
+
+To test a saved model:
+```
+python reports/test_saved_model.py --models_path saved_models/
+```

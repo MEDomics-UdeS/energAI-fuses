@@ -1,7 +1,9 @@
 """
 COCO Evaluation Metrics Utilities
 
-Imported from: https://github.com/pytorch/vision/blob/master/references/detection/utils.py
+  - Copyright Holder: Facebook, Inc. and its affiliates
+  - Source: https://github.com/pytorch/vision/tree/main/references/detection
+  - License: BSD-3-Clause: https://opensource.org/licenses/BSD-3-Clause
 """
 from collections import defaultdict, deque
 import datetime

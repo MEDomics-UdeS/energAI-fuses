@@ -1,7 +1,9 @@
 """
 COCO Evaluation Metrics
 
-Imported from: https://github.com/pytorch/vision/blob/master/references/detection/coco_eval.py
+  - Copyright Holder: Facebook, Inc. and its affiliates
+  - Source: https://github.com/pytorch/vision/tree/main/references/detection
+  - License: BSD-3-Clause: https://opensource.org/licenses/BSD-3-Clause
 """
 import json
 
