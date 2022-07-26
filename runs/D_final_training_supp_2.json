@@ -1,0 +1,17 @@
+{
+    "fixed":{
+        "--model": "fasterrcnn_resnet50_fpn",
+        "--batch": "20",
+        "--learning_rate": "3e-4",
+        "--weight_decay": "3e-5",
+        "--data_aug": "0.25",
+        "--image_size": "1024",
+        "--validation_size": "0.3",
+        "--test_size": "0",
+        "--seed_init": "2003"
+    },
+
+    "variable": {
+
+    }
+}

@@ -32,8 +32,6 @@ from src.coco.coco_utils import get_coco_api_from_dataset
 from src.coco.coco_eval import CocoEvaluator
 from src.utils.helper_functions import print_dict, format_detr_outputs
 from src.detr.box_ops import batch_box_xyxy_to_cxcywh
-from src.data.DataLoaderManagers.CocoDataLoaderManager import CocoDataLoaderManager
-from src.data.DatasetManagers.CocoDatasetManager import CocoDatasetManager
 from src.detr.criterion import build_criterion
 from src.models.SummaryWriter import SummaryWriter
 
