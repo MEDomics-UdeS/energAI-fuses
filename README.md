@@ -21,7 +21,7 @@ This project implements a supervised learning PyTorch-based end-to-end object de
 classifying fuses in low-voltage electrical installations.
 
 ## 2. Installation
-First, install PyTorch in a Python environment:
+First, install PyTorch in a Python (>=3.8) environment:
 ```
 $ pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu116
 ```
