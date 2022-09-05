@@ -24,7 +24,6 @@ classifying fuses in low-voltage electrical installations.
 First, install PyTorch in a Python environment:
 ```
 $ pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu116
-
 ```
 Then, install dependencies in the same environment:
 ```
