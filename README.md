@@ -21,11 +21,16 @@ This project implements a supervised learning PyTorch-based end-to-end object de
 classifying fuses in low-voltage electrical installations.
 
 ## 2. Installation
-Install dependencies in a Python environment:
+First, install PyTorch in a Python environment:
+```
+$ pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu116
+
+```
+Then, install dependencies in the same environment:
 ```
 $ pip install -r requirements.txt
 ```
-The use of a CUDA GPU with at least 24 GB of VRAM is required to run the experiments
+The use of a CUDA (>=11.6) GPU with at least 24 GB of VRAM is required to run the experiments
 in this repository. To enable users with lower specifications to train a model and obtain
 a trained model quickly, a 'quick run' script has been created, see [here](docs/readme/README_experiment_batch.md) for
 details on how to run this script.
