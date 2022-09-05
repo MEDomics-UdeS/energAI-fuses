@@ -102,7 +102,7 @@ def parse_results(saved_models_path: str,
 
         df_std.loc[df_std[columns_std[0]] == column, columns_std[1]] = format_str.format(mean_round)
         df_std.loc[df_std[columns_std[0]] == column, columns_std[2]] = format_str.format(std_round)
-        df_std.loc[df_std[columns_std[0]] == column, columns_std[3]] = '{:.2%}'.format(std / mean).replace('%', '\\%')
+        df_std.loc[df_std[columns_std[0]] == column, columns_std[3]] = '{:.6%}'.format(std / mean).replace('%', '\\%')
 
     df_all_seeds = df_all_seeds.append(row, ignore_index=True)
 

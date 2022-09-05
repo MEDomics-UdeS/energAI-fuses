@@ -104,7 +104,7 @@ def generate_figure_all(best_ap_curves: dict,
         show(bool, optional): Choose whether to show the figure (Default value = False)
 
     """
-    fig, axs = plt.subplots(1, 3, figsize=(12, 3))
+    fig, axs = plt.subplots(3, 1, figsize=(6, 12))
 
     x_max = 0
 
@@ -168,14 +168,15 @@ def generate_figure_all(best_ap_curves: dict,
 
     for ax in axs:
         ax.grid()
+        ax.legend()
         ax.set_xlabel('Epoch')
 
-    handles, labels = axs[-1].get_legend_handles_labels()
-    fig.legend(handles, labels, loc='center right')
+    # handles, labels = axs[-1].get_legend_handles_labels()
+    # fig.legend(handles, labels, loc='center right')
 
     fig.tight_layout()
 
-    fig.subplots_adjust(right=0.7)
+    # fig.subplots_adjust(right=0.7)
 
     if save:
         file_path = '../reports/figure.svg'
