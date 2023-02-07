@@ -36,7 +36,7 @@ details on how to run this script.
 
 ## 3. Data
 
-The data for this project can be downloaded at the following link: [https://zenodo.org/record/7613425](https://zenodo.org/record/7613425)
+The data for this project can be downloaded at the following link: [https://doi.org/10.5281/zenodo.7613425](https://doi.org/10.5281/zenodo.7613425)
 
 - **annotations.csv**: Contains bounding box annotations for images. Save the file to 'data/annotations/'.
 - **final_model.pkl**: Final trained model. Save the file anywhere and select it using the GUI to use it.
