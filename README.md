@@ -13,7 +13,7 @@
 ## 1. Introduction
 This repository contains the fuse detection code for the EnergAI 
 project and the following article published in **IEEE Transactions on
-Industral Informatics**: 
+Industral Informatics** (accepted on February 6, 2023): 
 
 [***Electric Power Fuse Identification with Deep Learning***](about:blank)
 
