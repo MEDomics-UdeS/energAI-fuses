@@ -36,6 +36,12 @@ details on how to run this script.
 
 ## 3. Data
 
+The data for this project can be downloaded at the following link: [https://zenodo.org/record/7613425](https://zenodo.org/record/7613425)
+
+- **annotations.csv**: Contains bounding box annotations for images. Save the file to 'data/annotations/'.
+- **final_model.pkl**: Final trained model. Save the file anywhere and select it using the GUI to use it.
+- **images.zip**: Images for learning and testing. Extract the .zip file to 'data/raw/'.
+
 ### Datasets
 
 The datasets have been split into two parts: learning
@@ -52,18 +58,6 @@ on new data.
 
 **Google Images Dataset** (n = 1,116)
 - G0001.jpg to G1116.jpg
-
-**TO-DO**
-- Zenodo
-- Auto download
-
-### Best Model
-
-Best trained model hosted somewhere and downloadable
-
-**TO-DO**
-- Zenodo
-- Auto download
 
 ## 4. Python Module Details
 
