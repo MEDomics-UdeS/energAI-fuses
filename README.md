@@ -201,9 +201,9 @@ More details on each window, option and button and an example of basic use can b
 ```
 
 ## 6. Authors
-* [Simon Giard-Leroux](https://github.com/sgiardl) (Université de Sherbrooke / CIMA+)
+* [Simon Giard-Leroux](https://github.com/sgiardl) (Université de Sherbrooke)
 * [Guillaume Cléroux](https://github.com/gcleroux) (Université de Sherbrooke)
-* [Shreyas Sunil Kulkarni](https://github.com/Kuyas) (Birla Institute of Technology and Science, Pilani / Amazon)
+* [Shreyas Sunil Kulkarni](https://github.com/Kuyas) (Birla Institute of Technology and Science, Pilani)
 * [François Bouffard](https://www.mcgill.ca/ece/francois-bouffard) (McGill University)
 * [Martin Vallières](https://github.com/mvallieres) (Université de Sherbrooke)
 
