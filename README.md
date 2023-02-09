@@ -109,6 +109,8 @@ More details on the purpose of each parsing script and an example of basic use c
 A graphical user interface (GUI) has been created to allow users to 
 locate and classify fuses in new pictures.
 
+[gui.webm](https://user-images.githubusercontent.com/70918466/217882046-5906e183-295e-478e-a55d-8b6965c68ada.webm)
+
 More details on each window, option and button and an example of basic use can be found [here](docs/readme/README_gui.md).
 
 ## 5. Project Files Organization
